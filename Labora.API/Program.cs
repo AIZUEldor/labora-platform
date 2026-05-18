@@ -1,5 +1,4 @@
-using Labora.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using Labora.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,9 +7,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Database
-builder.Services.AddDbContext<LaboaDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Infrastructure
+builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
