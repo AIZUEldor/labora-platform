@@ -12,8 +12,6 @@
 
   <ItemGroup>
     <Folder Include="Common\" />
-    <Folder Include="Services\" />
-    <Folder Include="DTOs\" />
     <Folder Include="Validators\" />
     <Folder Include="Mappings\" />
   </ItemGroup>
@@ -21,6 +19,9 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="16.1.1" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.4" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.18.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.18.0" />
   </ItemGroup>
 
 </Project>
