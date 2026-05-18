@@ -22,4 +22,5 @@ public class User : BaseEntity
     // Navigation properties
     public ICollection<Job> Jobs { get; set; } = new List<Job>();
     public ICollection<JobApplication> JobApplications { get; set; } = new List<JobApplication>();
+    public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 }
