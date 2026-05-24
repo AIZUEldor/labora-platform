@@ -3,6 +3,7 @@ using Labora.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,10 @@ builder.Services.AddSwaggerGen();
 
 // Application
 builder.Services.AddApplication();
+
+// FluentValidation
+builder.Services.AddValidatorsFromAssemblyContaining<Labora.Application.Validators.Auth.RegisterRequestDtoValidator>();
+
 
 // Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
