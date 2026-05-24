@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Labora.Application.DTOs.Applications;
+using Labora.Application.DTOs.Categories;
 using Labora.Application.DTOs.Jobs;
 using Labora.Application.DTOs.Users;
 using Labora.Domain.Entities;
@@ -21,5 +22,11 @@ public class MappingProfile : Profile
         // User mappings
         CreateMap<User, UserProfileResponseDto>();
         CreateMap<UpdateProfileRequestDto, User>();
+
+        // Category mappings
+        CreateMap<Category, CategoryResponseDto>()
+            .ForMember(dest => dest.SubCategories,
+                opt => opt.MapFrom(src => src.SubCategories));
+        CreateMap<CategoryRequestDto, Category>();
     }
 }
