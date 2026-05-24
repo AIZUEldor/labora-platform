@@ -15,6 +15,13 @@ public class JobApplicationRepository : GenericRepository<JobApplication>, IJobA
         _context = context;
     }
 
+    public new async Task<JobApplication?> GetByIdAsync(Guid id)
+    {
+        return await _context.JobApplications
+            .Include(a => a.Job)
+            .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
+    }
+
     public async Task<IEnumerable<JobApplication>> GetApplicationsByJobIdAsync(Guid jobId)
     {
         return await _context.JobApplications
