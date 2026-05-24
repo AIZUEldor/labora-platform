@@ -10,7 +10,6 @@ namespace Labora.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
 public class JobController : ControllerBase
 {
     private readonly IJobService _jobService;
@@ -23,10 +22,10 @@ public class JobController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Employer")]
     public async Task<IActionResult> Create([FromBody] JobRequestDto request)
     {
         ValidationResult validationResult = await _jobValidator.ValidateAsync(request);
-
         if (!validationResult.IsValid)
             return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
 
@@ -36,7 +35,6 @@ public class JobController : ControllerBase
     }
 
     [HttpGet]
-    [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
         IEnumerable<JobResponseDto> jobs = await _jobService.GetAllAsync();
@@ -44,7 +42,6 @@ public class JobController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    [AllowAnonymous]
     public async Task<IActionResult> GetById(Guid id)
     {
         JobResponseDto job = await _jobService.GetByIdAsync(id);
@@ -52,6 +49,7 @@ public class JobController : ControllerBase
     }
 
     [HttpGet("my-jobs")]
+    [Authorize(Roles = "Employer")]
     public async Task<IActionResult> GetMyJobs()
     {
         Guid employerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -60,10 +58,10 @@ public class JobController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Employer")]
     public async Task<IActionResult> Update(Guid id, [FromBody] JobRequestDto request)
     {
         ValidationResult validationResult = await _jobValidator.ValidateAsync(request);
-
         if (!validationResult.IsValid)
             return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
 
@@ -73,6 +71,7 @@ public class JobController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Employer")]
     public async Task<IActionResult> Delete(Guid id)
     {
         Guid employerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

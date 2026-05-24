@@ -1,5 +1,4 @@
-﻿using FluentValidation;
-using Labora.Application.DTOs.Applications;
+﻿using Labora.Application.DTOs.Applications;
 using Labora.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +19,7 @@ public class JobApplicationController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Worker")]
     public async Task<IActionResult> Apply([FromBody] ApplicationRequestDto request)
     {
         Guid workerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -28,6 +28,7 @@ public class JobApplicationController : ControllerBase
     }
 
     [HttpGet("my-applications")]
+    [Authorize(Roles = "Worker")]
     public async Task<IActionResult> GetMyApplications()
     {
         Guid workerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -36,6 +37,7 @@ public class JobApplicationController : ControllerBase
     }
 
     [HttpGet("job/{jobId:guid}")]
+    [Authorize(Roles = "Employer")]
     public async Task<IActionResult> GetByJobId(Guid jobId)
     {
         IEnumerable<ApplicationResponseDto> applications = await _jobApplicationService.GetByJobIdAsync(jobId);
@@ -43,6 +45,7 @@ public class JobApplicationController : ControllerBase
     }
 
     [HttpPut("{id:guid}/status")]
+    [Authorize(Roles = "Employer")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromQuery] string status)
     {
         Guid employerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -51,6 +54,7 @@ public class JobApplicationController : ControllerBase
     }
 
     [HttpDelete("{id:guid}/cancel")]
+    [Authorize(Roles = "Worker")]
     public async Task<IActionResult> Cancel(Guid id)
     {
         Guid workerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
