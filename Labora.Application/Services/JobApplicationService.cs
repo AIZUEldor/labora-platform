@@ -1,4 +1,5 @@
-﻿using Labora.Application.DTOs.Applications;
+﻿using AutoMapper;
+using Labora.Application.DTOs.Applications;
 using Labora.Application.Interfaces;
 using Labora.Domain.Entities;
 using Labora.Domain.Enums;
@@ -10,13 +11,16 @@ public class JobApplicationService : IJobApplicationService
 {
     private readonly IJobApplicationRepository _jobApplicationRepository;
     private readonly IJobRepository _jobRepository;
+    private readonly IMapper _mapper;
 
     public JobApplicationService(
         IJobApplicationRepository jobApplicationRepository,
-        IJobRepository jobRepository)
+        IJobRepository jobRepository,
+        IMapper mapper)
     {
         _jobApplicationRepository = jobApplicationRepository;
         _jobRepository = jobRepository;
+        _mapper = mapper;
     }
 
     public async Task<ApplicationResponseDto> ApplyAsync(ApplicationRequestDto request, Guid workerId)
@@ -29,28 +33,24 @@ public class JobApplicationService : IJobApplicationService
         if (job.Status != JobStatus.Active)
             throw new InvalidOperationException("Bu ish endi faol emas.");
 
-        JobApplication jobApplication = new JobApplication
-        {
-            JobId = request.JobId,
-            WorkerId = workerId,
-            CoverLetter = request.CoverLetter,
-            Status = ApplicationStatus.Pending
-        };
+        JobApplication jobApplication = _mapper.Map<JobApplication>(request);
+        jobApplication.WorkerId = workerId;
+        jobApplication.Status = ApplicationStatus.Pending;
 
         JobApplication createdApplication = await _jobApplicationRepository.AddAsync(jobApplication);
-        return MapToResponseDto(createdApplication);
+        return _mapper.Map<ApplicationResponseDto>(createdApplication);
     }
 
     public async Task<IEnumerable<ApplicationResponseDto>> GetByWorkerIdAsync(Guid workerId)
     {
         IEnumerable<JobApplication> applications = await _jobApplicationRepository.GetApplicationsByWorkerIdAsync(workerId);
-        return applications.Select(MapToResponseDto);
+        return _mapper.Map<IEnumerable<ApplicationResponseDto>>(applications);
     }
 
     public async Task<IEnumerable<ApplicationResponseDto>> GetByJobIdAsync(Guid jobId)
     {
         IEnumerable<JobApplication> applications = await _jobApplicationRepository.GetApplicationsByJobIdAsync(jobId);
-        return applications.Select(MapToResponseDto);
+        return _mapper.Map<IEnumerable<ApplicationResponseDto>>(applications);
     }
 
     public async Task<ApplicationResponseDto> UpdateStatusAsync(Guid id, string status, Guid employerId)
@@ -69,7 +69,7 @@ public class JobApplicationService : IJobApplicationService
         jobApplication.Status = newStatus;
 
         JobApplication updatedApplication = await _jobApplicationRepository.UpdateAsync(jobApplication);
-        return MapToResponseDto(updatedApplication);
+        return _mapper.Map<ApplicationResponseDto>(updatedApplication);
     }
 
     public async Task CancelAsync(Guid id, Guid workerId)
@@ -87,18 +87,5 @@ public class JobApplicationService : IJobApplicationService
 
         jobApplication.Status = ApplicationStatus.Cancelled;
         await _jobApplicationRepository.UpdateAsync(jobApplication);
-    }
-
-    private static ApplicationResponseDto MapToResponseDto(JobApplication jobApplication)
-    {
-        return new ApplicationResponseDto
-        {
-            Id = jobApplication.Id,
-            JobId = jobApplication.JobId,
-            WorkerId = jobApplication.WorkerId,
-            CoverLetter = jobApplication.CoverLetter,
-            Status = jobApplication.Status,
-            CreatedAt = jobApplication.CreatedAt
-        };
     }
 }

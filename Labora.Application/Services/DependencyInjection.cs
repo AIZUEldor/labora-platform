@@ -1,4 +1,6 @@
-﻿using Labora.Application.Interfaces;
+﻿using AutoMapper;
+using Labora.Application.Interfaces;
+using Labora.Application.Mappings;
 using Labora.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,6 +10,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        services.AddAutoMapper(typeof(MappingProfile));
+
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJobService, JobService>();
         services.AddScoped<IJobApplicationService, JobApplicationService>();
