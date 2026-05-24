@@ -1,4 +1,6 @@
-﻿using Labora.Application.DTOs.Jobs;
+﻿using FluentValidation;
+using FluentValidation.Results;
+using Labora.Application.DTOs.Jobs;
 using Labora.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,15 +14,22 @@ namespace Labora.API.Controllers;
 public class JobController : ControllerBase
 {
     private readonly IJobService _jobService;
+    private readonly IValidator<JobRequestDto> _jobValidator;
 
-    public JobController(IJobService jobService)
+    public JobController(IJobService jobService, IValidator<JobRequestDto> jobValidator)
     {
         _jobService = jobService;
+        _jobValidator = jobValidator;
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] JobRequestDto request)
     {
+        ValidationResult validationResult = await _jobValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
         Guid employerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         JobResponseDto response = await _jobService.CreateAsync(request, employerId);
         return Ok(response);
@@ -53,6 +62,11 @@ public class JobController : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] JobRequestDto request)
     {
+        ValidationResult validationResult = await _jobValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
         Guid employerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         JobResponseDto response = await _jobService.UpdateAsync(id, request, employerId);
         return Ok(response);
