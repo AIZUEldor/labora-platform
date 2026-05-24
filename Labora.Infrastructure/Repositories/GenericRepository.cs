@@ -32,17 +32,19 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
         return await _dbSet.Where(predicate).Where(e => !e.IsDeleted).ToListAsync();
     }
 
-    public async Task AddAsync(T entity)
+    public async Task<T> AddAsync(T entity)
     {
         await _dbSet.AddAsync(entity);
         await _context.SaveChangesAsync();
+        return entity;
     }
 
-    public async Task UpdateAsync(T entity)
+    public async Task<T> UpdateAsync(T entity)
     {
         entity.UpdatedAt = DateTime.UtcNow;
         _dbSet.Update(entity);
         await _context.SaveChangesAsync();
+        return entity;
     }
 
     public async Task DeleteAsync(Guid id)
