@@ -99,4 +99,47 @@ public class JobService : IJobService
 
         await _jobRepository.DeleteAsync(id);
     }
+
+    public async Task<IEnumerable<NearbyJobResponseDto>> GetNearbyJobsAsync(
+        double latitude,
+        double longitude,
+        double radiusKm)
+    {
+        IEnumerable<Job> jobs = await _jobRepository.GetNearbyJobsAsync(latitude, longitude, radiusKm);
+
+        return jobs.Select(job => new NearbyJobResponseDto
+        {
+            Id = job.Id,
+            Title = job.Title,
+            Description = job.Description,
+            Salary = job.Salary,
+            JobType = job.JobType,
+            Status = job.Status,
+            CategoryName = job.CategoryName,
+            Latitude = job.Latitude,
+            Longitude = job.Longitude,
+            City = job.City,
+            Country = job.Country,
+            EmployerId = job.EmployerId,
+            CreatedAt = job.CreatedAt,
+            DistanceKm = CalculateDistance(latitude, longitude, job.Latitude, job.Longitude)
+        });
+    }
+
+    private static double CalculateDistance(
+        double lat1, double lon1,
+        double lat2, double lon2)
+    {
+        double earthRadiusKm = 6371.0;
+        double dLat = (lat2 - lat1) * Math.PI / 180.0;
+        double dLon = (lon2 - lon1) * Math.PI / 180.0;
+
+        double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                   Math.Cos(lat1 * Math.PI / 180.0) * Math.Cos(lat2 * Math.PI / 180.0) *
+                   Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
+        return earthRadiusKm * c;
+    }
 }

@@ -100,4 +100,51 @@ public class JobRepository : GenericRepository<Job>, IJobRepository
 
         return (jobs, totalCount);
     }
+
+    public async Task<IEnumerable<Job>> GetNearbyJobsAsync(
+        double latitude,
+        double longitude,
+        double radiusKm)
+    {
+        // Haversine formula uchun taxminiy daraja/km nisbati
+        double latDegreeKm = 111.0;
+        double lonDegreeKm = 111.0 * Math.Cos(latitude * Math.PI / 180.0);
+
+        double latDelta = radiusKm / latDegreeKm;
+        double lonDelta = radiusKm / lonDegreeKm;
+
+        // Bounding box — tez filter
+        List<Job> candidateJobs = await _context.Jobs
+            .Where(j => !j.IsDeleted &&
+                j.Status == Domain.Enums.JobStatus.Active &&
+                j.Latitude >= latitude - latDelta &&
+                j.Latitude <= latitude + latDelta &&
+                j.Longitude >= longitude - lonDelta &&
+                j.Longitude <= longitude + lonDelta)
+            .ToListAsync();
+
+        // Aniq Haversine hisoblash
+        return candidateJobs
+            .Where(j => CalculateDistance(latitude, longitude, j.Latitude, j.Longitude) <= radiusKm)
+            .OrderBy(j => CalculateDistance(latitude, longitude, j.Latitude, j.Longitude))
+            .ToList();
+    }
+
+    private static double CalculateDistance(
+        double lat1, double lon1,
+        double lat2, double lon2)
+    {
+        double earthRadiusKm = 6371.0;
+
+        double dLat = (lat2 - lat1) * Math.PI / 180.0;
+        double dLon = (lon2 - lon1) * Math.PI / 180.0;
+
+        double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                   Math.Cos(lat1 * Math.PI / 180.0) * Math.Cos(lat2 * Math.PI / 180.0) *
+                   Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
+        return earthRadiusKm * c;
+    }
 }

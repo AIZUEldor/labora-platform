@@ -42,6 +42,17 @@ public class JobController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("nearby")]
+    public async Task<IActionResult> GetNearbyJobs(
+        [FromQuery] double latitude,
+        [FromQuery] double longitude,
+        [FromQuery] double radiusKm = 10)
+    {
+        IEnumerable<NearbyJobResponseDto> jobs = await _jobService.GetNearbyJobsAsync(
+            latitude, longitude, radiusKm);
+        return Ok(jobs);
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {

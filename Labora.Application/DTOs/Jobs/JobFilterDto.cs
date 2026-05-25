@@ -11,6 +11,12 @@ public class JobFilterDto
     public decimal? MinSalary { get; set; }
     public decimal? MaxSalary { get; set; }
     public Guid? CategoryId { get; set; }
+
+    // Joylashuv filtri
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+    public double? RadiusKm { get; set; } = 10;
+
     public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 10;
 }

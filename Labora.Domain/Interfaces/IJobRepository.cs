@@ -20,4 +20,8 @@ public interface IJobRepository : IGenericRepository<Job>
         Guid? categoryId,
         int pageNumber,
         int pageSize);
+    Task<IEnumerable<Job>> GetNearbyJobsAsync(
+        double latitude,
+        double longitude,
+        double radiusKm);
 }
