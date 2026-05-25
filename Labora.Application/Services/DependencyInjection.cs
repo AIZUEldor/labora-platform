@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using Labora.Application.Interfaces;
+﻿using Labora.Application.Interfaces;
 using Labora.Application.Mappings;
 using Labora.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<ITransactionService, TransactionService>();
+        services.AddScoped<IReviewService, ReviewService>();
         return services;
     }
 }

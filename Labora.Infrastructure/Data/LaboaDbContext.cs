@@ -14,6 +14,7 @@ public class LaboaDbContext : DbContext
     public DbSet<JobApplication> JobApplications { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<Review> Reviews { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +80,24 @@ public class LaboaDbContext : DbContext
             entity.HasOne(e => e.User)
                 .WithMany(u => u.Transactions)
                 .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Review
+        modelBuilder.Entity<Review>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Reviewer)
+                .WithMany()
+                .HasForeignKey(e => e.ReviewerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Reviewee)
+                .WithMany()
+                .HasForeignKey(e => e.RevieweeId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.JobApplication)
+                .WithMany()
+                .HasForeignKey(e => e.JobApplicationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

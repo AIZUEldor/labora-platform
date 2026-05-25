@@ -2,6 +2,7 @@
 using Labora.Application.DTOs.Applications;
 using Labora.Application.DTOs.Categories;
 using Labora.Application.DTOs.Jobs;
+using Labora.Application.DTOs.Reviews;
 using Labora.Application.DTOs.Transactions;
 using Labora.Application.DTOs.Users;
 using Labora.Domain.Entities;
@@ -33,5 +34,13 @@ public class MappingProfile : Profile
         // Transaction mappings
         CreateMap<Transaction, TransactionResponseDto>();
         CreateMap<TransactionRequestDto, Transaction>();
+
+        // Review mappings
+        CreateMap<Review, ReviewResponseDto>()
+            .ForMember(dest => dest.ReviewerFirstName,
+                opt => opt.MapFrom(src => src.Reviewer.FirstName))
+            .ForMember(dest => dest.ReviewerLastName,
+                opt => opt.MapFrom(src => src.Reviewer.LastName));
+        CreateMap<ReviewRequestDto, Review>();
     }
 }
