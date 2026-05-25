@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using FluentValidation.Results;
 using Labora.Application.DTOs.Auth;
 using Labora.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -26,40 +27,24 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
     {
-        FluentValidation.Results.ValidationResult validationResult =
-            await _registerValidator.ValidateAsync(request);
+        ValidationResult validationResult = await _registerValidator.ValidateAsync(request);
 
         if (!validationResult.IsValid)
             return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
 
-        try
-        {
-            AuthResponseDto response = await _authService.RegisterAsync(request);
-            return Ok(response);
-        }
-        catch (InvalidOperationException invalidOperationException)
-        {
-            return BadRequest(new { message = invalidOperationException.Message });
-        }
+        AuthResponseDto response = await _authService.RegisterAsync(request);
+        return Ok(response);
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
     {
-        FluentValidation.Results.ValidationResult validationResult =
-            await _loginValidator.ValidateAsync(request);
+        ValidationResult validationResult = await _loginValidator.ValidateAsync(request);
 
         if (!validationResult.IsValid)
             return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
 
-        try
-        {
-            AuthResponseDto response = await _authService.LoginAsync(request);
-            return Ok(response);
-        }
-        catch (InvalidOperationException invalidOperationException)
-        {
-            return BadRequest(new { message = invalidOperationException.Message });
-        }
+        AuthResponseDto response = await _authService.LoginAsync(request);
+        return Ok(response);
     }
 }
