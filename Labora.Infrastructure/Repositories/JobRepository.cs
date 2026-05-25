@@ -55,4 +55,49 @@ public class JobRepository : GenericRepository<Job>, IJobRepository
             .OrderByDescending(j => j.CreatedAt)
             .ToListAsync();
     }
+
+    public async Task<(IEnumerable<Job> Jobs, int TotalCount)> GetFilteredJobsAsync(
+        string? keyword,
+        string? city,
+        string? country,
+        JobType? jobType,
+        decimal? minSalary,
+        decimal? maxSalary,
+        Guid? categoryId,
+        int pageNumber,
+        int pageSize)
+    {
+        IQueryable<Job> query = _context.Jobs.Where(j => !j.IsDeleted);
+
+        if (!string.IsNullOrEmpty(keyword))
+            query = query.Where(j => j.Title.Contains(keyword) || j.Description.Contains(keyword));
+
+        if (!string.IsNullOrEmpty(city))
+            query = query.Where(j => j.City == city);
+
+        if (!string.IsNullOrEmpty(country))
+            query = query.Where(j => j.Country == country);
+
+        if (jobType.HasValue)
+            query = query.Where(j => j.JobType == jobType.Value);
+
+        if (minSalary.HasValue)
+            query = query.Where(j => j.Salary >= minSalary.Value);
+
+        if (maxSalary.HasValue)
+            query = query.Where(j => j.Salary <= maxSalary.Value);
+
+        if (categoryId.HasValue)
+            query = query.Where(j => j.CategoryId == categoryId.Value);
+
+        int totalCount = await query.CountAsync();
+
+        IEnumerable<Job> jobs = await query
+            .OrderByDescending(j => j.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (jobs, totalCount);
+    }
 }

@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using FluentValidation.Results;
+using Labora.Application.Common;
 using Labora.Application.DTOs.Jobs;
 using Labora.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -35,10 +36,10 @@ public class JobController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] JobFilterDto filter)
     {
-        IEnumerable<JobResponseDto> jobs = await _jobService.GetAllAsync();
-        return Ok(jobs);
+        PagedResult<JobResponseDto> result = await _jobService.GetAllAsync(filter);
+        return Ok(result);
     }
 
     [HttpGet("{id:guid}")]

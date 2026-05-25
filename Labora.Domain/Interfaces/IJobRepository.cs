@@ -10,4 +10,14 @@ public interface IJobRepository : IGenericRepository<Job>
     Task<IEnumerable<Job>> GetJobsByCategoryAsync(Guid categoryId);
     Task<IEnumerable<Job>> GetJobsByLocationAsync(string city, string country);
     Task<IEnumerable<Job>> SearchJobsAsync(string keyword);
+    Task<(IEnumerable<Job> Jobs, int TotalCount)> GetFilteredJobsAsync(
+        string? keyword,
+        string? city,
+        string? country,
+        JobType? jobType,
+        decimal? minSalary,
+        decimal? maxSalary,
+        Guid? categoryId,
+        int pageNumber,
+        int pageSize);
 }

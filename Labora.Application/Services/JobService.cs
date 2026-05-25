@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Labora.Application.Common;
 using Labora.Application.DTOs.Jobs;
 using Labora.Application.Interfaces;
 using Labora.Domain.Entities;
@@ -39,10 +40,26 @@ public class JobService : IJobService
         return _mapper.Map<JobResponseDto>(job);
     }
 
-    public async Task<IEnumerable<JobResponseDto>> GetAllAsync()
+    public async Task<PagedResult<JobResponseDto>> GetAllAsync(JobFilterDto filter)
     {
-        IEnumerable<Job> jobs = await _jobRepository.GetAllAsync();
-        return _mapper.Map<IEnumerable<JobResponseDto>>(jobs);
+        (IEnumerable<Job> jobs, int totalCount) = await _jobRepository.GetFilteredJobsAsync(
+            filter.Keyword,
+            filter.City,
+            filter.Country,
+            filter.JobType,
+            filter.MinSalary,
+            filter.MaxSalary,
+            filter.CategoryId,
+            filter.PageNumber,
+            filter.PageSize);
+
+        return new PagedResult<JobResponseDto>
+        {
+            Items = _mapper.Map<IEnumerable<JobResponseDto>>(jobs),
+            TotalCount = totalCount,
+            PageNumber = filter.PageNumber,
+            PageSize = filter.PageSize
+        };
     }
 
     public async Task<IEnumerable<JobResponseDto>> GetByEmployerIdAsync(Guid employerId)
