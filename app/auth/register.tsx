@@ -1,0 +1,422 @@
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import { authService } from '../../services/authService';
+import { useAuthStore, AuthState } from '../../store/authStore';
+import { Colors } from '../../constants/colors';
+import { FontSize, FontWeight } from '../../constants/typography';
+import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
+import { UserRole } from '../../types';
+
+export default function RegisterScreen() {
+  const [firstName, setFirstName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
+  const [age, setAge] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [role, setRole] = useState<UserRole>(UserRole.Worker);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+
+  const login = useAuthStore((state: AuthState) => state.login);
+
+  const handleRegister = async () => {
+    if (!firstName.trim() || !lastName.trim() || !age.trim() || !email.trim() || !password.trim() || !phoneNumber.trim()) {
+      Alert.alert('Xato', 'Barcha maydonlarni to\'ldiring');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await authService.register({
+  firstName: firstName.trim(),
+  lastName: lastName.trim(),
+  age: parseInt(age),
+  email: email.trim(),
+  password,
+  phoneNumber: phoneNumber.trim(),
+  role,
+});
+      await login(response.token, response.role);
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      const message = JSON.stringify(error.response?.data) || error.message;
+Alert.alert('Xato', message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      {/* Top Gradient */}
+      <LinearGradient
+        colors={['#15803D', '#16A34A', '#22C55E']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientHeader}
+      >
+        <View style={styles.logoContainer}>
+          <Text style={styles.logoText}>L</Text>
+        </View>
+        <Text style={styles.appName}>Labora</Text>
+        <Text style={styles.appTagline}>Hisob yarating va ishni boshlang</Text>
+      </LinearGradient>
+
+      {/* White Card */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.card}>
+          <Text style={styles.title}>Ro'yxatdan o'ting</Text>
+          <Text style={styles.subtitle}>Ma'lumotlaringizni kiriting</Text>
+
+          {/* Role Selector */}
+          <View style={styles.roleContainer}>
+            <TouchableOpacity
+              style={[styles.roleButton, role === UserRole.Worker && styles.roleButtonActive]}
+              onPress={() => setRole(UserRole.Worker)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.roleIcon}>👷</Text>
+              <Text style={[styles.roleText, role === UserRole.Worker && styles.roleTextActive]}>
+                Ishchi
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.roleButton, role === UserRole.Employer && styles.roleButtonActive]}
+              onPress={() => setRole(UserRole.Employer)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.roleIcon}>🏢</Text>
+              <Text style={[styles.roleText, role === UserRole.Employer && styles.roleTextActive]}>
+                Ish beruvchi
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* First Name & Last Name */}
+          <View style={styles.row}>
+            <View style={[styles.inputWrapper, { flex: 1 }]}>
+              <Text style={styles.inputLabel}>Ism</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ismingiz"
+                  placeholderTextColor={Colors.textTertiary}
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  autoCapitalize="words"
+                />
+              </View>
+            </View>
+            <View style={[styles.inputWrapper, { flex: 1 }]}>
+              <Text style={styles.inputLabel}>Familiya</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Familiyangiz"
+                  placeholderTextColor={Colors.textTertiary}
+                  value={lastName}
+                  onChangeText={setLastName}
+                  autoCapitalize="words"
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Age */}
+<View style={styles.inputWrapper}>
+  <Text style={styles.inputLabel}>Yosh</Text>
+  <View style={styles.inputContainer}>
+    <Text style={styles.inputIcon}>🎂</Text>
+    <TextInput
+      style={styles.input}
+      placeholder="Yoshingiz (16-100)"
+      placeholderTextColor={Colors.textTertiary}
+      value={age}
+      onChangeText={setAge}
+      keyboardType="number-pad"
+    />
+  </View>
+</View>
+
+          {/* Email */}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Email</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputIcon}>✉️</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="email@example.com"
+                placeholderTextColor={Colors.textTertiary}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+          </View>
+
+          {/* Phone */}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Telefon raqam</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputIcon}>📱</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="+998 90 123 45 67"
+                placeholderTextColor={Colors.textTertiary}
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
+              />
+            </View>
+          </View>
+
+          {/* Password */}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Parol</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputIcon}>🔒</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Kamida 6 ta belgi"
+                placeholderTextColor={Colors.textTertiary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+              >
+                <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Register Button */}
+          <TouchableOpacity
+            onPress={handleRegister}
+            disabled={isLoading}
+            activeOpacity={0.85}
+            style={styles.registerButtonWrapper}
+          >
+            <LinearGradient
+              colors={['#15803D', '#16A34A']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[styles.registerButton, isLoading && styles.buttonDisabled]}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={Colors.white} size="small" />
+              ) : (
+                <Text style={styles.registerButtonText}>Ro'yxatdan o'tish</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Hisobingiz bormi? </Text>
+            <TouchableOpacity onPress={() => router.push('/auth/login')}>
+              <Text style={styles.loginText}>Kirish</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  gradientHeader: {
+    paddingTop: 56,
+    paddingBottom: 40,
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  logoContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: BorderRadius.xl,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  logoText: {
+    fontSize: 30,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  },
+  appName: {
+    fontSize: FontSize.xxl,
+    fontWeight: FontWeight.extraBold,
+    color: Colors.white,
+    letterSpacing: 1,
+  },
+  appTagline: {
+    fontSize: FontSize.sm,
+    color: 'rgba(255,255,255,0.85)',
+    textAlign: 'center',
+    paddingHorizontal: Spacing.xxxl,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: Spacing.xxxl,
+  },
+  card: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    marginTop: -24,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xxl,
+    paddingBottom: Spacing.xl,
+    ...Shadow.lg,
+  },
+  title: {
+    fontSize: FontSize.xxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  subtitle: {
+    fontSize: FontSize.md,
+    color: '#6B7280',
+    marginBottom: Spacing.lg,
+  },
+  roleContainer: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  roleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  roleButtonActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  roleIcon: {
+    fontSize: 18,
+  },
+  roleText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semiBold,
+    color: '#6B7280',
+  },
+  roleTextActive: {
+    color: Colors.primary,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  inputWrapper: {
+    gap: Spacing.xs,
+    marginBottom: Spacing.md,
+  },
+  inputLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semiBold,
+    color: Colors.textPrimary,
+    marginLeft: Spacing.xs,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.lg,
+    height: 54,
+  },
+  inputIcon: {
+    fontSize: 16,
+    marginRight: Spacing.sm,
+  },
+  input: {
+    flex: 1,
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+  },
+  eyeButton: {
+    padding: Spacing.xs,
+  },
+  eyeIcon: {
+    fontSize: 16,
+  },
+  registerButtonWrapper: {
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+    marginTop: Spacing.sm,
+    ...Shadow.md,
+  },
+  registerButton: {
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.lg,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  registerButtonText: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+    letterSpacing: 0.5,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Spacing.xl,
+  },
+  footerText: {
+    fontSize: FontSize.md,
+    color: '#6B7280',
+  },
+  loginText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.primary,
+  },
+});
