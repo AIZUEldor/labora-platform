@@ -25,4 +25,11 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         return await _context.Users
             .AnyAsync(u => u.PhoneNumber == phoneNumber && !u.IsDeleted);
     }
+
+    public async Task<IEnumerable<User>> GetWorkerUsersAsync()
+    {
+        return await _context.Users
+            .Where(u => u.Role == Labora.Domain.Enums.UserRole.Worker && !u.IsDeleted)
+            .ToListAsync();
+    }
 }

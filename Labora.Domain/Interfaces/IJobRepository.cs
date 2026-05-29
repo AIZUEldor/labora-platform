@@ -24,4 +24,9 @@ public interface IJobRepository : IGenericRepository<Job>
         double latitude,
         double longitude,
         double radiusKm);
+
+    Task<IEnumerable<Job>> GetRecommendedJobsAsync(
+    double? latitude,
+    double? longitude,
+    IEnumerable<UserPreference> preferences);
 }

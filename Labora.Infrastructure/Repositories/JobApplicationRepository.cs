@@ -22,18 +22,12 @@ public class JobApplicationRepository : GenericRepository<JobApplication>, IJobA
             .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
     }
 
+
     public async Task<IEnumerable<JobApplication>> GetApplicationsByJobIdAsync(Guid jobId)
     {
         return await _context.JobApplications
+            .Include(a => a.Worker)
             .Where(a => a.JobId == jobId && !a.IsDeleted)
-            .OrderByDescending(a => a.CreatedAt)
-            .ToListAsync();
-    }
-
-    public async Task<IEnumerable<JobApplication>> GetApplicationsByWorkerIdAsync(Guid workerId)
-    {
-        return await _context.JobApplications
-            .Where(a => a.WorkerId == workerId && !a.IsDeleted)
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync();
     }
@@ -50,6 +44,15 @@ public class JobApplicationRepository : GenericRepository<JobApplication>, IJobA
             .AnyAsync(a => a.JobId == jobId && a.WorkerId == workerId && !a.IsDeleted);
     }
 
+    public async Task<IEnumerable<JobApplication>> GetApplicationsByWorkerIdAsync(Guid workerId)
+    {
+        return await _context.JobApplications
+            .Include(a => a.Job)
+            .Where(a => a.WorkerId == workerId && !a.IsDeleted)
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task UpdateStatusAsync(Guid applicationId, ApplicationStatus status)
     {
         JobApplication? application = await _context.JobApplications
@@ -62,4 +65,6 @@ public class JobApplicationRepository : GenericRepository<JobApplication>, IJobA
             await _context.SaveChangesAsync();
         }
     }
+
+
 }

@@ -48,6 +48,25 @@ builder.Services.AddValidatorsFromAssemblyContaining<Labora.Application.Validato
 // Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Push Notifications
+builder.Services.AddHttpClient("ExpoPush", client =>
+{
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate");
+});
+builder.Services.AddScoped<Labora.Domain.Interfaces.IPushTokenRepository,
+    Labora.Infrastructure.Repositories.PushTokenRepository>();
+builder.Services.AddScoped<Labora.Application.Interfaces.IPushNotificationService,
+    Labora.Application.Services.PushNotificationService>();
+
+// Notification
+builder.Services.AddScoped<Labora.Domain.Interfaces.INotificationRepository,
+    Labora.Infrastructure.Repositories.NotificationRepository>();
+builder.Services.AddScoped<Labora.Domain.Interfaces.IUserPreferenceRepository,
+    Labora.Infrastructure.Repositories.UserPreferenceRepository>();
+builder.Services.AddScoped<Labora.Application.Interfaces.INotificationService,
+    Labora.Application.Services.NotificationService>();
+
 // JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -74,6 +93,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<Labora.API.Middleware.ExceptionHandlingMiddleware>();
+app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

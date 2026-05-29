@@ -33,4 +33,20 @@ public class UserController : ControllerBase
         UserProfileResponseDto response = await _userService.UpdateProfileAsync(userId, request);
         return Ok(response);
     }
+
+    [HttpPost("upload-cv")]
+    public async Task<IActionResult> UploadCv(IFormFile file)
+    {
+        Guid userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        string url = await _userService.UploadCvAsync(userId, file);
+        return Ok(new { url });
+    }
+
+    [HttpPost("upload-avatar")]
+    public async Task<IActionResult> UploadAvatar(IFormFile file)
+    {
+        Guid userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        string url = await _userService.UploadAvatarAsync(userId, file);
+        return Ok(new { url });
+    }
 }

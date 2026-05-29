@@ -18,9 +18,13 @@ public class User : BaseEntity
     public string? Country { get; set; }
     public decimal Balance { get; set; } = 0;
     public bool IsVerified { get; set; } = false;
+    public string? CvUrl { get; set; }
 
     // Navigation properties
     public ICollection<Job> Jobs { get; set; } = new List<Job>();
     public ICollection<JobApplication> JobApplications { get; set; } = new List<JobApplication>();
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+    public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+    public ICollection<UserPreference> Preferences { get; set; } = new List<UserPreference>();
+    public ICollection<PushToken> PushTokens { get; set; } = new List<PushToken>();
 }

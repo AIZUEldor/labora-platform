@@ -130,6 +130,52 @@ public class JobRepository : GenericRepository<Job>, IJobRepository
             .ToList();
     }
 
+    public async Task<IEnumerable<Job>> GetRecommendedJobsAsync(
+    double? latitude,
+    double? longitude,
+    IEnumerable<UserPreference> preferences)
+    {
+        IQueryable<Job> query = _context.Jobs
+            .Where(j => !j.IsDeleted && j.Status == JobStatus.Active);
+
+        // Kategoriya va JobType filtri
+        List<Guid> categoryIds = preferences
+            .Where(p => p.PreferredCategoryId.HasValue)
+            .Select(p => p.PreferredCategoryId!.Value)
+            .ToList();
+
+        JobType? preferredJobType = preferences
+            .FirstOrDefault(p => p.PreferredJobType.HasValue)?.PreferredJobType;
+
+        double maxDistance = preferences
+            .FirstOrDefault(p => p.MaxDistanceKm.HasValue)?.MaxDistanceKm ?? 20.0;
+
+        if (categoryIds.Any())
+            query = query.Where(j => j.CategoryId.HasValue && categoryIds.Contains(j.CategoryId.Value));
+
+        if (preferredJobType.HasValue)
+            query = query.Where(j => j.JobType == preferredJobType.Value);
+
+        List<Job> jobs = await query
+            .OrderByDescending(j => j.CreatedAt)
+            .ToListAsync();
+
+        // Lokatsiya filtri
+        if (latitude.HasValue && longitude.HasValue)
+        {
+            jobs = jobs
+                .Where(j => CalculateDistance(
+                    latitude.Value, longitude.Value,
+                    j.Latitude, j.Longitude) <= maxDistance)
+                .OrderBy(j => CalculateDistance(
+                    latitude.Value, longitude.Value,
+                    j.Latitude, j.Longitude))
+                .ToList();
+        }
+
+        return jobs;
+    }
+
     private static double CalculateDistance(
         double lat1, double lon1,
         double lat2, double lon2)

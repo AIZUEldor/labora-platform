@@ -15,6 +15,9 @@ public class LaboaDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<Review> Reviews { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<UserPreference> UserPreferences { get; set; }
+    public DbSet<PushToken> PushTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -98,6 +101,44 @@ public class LaboaDbContext : DbContext
             entity.HasOne(e => e.JobApplication)
                 .WithMany()
                 .HasForeignKey(e => e.JobApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Notification
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Message).IsRequired().HasMaxLength(500);
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // UserPreference
+        modelBuilder.Entity<UserPreference>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.Preferences)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.PreferredCategory)
+                .WithMany()
+                .HasForeignKey(e => e.PreferredCategoryId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // PushToken
+        modelBuilder.Entity<PushToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Token).IsRequired().HasMaxLength(500);
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.PushTokens)
+                .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

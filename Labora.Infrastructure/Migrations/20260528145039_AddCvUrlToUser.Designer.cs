@@ -3,6 +3,7 @@ using System;
 using Labora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Labora.Infrastructure.Migrations
 {
     [DbContext(typeof(LaboaDbContext))]
-    partial class LaboaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260528145039_AddCvUrlToUser")]
+    partial class AddCvUrlToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -173,86 +176,6 @@ namespace Labora.Infrastructure.Migrations
                     b.HasIndex("WorkerId");
 
                     b.ToTable("JobApplications");
-                });
-
-            modelBuilder.Entity("Labora.Domain.Entities.Notification", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<Guid?>("ReferenceId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Notifications");
-                });
-
-            modelBuilder.Entity("Labora.Domain.Entities.PushToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DeviceType")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Token")
-                        .IsUnique();
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("PushTokens");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.Review", b =>
@@ -427,42 +350,6 @@ namespace Labora.Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("Labora.Domain.Entities.UserPreference", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<double?>("MaxDistanceKm")
-                        .HasColumnType("double precision");
-
-                    b.Property<Guid?>("PreferredCategoryId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int?>("PreferredJobType")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PreferredCategoryId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserPreferences");
-                });
-
             modelBuilder.Entity("Labora.Domain.Entities.Category", b =>
                 {
                     b.HasOne("Labora.Domain.Entities.Category", "ParentCategory")
@@ -510,28 +397,6 @@ namespace Labora.Infrastructure.Migrations
                     b.Navigation("Worker");
                 });
 
-            modelBuilder.Entity("Labora.Domain.Entities.Notification", b =>
-                {
-                    b.HasOne("Labora.Domain.Entities.User", "User")
-                        .WithMany("Notifications")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Labora.Domain.Entities.PushToken", b =>
-                {
-                    b.HasOne("Labora.Domain.Entities.User", "User")
-                        .WithMany("PushTokens")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Labora.Domain.Entities.Review", b =>
                 {
                     b.HasOne("Labora.Domain.Entities.JobApplication", "JobApplication")
@@ -570,24 +435,6 @@ namespace Labora.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Labora.Domain.Entities.UserPreference", b =>
-                {
-                    b.HasOne("Labora.Domain.Entities.Category", "PreferredCategory")
-                        .WithMany()
-                        .HasForeignKey("PreferredCategoryId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Labora.Domain.Entities.User", "User")
-                        .WithMany("Preferences")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PreferredCategory");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Labora.Domain.Entities.Category", b =>
                 {
                     b.Navigation("Jobs");
@@ -605,12 +452,6 @@ namespace Labora.Infrastructure.Migrations
                     b.Navigation("JobApplications");
 
                     b.Navigation("Jobs");
-
-                    b.Navigation("Notifications");
-
-                    b.Navigation("Preferences");
-
-                    b.Navigation("PushTokens");
 
                     b.Navigation("Transactions");
                 });
