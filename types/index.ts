@@ -1,6 +1,6 @@
 // ==================== AUTH ====================
 export interface LoginRequest {
-  email: string;
+  phoneNumber: string;
   password: string;
 }
 
@@ -8,9 +8,8 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   age: number;
-  email: string;
-  password: string;
   phoneNumber: string;
+  password: string;
   role: UserRole;
 }
 

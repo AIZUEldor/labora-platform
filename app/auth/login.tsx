@@ -20,23 +20,23 @@ import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState<string>('');
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [emailFocused, setEmailFocused] = useState<boolean>(false);
+  const [phoneFocused, setPhoneFocused] = useState<boolean>(false);
   const [passwordFocused, setPasswordFocused] = useState<boolean>(false);
 
   const login = useAuthStore((state: AuthState) => state.login);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Xato', 'Email va parolni kiriting');
+    if (!phoneNumber.trim() || !password.trim()) {
+      Alert.alert('Xato', 'Telefon raqam va parolni kiriting');
       return;
     }
     setIsLoading(true);
     try {
-      const response = await authService.login({ email: email.trim(), password });
+      const response = await authService.login({ phoneNumber: phoneNumber.trim(), password });
       await login(response.token, response.role);
       router.replace('/(tabs)');
     } catch (error: any) {
@@ -52,7 +52,6 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Top Gradient Section */}
       <LinearGradient
         colors={['#15803D', '#16A34A', '#22C55E']}
         start={{ x: 0, y: 0 }}
@@ -66,37 +65,36 @@ export default function LoginScreen() {
         <Text style={styles.appTagline}>Ishingizni toping, hayotingizni o'zgartiring</Text>
       </LinearGradient>
 
-      {/* White Card Section */}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <Text style={styles.title}>Xush kelibsiz! 👋</Text>
+          <Text style={styles.title}>Xush kelibsiz!</Text>
           <Text style={styles.subtitle}>Hisobingizga kiring</Text>
 
-          {/* Email */}
+          {/* Telefon raqam */}
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Email</Text>
-            <View style={[styles.inputContainer, emailFocused && styles.inputFocused]}>
-              <Text style={styles.inputIcon}>✉️</Text>
+            <Text style={styles.inputLabel}>Telefon raqam</Text>
+            <View style={[styles.inputContainer, phoneFocused && styles.inputFocused]}>
+              <Text style={styles.inputIcon}>📱</Text>
               <TextInput
                 style={styles.input}
-                placeholder="email@example.com"
+                placeholder="+998 90 123 45 67"
                 placeholderTextColor={Colors.textTertiary}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
                 autoCapitalize="none"
                 autoCorrect={false}
-                onFocus={() => setEmailFocused(true)}
-                onBlur={() => setEmailFocused(false)}
+                onFocus={() => setPhoneFocused(true)}
+                onBlur={() => setPhoneFocused(false)}
               />
             </View>
           </View>
 
-          {/* Password */}
+          {/* Parol */}
           <View style={styles.inputWrapper}>
             <Text style={styles.inputLabel}>Parol</Text>
             <View style={[styles.inputContainer, passwordFocused && styles.inputFocused]}>

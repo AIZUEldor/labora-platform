@@ -24,7 +24,6 @@ export default function RegisterScreen() {
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
   const [age, setAge] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [role, setRole] = useState<UserRole>(UserRole.Worker);
@@ -34,26 +33,33 @@ export default function RegisterScreen() {
   const login = useAuthStore((state: AuthState) => state.login);
 
   const handleRegister = async () => {
-    if (!firstName.trim() || !lastName.trim() || !age.trim() || !email.trim() || !password.trim() || !phoneNumber.trim()) {
-      Alert.alert('Xato', 'Barcha maydonlarni to\'ldiring');
+    if (!firstName.trim() || !lastName.trim() || !age.trim() || !password.trim() || !phoneNumber.trim()) {
+      Alert.alert('Xato', "Barcha maydonlarni to'ldiring");
+      return;
+    }
+    const ageNum = parseInt(age);
+    if (isNaN(ageNum) || ageNum < 16 || ageNum > 100) {
+      Alert.alert('Xato', 'Yosh 16 dan 100 gacha bo\'lishi kerak');
       return;
     }
     setIsLoading(true);
     try {
       const response = await authService.register({
-  firstName: firstName.trim(),
-  lastName: lastName.trim(),
-  age: parseInt(age),
-  email: email.trim(),
-  password,
-  phoneNumber: phoneNumber.trim(),
-  role,
-});
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        age: ageNum,
+        phoneNumber: phoneNumber.trim(),
+        password,
+        role,
+      });
       await login(response.token, response.role);
       router.replace('/(tabs)');
     } catch (error: any) {
-      const message = JSON.stringify(error.response?.data) || error.message;
-Alert.alert('Xato', message);
+      const data = error.response?.data;
+      const message = Array.isArray(data)
+        ? data.join('\n')
+        : data?.message ?? error.message ?? 'Xatolik yuz berdi';
+      Alert.alert('Xato', message);
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +70,6 @@ Alert.alert('Xato', message);
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Top Gradient */}
       <LinearGradient
         colors={['#15803D', '#16A34A', '#22C55E']}
         start={{ x: 0, y: 0 }}
@@ -78,7 +83,6 @@ Alert.alert('Xato', message);
         <Text style={styles.appTagline}>Hisob yarating va ishni boshlang</Text>
       </LinearGradient>
 
-      {/* White Card */}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -112,7 +116,7 @@ Alert.alert('Xato', message);
             </TouchableOpacity>
           </View>
 
-          {/* First Name & Last Name */}
+          {/* Ism va Familiya */}
           <View style={styles.row}>
             <View style={[styles.inputWrapper, { flex: 1 }]}>
               <Text style={styles.inputLabel}>Ism</Text>
@@ -142,41 +146,24 @@ Alert.alert('Xato', message);
             </View>
           </View>
 
-          {/* Age */}
-<View style={styles.inputWrapper}>
-  <Text style={styles.inputLabel}>Yosh</Text>
-  <View style={styles.inputContainer}>
-    <Text style={styles.inputIcon}>🎂</Text>
-    <TextInput
-      style={styles.input}
-      placeholder="Yoshingiz (16-100)"
-      placeholderTextColor={Colors.textTertiary}
-      value={age}
-      onChangeText={setAge}
-      keyboardType="number-pad"
-    />
-  </View>
-</View>
-
-          {/* Email */}
+          {/* Yosh */}
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Email</Text>
+            <Text style={styles.inputLabel}>Yosh</Text>
             <View style={styles.inputContainer}>
-              <Text style={styles.inputIcon}>✉️</Text>
+              <Text style={styles.inputIcon}>🎂</Text>
               <TextInput
                 style={styles.input}
-                placeholder="email@example.com"
+                placeholder="Yoshingiz (16-100)"
                 placeholderTextColor={Colors.textTertiary}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
+                value={age}
+                onChangeText={setAge}
+                keyboardType="number-pad"
+                maxLength={3}
               />
             </View>
           </View>
 
-          {/* Phone */}
+          {/* Telefon raqam */}
           <View style={styles.inputWrapper}>
             <Text style={styles.inputLabel}>Telefon raqam</Text>
             <View style={styles.inputContainer}>
@@ -192,7 +179,7 @@ Alert.alert('Xato', message);
             </View>
           </View>
 
-          {/* Password */}
+          {/* Parol */}
           <View style={styles.inputWrapper}>
             <Text style={styles.inputLabel}>Parol</Text>
             <View style={styles.inputContainer}>
