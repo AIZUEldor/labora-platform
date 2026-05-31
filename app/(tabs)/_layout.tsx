@@ -4,10 +4,12 @@ import { useThemeStore } from '../../store/themeStore';
 import { UserRole } from '../../types';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabsLayout() {
   const role       = useAuthStore((state: AuthState) => state.role);
   const { colors } = useThemeStore();
+  const insets     = useSafeAreaInsets();
 
   const isEmployer = Number(role) === UserRole.Employer;
 
@@ -15,13 +17,16 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: [styles.tabBar, { backgroundColor: colors.surface }],
+        tabBarStyle: [styles.tabBar, {
+          backgroundColor: colors.surface,
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom + 8,
+        }],
         tabBarShowLabel: false,
         tabBarActiveTintColor: '#16A34A',
         tabBarInactiveTintColor: '#9CA3AF',
       }}
     >
-      {/* Bosh sahifa */}
       <Tabs.Screen
         name="index"
         options={{
@@ -37,7 +42,6 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* Arizalar — Worker uchun, Employer da yashirin */}
       <Tabs.Screen
         name="applications"
         options={{
@@ -55,7 +59,6 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* E'lon qilish — faqat Employer */}
       <Tabs.Screen
         name="create-job"
         options={{
@@ -74,7 +77,6 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* Profil */}
       <Tabs.Screen
         name="profile"
         options={{
@@ -98,8 +100,6 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     borderTopWidth: 0,
-    height: 64,
-    paddingBottom: 8,
     paddingTop: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
@@ -108,4 +108,3 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
 });
-
