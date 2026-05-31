@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Labora",
+    "slug": "labora-mobile",
+    "version": "1.0.0",
+    "scheme": "labora",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#15803d"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aizue.labora"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#15803d"
+      },
+      "package": "com.aizue.labora",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#15803d"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ff70999b-baec-4479-8c2b-b9f21fae78d6"
+      }
+    },
+    "owner": "aizue"
+  }
+}
