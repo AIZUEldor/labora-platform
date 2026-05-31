@@ -66,5 +66,13 @@ public class JobApplicationRepository : GenericRepository<JobApplication>, IJobA
         }
     }
 
+    public async Task<JobApplication?> GetByIdWithWorkerAsync(Guid id)
+    {
+        return await _context.JobApplications
+            .Include(a => a.Worker)
+            .Include(a => a.Job)
+            .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
+    }
+
 
 }

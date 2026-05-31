@@ -1,4 +1,4 @@
-﻿using Labora.Domain.Entities;
+﻿ using Labora.Domain.Entities;
 using Labora.Domain.Interfaces;
 
 namespace Labora.Domain.Interfaces;

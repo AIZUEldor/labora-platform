@@ -10,4 +10,5 @@ public interface IJobApplicationRepository : IGenericRepository<JobApplication>
     Task<JobApplication?> GetApplicationByJobAndWorkerAsync(Guid jobId, Guid workerId);
     Task<bool> HasWorkerAppliedAsync(Guid jobId, Guid workerId);
     Task UpdateStatusAsync(Guid applicationId, ApplicationStatus status);
+    Task<JobApplication?> GetByIdWithWorkerAsync(Guid id);
 }

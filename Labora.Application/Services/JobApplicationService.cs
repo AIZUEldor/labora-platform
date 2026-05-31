@@ -38,7 +38,11 @@ public class JobApplicationService : IJobApplicationService
         jobApplication.Status = ApplicationStatus.Pending;
 
         JobApplication createdApplication = await _jobApplicationRepository.AddAsync(jobApplication);
-        return _mapper.Map<ApplicationResponseDto>(createdApplication);
+
+        // Worker ni qayta yuklash
+        JobApplication? withWorker = await _jobApplicationRepository.GetByIdWithWorkerAsync(createdApplication.Id);
+
+        return _mapper.Map<ApplicationResponseDto>(withWorker ?? createdApplication);
     }
 
     public async Task<IEnumerable<ApplicationResponseDto>> GetByWorkerIdAsync(Guid workerId)

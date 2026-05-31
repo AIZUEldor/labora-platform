@@ -16,17 +16,16 @@ public class MappingProfile : Profile
         // Job mappings
         CreateMap<Job, JobResponseDto>();
         CreateMap<JobRequestDto, Job>();
-
-        // JobApplication mappings
+        CreateMap<ApplicationRequestDto, JobApplication>();
         CreateMap<JobApplication, ApplicationResponseDto>()
-    .ForMember(dest => dest.WorkerName,
-        opt => opt.MapFrom(src => src.Worker != null
-            ? $"{src.Worker.FirstName} {src.Worker.LastName}"
-            : null))
-    .ForMember(dest => dest.WorkerCvUrl,
-        opt => opt.MapFrom(src => src.Worker != null
-            ? src.Worker.CvUrl
-            : null));
+     .ForMember(dest => dest.WorkerName,
+         opt => opt.MapFrom(src => src.Worker != null
+             ? $"{src.Worker.FirstName} {src.Worker.LastName}"
+             : null))
+     .ForMember(dest => dest.WorkerCvUrl,
+         opt => opt.MapFrom(src => src.Worker != null
+             ? src.Worker.CvUrl
+             : null));
 
         // User mappings
         CreateMap<User, UserProfileResponseDto>();
