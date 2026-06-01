@@ -18,6 +18,8 @@ import { router } from 'expo-router';
 import { jobService } from '../../services/jobService';
 import { categoryService } from '../../services/categoryService';
 import { Job, Category } from '../../types';
+import { useAuthStore, AuthState } from '../../store/authStore';
+
 
 function CategoryIcon({ name, color }: { name: string; color: string }) {
   const props = { size: 28, color };
@@ -41,6 +43,7 @@ function CategoryIcon({ name, color }: { name: string; color: string }) {
 export default function HomeScreen() {
   const { colors, isDark, toggleTheme } = useThemeStore();
 
+  const firstName = useAuthStore((state: AuthState) => state.firstName);
   const [jobs,        setJobs]        = useState<Job[]>([]);
   const [categories,  setCategories]  = useState<Category[]>([]);
   const [loading,     setLoading]     = useState(true);
@@ -115,7 +118,7 @@ export default function HomeScreen() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, ...Shadow.sm }]}>
         <View>
-          <Text style={[styles.greeting,   { color: colors.textSecondary }]}>Salom! 👋</Text>
+          <Text style={[styles.greeting, { color: colors.textSecondary }]}>Salom, {firstName || 'Foydalanuvchi'}!</Text>
           <Text style={[styles.headerTitle, { color: colors.textPrimary   }]}>Ishlarni toping</Text>
         </View>
         <View style={styles.headerRight}>

@@ -52,7 +52,7 @@ export default function RegisterScreen() {
         password,
         role,
       });
-      await login(response.token, response.role);
+      await login(response.token, response.role, response.firstName, response.lastName);
       router.replace('/(tabs)');
     } catch (error: any) {
       const data = error.response?.data;

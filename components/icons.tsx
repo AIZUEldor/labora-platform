@@ -374,3 +374,21 @@ export function PhoneIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: Icon
     </Svg>
   );
 }
+
+export function EyeIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth={strokeWidth} />
+    </Svg>
+  );
+}
+
+export function EyeOffIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M17.94 17.94C16.23 19.24 14.19 20 12 20C5 20 1 12 1 12C2.24 9.92 3.9 8.12 5.84 6.76M9.9 4.24C10.58 4.08 11.29 4 12 4C19 4 23 12 23 12C22.45 13.07 21.78 14.07 21 14.97M3 3L21 21" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M14.12 14.12C13.84 14.41 13.5 14.64 13.12 14.8C12.75 14.96 12.38 15.04 12 15.04C11.12 15.04 10.28 14.69 9.66 14.08C9.04 13.46 8.7 12.62 8.7 11.74C8.7 11.37 8.77 11 8.93 10.63" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}

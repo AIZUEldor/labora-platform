@@ -78,6 +78,7 @@ export default function ProfileScreen() {
           userService.getProfile(),
           jobService.getMyJobs(),
         ]);
+        console.log('PROFILE DATA:', JSON.stringify(prof));
         setProfile(prof);
         setStatCount(jobs.length);
         setStatCount2(jobs.filter((j: any) => j.status === 0).length);
@@ -154,8 +155,12 @@ export default function ProfileScreen() {
     }
   };
 
-  const fullName  = profile ? `${profile.firstName} ${profile.lastName}` : '...';
-  const initials  = profile ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase() : '?';
+  const fullName = profile
+  ? [profile.firstName, profile.lastName].filter(Boolean).join(' ') || '...'
+  : '...';
+const initials = profile?.firstName
+  ? `${profile.firstName[0]}${profile.lastName?.[0] ?? ''}`.toUpperCase()
+  : '?';
   const roleLabel = isEmployer ? 'Ish beruvchi' : 'Ishchi';
   const menuItems = isEmployer ? EMPLOYER_MENU : WORKER_MENU;
   

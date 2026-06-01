@@ -19,6 +19,8 @@ import { jobService } from '../services/jobService';
 import { jobApplicationService } from '../services/jobApplicationService';
 import { Job, UserRole } from '../types';
 import { JobDetailSkeleton } from '../components/SkeletonLoader';
+import * as DocumentPicker from 'expo-document-picker';
+import { userService } from '../services/userService';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
   return (
@@ -75,6 +77,10 @@ export default function JobDetailScreen() {
   const [experience,   setExperience]   = useState('');
   const [workerPhone,  setWorkerPhone]  = useState('');
 
+  const [cvUri,        setCvUri]        = useState<string | null>(null);
+const [cvName,       setCvName]       = useState<string | null>(null);
+const [uploadingCv,  setUploadingCv]  = useState(false);
+
   // Employer state
   const [budget,   setBudget]   = useState('');
   const [address,  setAddress]  = useState('');
@@ -98,7 +104,19 @@ export default function JobDetailScreen() {
   const resetForm = () => {
     setCoverLetter(''); setExperience(''); setWorkerPhone('');
     setBudget(''); setAddress(''); setDeadline('');
+    setCvUri(null); setCvName(null);
   };
+
+  const handlePickCv = async () => {
+  const result = await DocumentPicker.getDocumentAsync({
+    type: ['application/pdf', 'application/msword',
+           'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    copyToCacheDirectory: true,
+  });
+  if (result.canceled) return;
+  setCvUri(result.assets[0].uri);
+  setCvName(result.assets[0].name);
+};
 
   const handleApply = async () => {
     let fullCoverLetter = '';
@@ -119,6 +137,13 @@ export default function JobDetailScreen() {
 
     try {
       setApplying(true);
+      if (!isEmployer && cvUri && cvName) {
+  setUploadingCv(true);
+  try {
+    await userService.uploadCv(cvUri, cvName);
+  } catch (_) {}
+  setUploadingCv(false);
+}
       await jobApplicationService.apply(id, fullCoverLetter);
       setModalVisible(false);
       resetForm();
@@ -334,6 +359,20 @@ export default function JobDetailScreen() {
               </>
             )}
 
+
+
+{!isEmployer && (
+              <TouchableOpacity
+                style={[styles.cvPickerBtn, { backgroundColor: colors.background, borderColor: cvUri ? colors.primary : colors.border }]}
+                onPress={handlePickCv}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.cvPickerText, { color: cvUri ? colors.primary : colors.textTertiary }]}>
+                  {cvUri ? cvName : 'CV yuklash (PDF yoki Word)'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1 }]}
@@ -448,5 +487,11 @@ const styles = StyleSheet.create({
     flex: 1, height: 48, borderRadius: BorderRadius.lg,
     alignItems: 'center', justifyContent: 'center',
   },
-  modalBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.semiBold },
+modalBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.semiBold },
+  cvPickerBtn: {
+    borderWidth: 1.5, borderRadius: BorderRadius.lg, borderStyle: 'dashed',
+    padding: Spacing.md, minHeight: 52, alignItems: 'center', justifyContent: 'center',
+  },
+  cvPickerText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
 });
+

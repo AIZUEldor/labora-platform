@@ -6,26 +6,26 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { authService } from '../../services/authService';
 import { useAuthStore, AuthState } from '../../store/authStore';
 import { Colors } from '../../constants/colors';
 import { FontSize, FontWeight } from '../../constants/typography';
-import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
+import { Spacing, BorderRadius } from '../../constants/spacing';
+import { PhoneIcon, LockIcon, EyeIcon, EyeOffIcon } from '../../components/icons';
 
 export default function LoginScreen() {
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [phoneFocused, setPhoneFocused] = useState<boolean>(false);
-  const [passwordFocused, setPasswordFocused] = useState<boolean>(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [phoneFocused, setPhoneFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const login = useAuthStore((state: AuthState) => state.login);
 
@@ -37,7 +37,7 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       const response = await authService.login({ phoneNumber: phoneNumber.trim(), password });
-      await login(response.token, response.role);
+      await login(response.token, response.role, response.firstName, response.lastName);
       router.replace('/(tabs)');
     } catch (error: any) {
       const message = error.response?.data?.message || 'Login amalga oshmadi';
@@ -48,9 +48,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAwareScrollView
+      style={{ flex: 1, backgroundColor: Colors.background }}
+      contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="always"
+      enableOnAndroid={true}
+      extraScrollHeight={Platform.OS === 'ios' ? 20 : 80}
+      showsVerticalScrollIndicator={false}
     >
       <LinearGradient
         colors={['#15803D', '#16A34A', '#22C55E']}
@@ -65,103 +69,93 @@ export default function LoginScreen() {
         <Text style={styles.appTagline}>Ishingizni toping, hayotingizni o'zgartiring</Text>
       </LinearGradient>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.card}>
-          <Text style={styles.title}>Xush kelibsiz!</Text>
-          <Text style={styles.subtitle}>Hisobingizga kiring</Text>
+      <View style={styles.card}>
+        <Text style={styles.title}>Xush kelibsiz!</Text>
+        <Text style={styles.subtitle}>Hisobingizga kiring</Text>
 
-          {/* Telefon raqam */}
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Telefon raqam</Text>
-            <View style={[styles.inputContainer, phoneFocused && styles.inputFocused]}>
-              <Text style={styles.inputIcon}>📱</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="+998 90 123 45 67"
-                placeholderTextColor={Colors.textTertiary}
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-                autoCapitalize="none"
-                autoCorrect={false}
-                onFocus={() => setPhoneFocused(true)}
-                onBlur={() => setPhoneFocused(false)}
-              />
-            </View>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputLabel}>Telefon raqam</Text>
+          <View style={[styles.inputContainer, phoneFocused && styles.inputFocused]}>
+            <PhoneIcon size={18} color={phoneFocused ? Colors.primary : Colors.textTertiary} />
+            <TextInput
+              style={styles.input}
+              placeholder="+998 90 123 45 67"
+              placeholderTextColor={Colors.textTertiary}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+              autoCorrect={false}
+              onFocus={() => setPhoneFocused(true)}
+              onBlur={() => setPhoneFocused(false)}
+            />
           </View>
+        </View>
 
-          {/* Parol */}
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Parol</Text>
-            <View style={[styles.inputContainer, passwordFocused && styles.inputFocused]}>
-              <Text style={styles.inputIcon}>🔒</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Parolingizni kiriting"
-                placeholderTextColor={Colors.textTertiary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                onFocus={() => setPasswordFocused(true)}
-                onBlur={() => setPasswordFocused(false)}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
-              >
-                <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Forgot Password */}
-          <TouchableOpacity style={styles.forgotButton}>
-            <Text style={styles.forgotText}>Parolni unutdingizmi?</Text>
-          </TouchableOpacity>
-
-          {/* Login Button */}
-          <TouchableOpacity
-            onPress={handleLogin}
-            disabled={isLoading}
-            activeOpacity={0.85}
-            style={styles.loginButtonWrapper}
-          >
-            <LinearGradient
-              colors={['#15803D', '#16A34A']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputLabel}>Parol</Text>
+          <View style={[styles.inputContainer, passwordFocused && styles.inputFocused]}>
+            <LockIcon size={18} color={passwordFocused ? Colors.primary : Colors.textTertiary} />
+            <TextInput
+              style={styles.input}
+              placeholder="Parolingizni kiriting"
+              placeholderTextColor={Colors.textTertiary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeButton}
             >
-              {isLoading ? (
-                <ActivityIndicator color={Colors.white} size="small" />
-              ) : (
-                <Text style={styles.loginButtonText}>Kirish</Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Hisobingiz yo'qmi? </Text>
-            <TouchableOpacity onPress={() => router.push('/auth/register')}>
-              <Text style={styles.registerText}>Ro'yxatdan o'ting</Text>
+              {showPassword
+                ? <EyeOffIcon size={18} color={Colors.textTertiary} />
+                : <EyeIcon size={18} color={Colors.textTertiary} />
+              }
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+        <TouchableOpacity
+          style={styles.forgotButton}
+          onPress={() => router.push('/auth/forgot-password')}
+        >
+          <Text style={styles.forgotText}>Parolni unutdingizmi?</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleLogin}
+          disabled={isLoading}
+          activeOpacity={0.85}
+          style={styles.loginButtonWrapper}
+        >
+          <LinearGradient
+            colors={['#15803D', '#16A34A']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+          >
+            {isLoading
+              ? <ActivityIndicator color={Colors.white} size="small" />
+              : <Text style={styles.loginButtonText}>Kirish</Text>
+            }
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Hisobingiz yo'qmi? </Text>
+          <TouchableOpacity onPress={() => router.push('/auth/register')}>
+            <Text style={styles.registerText}>Ro'yxatdan o'ting</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
   gradientHeader: {
     paddingTop: 64,
     paddingBottom: 48,
@@ -196,10 +190,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: Spacing.xxxl,
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: Spacing.xxxl,
-  },
   card: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 32,
@@ -207,8 +197,7 @@ const styles = StyleSheet.create({
     marginTop: -24,
     paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.xxxl,
-    paddingBottom: Spacing.xl,
-    ...Shadow.lg,
+    paddingBottom: Spacing.xxxl,
     flex: 1,
   },
   title: {
@@ -241,15 +230,11 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     paddingHorizontal: Spacing.lg,
     height: 54,
+    gap: Spacing.sm,
   },
   inputFocused: {
     borderColor: Colors.primary,
     backgroundColor: Colors.white,
-    ...Shadow.sm,
-  },
-  inputIcon: {
-    fontSize: 16,
-    marginRight: Spacing.sm,
   },
   input: {
     flex: 1,
@@ -259,9 +244,6 @@ const styles = StyleSheet.create({
   },
   eyeButton: {
     padding: Spacing.xs,
-  },
-  eyeIcon: {
-    fontSize: 16,
   },
   forgotButton: {
     alignSelf: 'flex-end',
@@ -275,7 +257,6 @@ const styles = StyleSheet.create({
   loginButtonWrapper: {
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
-    ...Shadow.md,
   },
   loginButton: {
     height: 54,
