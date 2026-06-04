@@ -1,4 +1,5 @@
 ﻿using Labora.Domain.Entities;
+using Labora.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Labora.Infrastructure.Data;
@@ -74,6 +75,23 @@ public class LaboaDbContext : DbContext
                 .HasForeignKey(e => e.ParentCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        // Category Seed Data
+        modelBuilder.Entity<Category>().HasData(
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111112"), Name = "Daily", Description = "Kunlik ishlar", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111101"), Name = "Construction", Description = "Qurilish", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111102"), Name = "Driver", Description = "Haydovchi", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111103"), Name = "Chef", Description = "Oshpaz", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111104"), Name = "Medical", Description = "Tibbiyot", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111105"), Name = "Education", Description = "Ta'lim", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111106"), Name = "Finance", Description = "Moliya", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111107"), Name = "Security", Description = "Qorovul", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111108"), Name = "Cleaning", Description = "Tozalik", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111109"), Name = "Design", Description = "Dizayn", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111110"), Name = "Marketing", Description = "Marketing", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Category { Id = Guid.Parse("11111111-1111-1111-1111-111111111111"), Name = "Warehouse", Description = "Ombor", IconUrl = "", JobType = JobType.FullTime, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
+
+        );
 
         // Transaction
         modelBuilder.Entity<Transaction>(entity =>

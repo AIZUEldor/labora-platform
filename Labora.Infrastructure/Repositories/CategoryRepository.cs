@@ -19,10 +19,10 @@ public class CategoryRepository : GenericRepository<Category>, ICategoryReposito
     {
         return await _context.Categories
             .Where(c => c.ParentCategoryId == null && !c.IsDeleted)
+            .Include(c => c.SubCategories.Where(s => !s.IsDeleted))
             .OrderBy(c => c.Name)
             .ToListAsync();
     }
-
     public async Task<IEnumerable<Category>> GetSubCategoriesAsync(Guid parentCategoryId)
     {
         return await _context.Categories

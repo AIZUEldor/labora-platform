@@ -21,5 +21,6 @@ public class JobResponseDto
     public DateTime? Deadline { get; set; }
     public Guid EmployerId { get; set; }
     public Guid? CategoryId { get; set; }
+    public Guid? SubCategoryId { get; set; }
     public DateTime CreatedAt { get; set; }
 }

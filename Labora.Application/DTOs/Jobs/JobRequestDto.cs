@@ -18,4 +18,5 @@ public class JobRequestDto
     public int? ExperienceYears { get; set; }
     public DateTime? Deadline { get; set; }
     public Guid? CategoryId { get; set; }
+    public Guid? SubCategoryId { get; set; }
 }

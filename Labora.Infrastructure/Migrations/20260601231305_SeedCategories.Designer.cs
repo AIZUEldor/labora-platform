@@ -3,6 +3,7 @@ using System;
 using Labora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Labora.Infrastructure.Migrations
 {
     [DbContext(typeof(LaboaDbContext))]
-    partial class LaboaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260601231305_SeedCategories")]
+    partial class SeedCategories
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -61,16 +64,6 @@ namespace Labora.Infrastructure.Migrations
                     b.ToTable("Categories");
 
                     b.HasData(
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111112"),
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Kunlik ishlar",
-                            IconUrl = "",
-                            IsDeleted = false,
-                            JobType = 5,
-                            Name = "Daily"
-                        },
                         new
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111101"),
@@ -241,9 +234,6 @@ namespace Labora.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("SubCategoryId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("SubCategoryName")
                         .HasColumnType("text");
 
@@ -260,8 +250,6 @@ namespace Labora.Infrastructure.Migrations
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("EmployerId");
-
-                    b.HasIndex("SubCategoryId");
 
                     b.ToTable("Jobs");
                 });
@@ -613,15 +601,9 @@ namespace Labora.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Labora.Domain.Entities.Category", "SubCategory")
-                        .WithMany()
-                        .HasForeignKey("SubCategoryId");
-
                     b.Navigation("Category");
 
                     b.Navigation("Employer");
-
-                    b.Navigation("SubCategory");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.JobApplication", b =>

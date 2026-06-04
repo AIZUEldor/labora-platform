@@ -23,6 +23,8 @@ public class Job : BaseEntity
     // Foreign key
     public Guid EmployerId { get; set; }
     public Guid? CategoryId { get; set; }
+    public Guid? SubCategoryId { get; set; }
+    public Category? SubCategory { get; set; }
 
     // Navigation properties
     public User Employer { get; set; } = null!;
