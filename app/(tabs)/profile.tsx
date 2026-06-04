@@ -22,25 +22,8 @@ import { jobApplicationService } from '../../services/jobApplicationService';
 import { jobService } from '../../services/jobService';
 import { UserProfile, UserRole } from '../../types';
 import { ProfileSkeleton } from '../../components/SkeletonLoader';
-
-const WORKER_MENU = [
-  { icon: 'edit',         label: 'Profilni tahrirlash', route: '/edit-profile' },
-  { icon: 'applications', label: 'Arizalarim',          route: '/(tabs)/applications' },
-  { icon: 'heart',        label: 'Saqlangan ishlar' },
-  { icon: 'star',         label: 'Baholarim' },
-  { icon: 'bell',         label: 'Bildirishnomalar',    route: '/notifications' },
-  { icon: 'lock',         label: "Parolni o'zgartirish" },
-  { icon: 'help',         label: 'Yordam' },
-];
-
-const EMPLOYER_MENU = [
-  { icon: 'edit',      label: 'Profilni tahrirlash', route: '/edit-profile' },
-  { icon: 'briefcase', label: "E'lonlarim",           route: '/(tabs)/applications' },
-  { icon: 'star',      label: 'Baholarim' },
-  { icon: 'bell',      label: 'Bildirishnomalar',     route: '/notifications' },
-  { icon: 'lock',      label: "Parolni o'zgartirish" },
-  { icon: 'help',      label: 'Yordam' },
-];
+import { useLanguageStore } from '../../stores/useLanguageStore';
+import { LanguagePicker } from '../../components/LanguagePicker';
 
 function MenuIcon({ name, color }: { name: string; color: string }) {
   const props = { size: 22, color };
@@ -59,16 +42,36 @@ function MenuIcon({ name, color }: { name: string; color: string }) {
 
 export default function ProfileScreen() {
   const { colors, isDark, toggleTheme } = useThemeStore();
+  const { t } = useLanguageStore();
   const logout     = useAuthStore((state: AuthState) => state.logout);
   const role       = useAuthStore((state: AuthState) => state.role);
   const isEmployer = Number(role) === UserRole.Employer;
 
-  const [profile,      setProfile]      = useState<UserProfile | null>(null);
-  const [statCount,    setStatCount]    = useState(0);
-  const [statCount2,   setStatCount2]   = useState(0);
-  const [loading,      setLoading]      = useState(true);
-  const [refreshing,   setRefreshing]   = useState(false);
-  const [uploadingCv,  setUploadingCv]  = useState(false);
+  const WORKER_MENU = [
+    { icon: 'edit',         label: t.profile.editProfile,      route: '/edit-profile' },
+    { icon: 'applications', label: t.applications.title,        route: '/(tabs)/applications' },
+    { icon: 'heart', label: "Saqlangan ishlar" },
+{ icon: 'star',  label: t.profile.reviews },
+{ icon: 'bell',  label: t.notifications.title, route: '/notifications' },
+{ icon: 'lock',  label: "Parolni o'zgartirish" },
+{ icon: 'help',  label: "Yordam" },
+  ];
+
+  const EMPLOYER_MENU = [
+    { icon: 'edit',      label: t.profile.editProfile,   route: '/edit-profile' },
+    { icon: 'briefcase', label: t.employer.myJobs,        route: '/(tabs)/applications' },
+    { icon: 'star',      label: t.profile.reviews },
+    { icon: 'bell',      label: t.notifications.title,    route: '/notifications' },
+    { icon: 'lock', label: "Parolni o'zgartirish" },
+{ icon: 'help', label: "Yordam" },
+  ];
+
+  const [profile,         setProfile]         = useState<UserProfile | null>(null);
+  const [statCount,       setStatCount]       = useState(0);
+  const [statCount2,      setStatCount2]      = useState(0);
+  const [loading,         setLoading]         = useState(true);
+  const [refreshing,      setRefreshing]      = useState(false);
+  const [uploadingCv,     setUploadingCv]     = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const load = useCallback(async () => {
@@ -78,7 +81,6 @@ export default function ProfileScreen() {
           userService.getProfile(),
           jobService.getMyJobs(),
         ]);
-        console.log('PROFILE DATA:', JSON.stringify(prof));
         setProfile(prof);
         setStatCount(jobs.length);
         setStatCount2(jobs.filter((j: any) => j.status === 0).length);
@@ -107,7 +109,6 @@ export default function ProfileScreen() {
     router.replace('/auth/login');
   };
 
-  // CV yuklash
   const handleUploadCv = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -116,20 +117,18 @@ export default function ProfileScreen() {
         copyToCacheDirectory: true,
       });
       if (result.canceled) return;
-
       const file = result.assets[0];
       setUploadingCv(true);
       const url = await userService.uploadCv(file.uri, file.name);
       setProfile(prev => prev ? { ...prev, cvUrl: url } : prev);
-      Alert.alert('Muvaffaqiyat', 'CV muvaffaqiyatli yuklandi!');
+      Alert.alert(t.common.success, t.profile.uploadCV);
     } catch (e: any) {
-      Alert.alert('Xatolik', e?.message ?? 'CV yuklashda xatolik');
+      Alert.alert(t.common.error, e?.message ?? t.common.somethingWentWrong);
     } finally {
       setUploadingCv(false);
     }
   };
 
-  // Avatar yuklash
   const handleUploadAvatar = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -139,38 +138,36 @@ export default function ProfileScreen() {
         quality: 0.8,
       });
       if (result.canceled) return;
-
       const file = result.assets[0];
       const fileName = file.uri.split('/').pop() ?? 'avatar.jpg';
       const type = file.mimeType ?? 'image/jpeg';
-
       setUploadingAvatar(true);
       const url = await userService.uploadAvatar(file.uri, fileName, type);
       setProfile(prev => prev ? { ...prev, profileImageUrl: url } : prev);
-      Alert.alert('Muvaffaqiyat', 'Rasm muvaffaqiyatli yuklandi!');
+      Alert.alert(t.common.success, t.editProfile.avatar);
     } catch (e: any) {
-      Alert.alert('Xatolik', e?.message ?? 'Rasm yuklashda xatolik');
+      Alert.alert(t.common.error, e?.message ?? t.common.somethingWentWrong);
     } finally {
       setUploadingAvatar(false);
     }
   };
 
   const fullName = profile
-  ? [profile.firstName, profile.lastName].filter(Boolean).join(' ') || '...'
-  : '...';
-const initials = profile?.firstName
-  ? `${profile.firstName[0]}${profile.lastName?.[0] ?? ''}`.toUpperCase()
-  : '?';
-  const roleLabel = isEmployer ? 'Ish beruvchi' : 'Ishchi';
-  const menuItems = isEmployer ? EMPLOYER_MENU : WORKER_MENU;
-  
+    ? [profile.firstName, profile.lastName].filter(Boolean).join(' ') || '...'
+    : '...';
+  const initials = profile?.firstName
+    ? `${profile.firstName[0]}${profile.lastName?.[0] ?? ''}`.toUpperCase()
+    : '?';
+  const roleLabel  = isEmployer ? t.auth.employer : t.auth.worker;
+  const menuItems  = isEmployer ? EMPLOYER_MENU : WORKER_MENU;
+
   if (loading) {
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ProfileSkeleton />
-    </View>
-  );
-}
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ProfileSkeleton />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -212,34 +209,34 @@ const initials = profile?.firstName
               <>
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{statCount}</Text>
-                  <Text style={styles.statLabel}>E'lonlar</Text>
+                  <Text style={styles.statLabel}>{t.employer.myJobs}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{statCount2}</Text>
-                  <Text style={styles.statLabel}>Faol</Text>
+                  <Text style={styles.statLabel}>{t.employer.publish}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{profile?.isVerified ? 'Ha' : "Yo'q"}</Text>
-                  <Text style={styles.statLabel}>Tasdiqlangan</Text>
+                  <Text style={styles.statValue}>{profile?.isVerified ? t.common.yes : t.common.no}</Text>
+                  <Text style={styles.statLabel}>{t.common.ok}</Text>
                 </View>
               </>
             ) : (
               <>
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{statCount}</Text>
-                  <Text style={styles.statLabel}>Arizalar</Text>
+                  <Text style={styles.statLabel}>{t.applications.title}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{statCount2}</Text>
-                  <Text style={styles.statLabel}>Qabul</Text>
+                  <Text style={styles.statLabel}>{t.applications.accepted}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{profile?.age ?? '—'}</Text>
-                  <Text style={styles.statLabel}>Yosh</Text>
+                  <Text style={styles.statLabel}>{t.common.noData}</Text>
                 </View>
               </>
             )}
@@ -261,15 +258,15 @@ const initials = profile?.firstName
                 <Text style={[styles.cvBtnIcon, { color: colors.primary }]}>📄</Text>
                 <View style={styles.cvBtnInfo}>
                   <Text style={[styles.cvBtnTitle, { color: colors.textPrimary }]}>
-                    {profile?.cvUrl ? 'CV yangilash' : 'CV yuklash'}
+                    {profile?.cvUrl ? t.profile.myCV : t.profile.uploadCV}
                   </Text>
                   <Text style={[styles.cvBtnSub, { color: colors.textTertiary }]}>
-                    {profile?.cvUrl ? 'CV yuklangan' : 'PDF yoki Word fayl'}
+                    {profile?.cvUrl ? t.common.success : 'PDF / Word'}
                   </Text>
                 </View>
                 <View style={[styles.cvBtnBadge, { backgroundColor: profile?.cvUrl ? '#DCFCE7' : colors.primaryLight }]}>
                   <Text style={[styles.cvBtnBadgeText, { color: profile?.cvUrl ? '#166534' : colors.primary }]}>
-                    {profile?.cvUrl ? 'Yuklangan' : 'Yuklash'}
+                    {profile?.cvUrl ? t.common.done : t.profile.uploadCV}
                   </Text>
                 </View>
               </>
@@ -289,7 +286,7 @@ const initials = profile?.firstName
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.createJobGradient}
             >
-              <Text style={styles.createJobText}>+ Yangi ish e'lon qilish</Text>
+              <Text style={styles.createJobText}>+ {t.employer.postJob}</Text>
             </LinearGradient>
           </TouchableOpacity>
         )}
@@ -302,7 +299,7 @@ const initials = profile?.firstName
               : <SunIcon  size={22} color={colors.primary} />
             }
             <Text style={[styles.themeLabel, { color: colors.textPrimary }]}>
-              {isDark ? 'Tungi rejim' : 'Kunduzgi rejim'}
+              {isDark ? t.profile.darkMode : t.profile.lightMode}
             </Text>
           </View>
           <TouchableOpacity
@@ -311,6 +308,11 @@ const initials = profile?.firstName
           >
             <View style={[styles.toggleCircle, { transform: [{ translateX: isDark ? 20 : 2 }] }]} />
           </TouchableOpacity>
+        </View>
+
+        {/* Til tanlash */}
+        <View style={[styles.themeCard, { backgroundColor: colors.card, ...Shadow.sm }]}>
+          <LanguagePicker />
         </View>
 
         {/* Menu */}
@@ -337,7 +339,7 @@ const initials = profile?.firstName
         {/* Logout */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
           <LogoutIcon size={22} color="#DC2626" />
-          <Text style={styles.logoutText}>Chiqish</Text>
+          <Text style={styles.logoutText}>{t.profile.logout}</Text>
         </TouchableOpacity>
 
         <View style={{ height: Spacing.xxxl }} />
@@ -384,8 +386,6 @@ const styles = StyleSheet.create({
   statValue:   { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: '#FFFFFF' },
   statLabel:   { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.8)', fontWeight: FontWeight.medium },
   statDivider: { width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.3)' },
-
-  // CV button
   cvBtn: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
@@ -401,7 +401,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   cvBtnBadgeText: { fontSize: FontSize.xs, fontWeight: FontWeight.bold },
-
   createJobBtn: {
     marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
     borderRadius: BorderRadius.xl, overflow: 'hidden',

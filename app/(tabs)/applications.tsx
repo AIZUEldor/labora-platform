@@ -13,6 +13,7 @@ import { jobApplicationService } from '../../services/jobApplicationService';
 import { jobService } from '../../services/jobService';
 import { JobApplication, ApplicationStatus, UserRole, Job } from '../../types';
 import { ApplicationListSkeleton } from '../../components/SkeletonLoader';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 
 const STATUS_COLOR: Record<number, { bg: string; text: string }> = {
   [ApplicationStatus.Pending]:   { bg: '#FEF9C3', text: '#854D0E' },
@@ -22,16 +23,6 @@ const STATUS_COLOR: Record<number, { bg: string; text: string }> = {
   [ApplicationStatus.Completed]: { bg: '#EFF6FF', text: '#1D4ED8' },
 };
 
-const STATUS_LABEL: Record<number, string> = {
-  [ApplicationStatus.Pending]:   'Kutilmoqda',
-  [ApplicationStatus.Accepted]:  'Qabul qilindi',
-  [ApplicationStatus.Rejected]:  'Rad etildi',
-  [ApplicationStatus.Cancelled]: 'Bekor qilindi',
-  [ApplicationStatus.Completed]: 'Yakunlandi',
-};
-
-const FILTERS = ['Barchasi', 'Kutilmoqda', 'Qabul qilindi', 'Rad etildi', 'Yakunlandi'];
-
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
@@ -39,6 +30,7 @@ function formatDate(dateStr: string): string {
 
 // ── Employer ──────────────────────────────────────────────────────────────────
 function EmployerJobsView({ colors }: { colors: any }) {
+  const { t } = useLanguageStore();
   const [jobs,       setJobs]       = useState<Job[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -50,7 +42,7 @@ function EmployerJobsView({ colors }: { colors: any }) {
       setJobs(data);
       setError(null);
     } catch (e: any) {
-      setError(e?.message ?? 'Xatolik yuz berdi');
+      setError(e?.message ?? t.common.somethingWentWrong);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -66,17 +58,17 @@ function EmployerJobsView({ colors }: { colors: any }) {
       <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
       <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
         onPress={() => { setLoading(true); load(); }}>
-        <Text style={styles.retryText}>Qayta urinish</Text>
+        <Text style={styles.retryText}>{t.common.retry}</Text>
       </TouchableOpacity>
     </View>
   );
 
   if (jobs.length === 0) return (
     <View style={styles.centerBox}>
-      <Text style={[styles.stateText, { color: colors.textSecondary }]}>Hali e'lon joylashtirilmagan</Text>
+      <Text style={[styles.stateText, { color: colors.textSecondary }]}>{t.employer.myJobs}</Text>
       <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
         onPress={() => router.push('/(tabs)/create-job')}>
-        <Text style={styles.retryText}>E'lon qilish</Text>
+        <Text style={styles.retryText}>{t.employer.postJob}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -115,7 +107,7 @@ function EmployerJobsView({ colors }: { colors: any }) {
             </View>
             <View style={[styles.statusBadge, { backgroundColor: item.status === 0 ? '#DCFCE7' : '#FEE2E2' }]}>
               <Text style={[styles.statusText, { color: item.status === 0 ? '#166534' : '#991B1B' }]}>
-                {item.status === 0 ? 'Faol' : 'Yopilgan'}
+                {item.status === 0 ? t.employer.publish : t.common.noData}
               </Text>
             </View>
           </View>
@@ -127,11 +119,29 @@ function EmployerJobsView({ colors }: { colors: any }) {
 
 // ── Worker ────────────────────────────────────────────────────────────────────
 function WorkerApplicationsView({ colors }: { colors: any }) {
+  const { t } = useLanguageStore();
+
+  const STATUS_LABEL: Record<number, string> = {
+    [ApplicationStatus.Pending]:   t.applications.pending,
+    [ApplicationStatus.Accepted]:  t.applications.accepted,
+    [ApplicationStatus.Rejected]:  t.applications.rejected,
+    [ApplicationStatus.Cancelled]: t.common.cancel ?? 'Bekor qilindi',
+    [ApplicationStatus.Completed]: t.common.done,
+  };
+
+  const FILTERS = [
+    t.home.seeAll,
+    t.applications.pending,
+    t.applications.accepted,
+    t.applications.rejected,
+    t.common.done,
+  ];
+
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [refreshing,   setRefreshing]   = useState(false);
   const [error,        setError]        = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState('Barchasi');
+  const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
 
   const load = useCallback(async () => {
     try {
@@ -139,7 +149,7 @@ function WorkerApplicationsView({ colors }: { colors: any }) {
       setApplications(data);
       setError(null);
     } catch (e: any) {
-      setError(e?.message ?? 'Xatolik yuz berdi');
+      setError(e?.message ?? t.common.somethingWentWrong);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -148,7 +158,7 @@ function WorkerApplicationsView({ colors }: { colors: any }) {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = activeFilter === 'Barchasi'
+  const filtered = activeFilter === FILTERS[0]
     ? applications
     : applications.filter(a => STATUS_LABEL[a.status] === activeFilter);
 
@@ -180,12 +190,13 @@ function WorkerApplicationsView({ colors }: { colors: any }) {
       </ScrollView>
 
       {loading && <View style={{ padding: Spacing.xl }}><ApplicationListSkeleton count={4} /></View>}
+
       {!loading && error && (
         <View style={styles.centerBox}>
           <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
           <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
             onPress={() => { setLoading(true); load(); }}>
-            <Text style={styles.retryText}>Qayta urinish</Text>
+            <Text style={styles.retryText}>{t.common.retry}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -193,7 +204,7 @@ function WorkerApplicationsView({ colors }: { colors: any }) {
       {!loading && !error && filtered.length === 0 && (
         <View style={styles.centerBox}>
           <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-            {activeFilter === 'Barchasi' ? "Hali ariza yubormagansiz" : "Bu bo'limda ariza yo'q"}
+            {t.applications.noApplications}
           </Text>
         </View>
       )}
@@ -214,7 +225,6 @@ function WorkerApplicationsView({ colors }: { colors: any }) {
                 key={app.id}
                 style={[styles.applicationCard, { backgroundColor: colors.card, ...Shadow.md }]}
               >
-                {/* Header */}
                 <View style={styles.cardHeader}>
                   <View style={[styles.companyLogo, { backgroundColor: colors.primaryLight }]}>
                     <Text style={[styles.companyLogoText, { color: colors.primary }]}>
@@ -234,7 +244,6 @@ function WorkerApplicationsView({ colors }: { colors: any }) {
 
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-                {/* Footer */}
                 <View style={styles.cardFooter}>
                   {app.coverLetter ? (
                     <Text style={[styles.coverLetter, { color: colors.textTertiary }]} numberOfLines={1}>
@@ -249,7 +258,6 @@ function WorkerApplicationsView({ colors }: { colors: any }) {
                   </View>
                 </View>
 
-                {/* Baholash — faqat Completed da */}
                 {app.status === ApplicationStatus.Completed && (
                   <>
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -262,7 +270,9 @@ function WorkerApplicationsView({ colors }: { colors: any }) {
                       activeOpacity={0.8}
                     >
                       <StarIcon size={16} color={colors.primary} />
-                      <Text style={[styles.reviewBtnText, { color: colors.primary }]}>Baholash</Text>
+                      <Text style={[styles.reviewBtnText, { color: colors.primary }]}>
+                        {t.profile.reviews}
+                      </Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -279,6 +289,7 @@ function WorkerApplicationsView({ colors }: { colors: any }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ApplicationsScreen() {
   const { colors } = useThemeStore();
+  const { t } = useLanguageStore();
   const role       = useAuthStore((state: AuthState) => state.role);
   const isEmployer = Number(role) === UserRole.Employer;
 
@@ -286,7 +297,7 @@ export default function ApplicationsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-          {isEmployer ? "E'lonlarim" : 'Arizalarim'}
+          {isEmployer ? t.employer.myJobs : t.applications.title}
         </Text>
       </View>
       {isEmployer
@@ -307,9 +318,10 @@ const styles = StyleSheet.create({
   headerTitle:     { fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
   filterContainer: { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, gap: Spacing.sm },
   filterTab: {
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full, borderWidth: 1.5,
-  },
+  paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+  borderRadius: BorderRadius.full, borderWidth: 1.5,
+  height: 36, alignItems: 'center', justifyContent: 'center',
+},
   filterText:      { fontSize: FontSize.sm, fontWeight: FontWeight.semiBold },
   listContainer:   { padding: Spacing.xl, gap: Spacing.md },
   applicationCard: { borderRadius: BorderRadius.xl, padding: Spacing.lg },

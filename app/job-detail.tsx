@@ -21,6 +21,7 @@ import { Job, UserRole } from '../types';
 import { JobDetailSkeleton } from '../components/SkeletonLoader';
 import * as DocumentPicker from 'expo-document-picker';
 import { userService } from '../services/userService';
+import { useLanguageStore } from '../stores/useLanguageStore';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
   return (
@@ -30,19 +31,10 @@ function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string
   );
 }
 
-const DEFAULT_REQUIREMENTS = [
-  'Kamida 2 yil ish tajribasi',
-  'Jamoada ishlash qobiliyati',
-  "Mas'uliyatlilik va puxtalik",
-  "O'z vaqtida vazifalarni bajarish",
-];
-
-const benefits = [
-  { icon: 'insurance', label: "Sug'urta" },
-  { icon: 'training',  label: "O'qitish" },
-  { icon: 'transport', label: 'Transport' },
-  { icon: 'food',      label: 'Ovqat' },
-];
+const JOB_TYPE_LABEL: Record<string, string> = {
+  FullTime: 'Full-time', PartTime: 'Part-time',
+  Remote: 'Remote', Contract: 'Contract', Internship: 'Internship',
+};
 
 function BenefitIcon({ name, color }: { name: string; color: string }) {
   const props = { size: 20, color };
@@ -55,16 +47,24 @@ function BenefitIcon({ name, color }: { name: string; color: string }) {
   }
 }
 
-const JOB_TYPE_LABEL: Record<string, string> = {
-  FullTime: 'Full-time', PartTime: 'Part-time',
-  Remote: 'Remote', Contract: 'Contract', Internship: 'Internship',
-};
-
 export default function JobDetailScreen() {
   const { colors, isDark } = useThemeStore();
+  const { t } = useLanguageStore();
   const { id } = useLocalSearchParams<{ id: string }>();
   const role       = useAuthStore((state: AuthState) => state.role);
   const isEmployer = Number(role) === UserRole.Employer;
+
+  const DEFAULT_REQUIREMENTS = [
+    t.job.requirements,
+    t.common.noData,
+  ];
+
+  const benefits = [
+    { icon: 'insurance', label: t.common.ok },
+    { icon: 'training',  label: t.common.ok },
+    { icon: 'transport', label: t.common.ok },
+    { icon: 'food',      label: t.common.ok },
+  ];
 
   const [job,          setJob]          = useState<Job | null>(null);
   const [loading,      setLoading]      = useState(true);
@@ -72,16 +72,13 @@ export default function JobDetailScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [applying,     setApplying]     = useState(false);
 
-  // Worker state
   const [coverLetter,  setCoverLetter]  = useState('');
   const [experience,   setExperience]   = useState('');
   const [workerPhone,  setWorkerPhone]  = useState('');
-
   const [cvUri,        setCvUri]        = useState<string | null>(null);
-const [cvName,       setCvName]       = useState<string | null>(null);
-const [uploadingCv,  setUploadingCv]  = useState(false);
+  const [cvName,       setCvName]       = useState<string | null>(null);
+  const [uploadingCv,  setUploadingCv]  = useState(false);
 
-  // Employer state
   const [budget,   setBudget]   = useState('');
   const [address,  setAddress]  = useState('');
   const [deadline, setDeadline] = useState('');
@@ -93,7 +90,7 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
         const data = await jobService.getJobById(id);
         setJob(data);
       } catch (e: any) {
-        setError(e?.message ?? 'Xatolik yuz berdi');
+        setError(e?.message ?? t.common.somethingWentWrong);
       } finally {
         setLoading(false);
       }
@@ -108,73 +105,70 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
   };
 
   const handlePickCv = async () => {
-  const result = await DocumentPicker.getDocumentAsync({
-    type: ['application/pdf', 'application/msword',
-           'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-    copyToCacheDirectory: true,
-  });
-  if (result.canceled) return;
-  setCvUri(result.assets[0].uri);
-  setCvName(result.assets[0].name);
-};
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'application/msword',
+             'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled) return;
+    setCvUri(result.assets[0].uri);
+    setCvName(result.assets[0].name);
+  };
 
   const handleApply = async () => {
     let fullCoverLetter = '';
-
     if (isEmployer) {
       if (!address.trim()) {
-        Alert.alert('Xatolik', "Manzilni kiriting");
+        Alert.alert(t.common.error, t.job.location);
         return;
       }
-      fullCoverLetter = `Byudjet: ${budget || 'Kelishiladi'}\nManzil: ${address}\nMuddat: ${deadline || 'Kelishiladi'}`;
+      fullCoverLetter = `Byudjet: ${budget || t.common.noData}\nManzil: ${address}\nMuddat: ${deadline || t.common.noData}`;
     } else {
       if (!coverLetter.trim()) {
-        Alert.alert('Xatolik', "O'zingiz haqida yozing");
+        Alert.alert(t.common.error, t.editProfile.bio);
         return;
       }
-      fullCoverLetter = `${coverLetter}\nTajriba: ${experience || 'Kiritilmagan'}\nTelefon: ${workerPhone || 'Kiritilmagan'}`;
+      fullCoverLetter = `${coverLetter}\n${t.editProfile.experience}: ${experience || t.common.noData}\n${t.auth.phone}: ${workerPhone || t.common.noData}`;
     }
 
     try {
       setApplying(true);
       if (!isEmployer && cvUri && cvName) {
-  setUploadingCv(true);
-  try {
-    await userService.uploadCv(cvUri, cvName);
-  } catch (_) {}
-  setUploadingCv(false);
-}
+        setUploadingCv(true);
+        try { await userService.uploadCv(cvUri, cvName); } catch (_) {}
+        setUploadingCv(false);
+      }
       await jobApplicationService.apply(id, fullCoverLetter);
       setModalVisible(false);
       resetForm();
-      Alert.alert('Muvaffaqiyat', 'Arizangiz yuborildi!');
+      Alert.alert(t.common.success, t.job.applied);
     } catch (e: any) {
-      Alert.alert('Xatolik', e?.message ?? 'Ariza yuborishda xatolik');
+      Alert.alert(t.common.error, e?.message ?? t.common.somethingWentWrong);
     } finally {
       setApplying(false);
     }
   };
 
   if (loading) {
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <JobDetailSkeleton />
-    </View>
-  );
-}
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <JobDetailSkeleton />
+      </View>
+    );
+  }
 
   if (error || !job) {
     return (
       <View style={[styles.container, styles.centerBox, { backgroundColor: colors.background }]}>
-        <Text style={{ color: '#EF4444', fontSize: FontSize.sm }}>{error ?? 'Ish topilmadi'}</Text>
+        <Text style={{ color: '#EF4444', fontSize: FontSize.sm }}>{error ?? t.common.noData}</Text>
         <TouchableOpacity onPress={() => router.back()} style={[styles.retryBtn, { backgroundColor: '#16A34A' }]}>
-          <Text style={styles.retryText}>Orqaga</Text>
+          <Text style={styles.retryText}>{t.common.back}</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const salary  = job.salary ? `${(job.salary / 1_000_000).toFixed(1)}M so'm` : 'Kelishiladi';
+  const salary  = job.salary ? `${(job.salary / 1_000_000).toFixed(1)}M ${t.common.currency}` : t.common.noData;
   const jobType = JOB_TYPE_LABEL[job.status as any] ?? 'Full-time';
 
   return (
@@ -220,36 +214,36 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
         <View style={[styles.salaryCard, { backgroundColor: colors.card, ...Shadow.md }]}>
           <View style={styles.salaryItem}>
             <MoneyIcon size={20} color={colors.primary} />
-            <Text style={[styles.salaryLabel, { color: colors.textTertiary }]}>Maosh</Text>
+            <Text style={[styles.salaryLabel, { color: colors.textTertiary }]}>{t.job.salary}</Text>
             <Text style={[styles.salaryValue, { color: colors.primary }]}>{salary}</Text>
           </View>
           <View style={[styles.salaryDivider, { backgroundColor: colors.border }]} />
           <View style={styles.salaryItem}>
             <ClockIcon size={20} color={colors.textTertiary} />
-            <Text style={[styles.salaryLabel, { color: colors.textTertiary }]}>Ish turi</Text>
+            <Text style={[styles.salaryLabel, { color: colors.textTertiary }]}>{t.job.jobType}</Text>
             <Text style={[styles.salaryValue, { color: colors.textPrimary }]}>{jobType}</Text>
           </View>
           <View style={[styles.salaryDivider, { backgroundColor: colors.border }]} />
           <View style={styles.salaryItem}>
             <MapPinIcon size={20} color={colors.textTertiary} />
-            <Text style={[styles.salaryLabel, { color: colors.textTertiary }]}>Joylashuv</Text>
+            <Text style={[styles.salaryLabel, { color: colors.textTertiary }]}>{t.job.location}</Text>
             <Text style={[styles.salaryValue, { color: colors.textPrimary }]} numberOfLines={1}>
-              {job.location ?? "Noma'lum"}
+              {job.location ?? t.common.noData}
             </Text>
           </View>
         </View>
 
         {/* Description */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Ish haqida</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.job.description}</Text>
           <Text style={[styles.description, { color: colors.textSecondary }]}>
-            {job.description ?? "Ma'lumot kiritilmagan."}
+            {job.description ?? t.common.noData}
           </Text>
         </View>
 
         {/* Requirements */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Talablar</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.job.requirements}</Text>
           {DEFAULT_REQUIREMENTS.map((req, index) => (
             <View key={index} style={styles.requirementItem}>
               <CheckCircleIcon size={18} color={colors.primary} />
@@ -260,7 +254,7 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
 
         {/* Benefits */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Imtiyozlar</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.common.ok}</Text>
           <View style={styles.benefitsGrid}>
             {benefits.map((benefit, index) => (
               <View key={index} style={[styles.benefitCard, { backgroundColor: colors.primaryLight }]}>
@@ -287,7 +281,7 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
             style={styles.applyButton}
           >
             <Text style={styles.applyButtonText}>
-              {isEmployer ? 'Ishchi topish' : 'Ariza yuborish'}
+              {isEmployer ? t.employer.applicants : t.job.applyNow}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -298,7 +292,7 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-              {isEmployer ? 'Ishchi topish' : 'Ariza yuborish'}
+              {isEmployer ? t.employer.applicants : t.job.applyNow}
             </Text>
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
               {job.title} — {job.employerName}
@@ -308,7 +302,7 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
               <>
                 <TextInput
                   style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                  placeholder="Byudjet (so'm)"
+                  placeholder={`${t.employer.minSalary} (${t.common.currency})`}
                   placeholderTextColor={colors.textTertiary}
                   value={budget}
                   onChangeText={setBudget}
@@ -316,14 +310,14 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
                 />
                 <TextInput
                   style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                  placeholder="Manzil (shahar, tuman) *"
+                  placeholder={`${t.job.location} *`}
                   placeholderTextColor={colors.textTertiary}
                   value={address}
                   onChangeText={setAddress}
                 />
                 <TextInput
                   style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                  placeholder="Muddat (masalan: 2 hafta)"
+                  placeholder={t.job.deadline}
                   placeholderTextColor={colors.textTertiary}
                   value={deadline}
                   onChangeText={setDeadline}
@@ -333,7 +327,7 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
               <>
                 <TextInput
                   style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border, minHeight: 100 }]}
-                  placeholder="O'zingiz haqida yozing *"
+                  placeholder={`${t.editProfile.bio} *`}
                   placeholderTextColor={colors.textTertiary}
                   value={coverLetter}
                   onChangeText={setCoverLetter}
@@ -343,14 +337,14 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
                 />
                 <TextInput
                   style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                  placeholder="Tajriba (masalan: 2 yil)"
+                  placeholder={t.editProfile.experience}
                   placeholderTextColor={colors.textTertiary}
                   value={experience}
                   onChangeText={setExperience}
                 />
                 <TextInput
                   style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                  placeholder="Telefon raqamingiz"
+                  placeholder={t.auth.phonePlaceholder}
                   placeholderTextColor={colors.textTertiary}
                   value={workerPhone}
                   onChangeText={setWorkerPhone}
@@ -359,16 +353,14 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
               </>
             )}
 
-
-
-{!isEmployer && (
+            {!isEmployer && (
               <TouchableOpacity
                 style={[styles.cvPickerBtn, { backgroundColor: colors.background, borderColor: cvUri ? colors.primary : colors.border }]}
                 onPress={handlePickCv}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.cvPickerText, { color: cvUri ? colors.primary : colors.textTertiary }]}>
-                  {cvUri ? cvName : 'CV yuklash (PDF yoki Word)'}
+                  {cvUri ? cvName : t.job.uploadCV}
                 </Text>
               </TouchableOpacity>
             )}
@@ -379,7 +371,7 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
                 onPress={() => { setModalVisible(false); resetForm(); }}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>Bekor qilish</Text>
+                <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>{t.common.cancel}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: '#16A34A' }]}
@@ -389,7 +381,7 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
               >
                 {applying
                   ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={[styles.modalBtnText, { color: '#fff' }]}>Yuborish</Text>
+                  : <Text style={[styles.modalBtnText, { color: '#fff' }]}>{t.common.done}</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -487,11 +479,10 @@ const styles = StyleSheet.create({
     flex: 1, height: 48, borderRadius: BorderRadius.lg,
     alignItems: 'center', justifyContent: 'center',
   },
-modalBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.semiBold },
+  modalBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.semiBold },
   cvPickerBtn: {
     borderWidth: 1.5, borderRadius: BorderRadius.lg, borderStyle: 'dashed',
     padding: Spacing.md, minHeight: 52, alignItems: 'center', justifyContent: 'center',
   },
   cvPickerText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
 });
-

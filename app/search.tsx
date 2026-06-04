@@ -11,6 +11,7 @@ import { SearchIcon, LocationIcon, ClockIcon, MapPinIcon } from '../components/i
 import Svg, { Path } from 'react-native-svg';
 import { jobService } from '../services/jobService';
 import { Job } from '../types';
+import { useLanguageStore } from '../stores/useLanguageStore';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
   return (
@@ -27,6 +28,7 @@ const JOB_TYPE_LABEL: Record<string, string> = {
 
 export default function SearchScreen() {
   const { colors } = useThemeStore();
+  const { t } = useLanguageStore();
 
   const [query,      setQuery]      = useState('');
   const [jobs,       setJobs]       = useState<Job[]>([]);
@@ -67,7 +69,7 @@ export default function SearchScreen() {
         </View>
         <View style={[styles.salaryBadge, { backgroundColor: colors.primaryLight }]}>
           <Text style={[styles.salaryText, { color: colors.primary }]}>
-            {item.salary ? `${(item.salary / 1_000_000).toFixed(1)}M` : 'Kelishiladi'}
+            {item.salary ? `${(item.salary / 1_000_000).toFixed(1)}M` : t.common.noData}
           </Text>
         </View>
       </View>
@@ -100,7 +102,7 @@ export default function SearchScreen() {
           <SearchIcon size={18} color={colors.textTertiary} />
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }]}
-            placeholder="Ish nomi, kompaniya..."
+            placeholder={t.search.placeholder}
             placeholderTextColor={colors.textTertiary}
             value={query}
             onChangeText={text => { setQuery(text); search(text); }}
@@ -128,7 +130,7 @@ export default function SearchScreen() {
       {!loading && searched && jobs.length === 0 && (
         <View style={styles.centerBox}>
           <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-            "{query}" bo'yicha natija topilmadi
+            "{query}" {t.search.noResults}
           </Text>
         </View>
       )}
@@ -138,7 +140,7 @@ export default function SearchScreen() {
         <View style={styles.centerBox}>
           <SearchIcon size={48} color={colors.border} />
           <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-            Ish nomini kiriting
+            {t.search.placeholder}
           </Text>
         </View>
       )}
@@ -147,7 +149,7 @@ export default function SearchScreen() {
       {!loading && jobs.length > 0 && (
         <>
           <Text style={[styles.resultCount, { color: colors.textSecondary }]}>
-            {totalCount} ta natija
+            {totalCount} {t.search.results}
           </Text>
           <FlatList
             data={jobs}

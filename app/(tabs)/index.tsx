@@ -10,7 +10,9 @@ import {
   ConstructionIcon, ITIcon, DriverIcon, ChefIcon,
   MedicalIcon, EducationIcon, FinanceIcon, SecurityIcon,
   CleaningIcon, DesignIcon, MarketingIcon, WarehouseIcon,
-  SunIcon, MoonIcon, BellIcon, MapPinIcon, ClockIcon,SearchIcon,LocationIcon,
+  SunIcon, MoonIcon, BellIcon, MapPinIcon, ClockIcon, SearchIcon, LocationIcon,
+  BriefcaseIcon, TradeIcon, AgricultureIcon, ManufacturingIcon, CourierIcon,
+  LegalIcon, HRIcon, RealEstateIcon, BeautyIcon, AutoServiceIcon, TextileIcon,
 } from '../../components/icons';
 import React from 'react';
 import { JobListSkeleton } from '../../components/SkeletonLoader';
@@ -19,29 +21,67 @@ import { jobService } from '../../services/jobService';
 import { categoryService } from '../../services/categoryService';
 import { Job, Category } from '../../types';
 import { useAuthStore, AuthState } from '../../store/authStore';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 
+const CATEGORY_NAMES: Record<string, { uz: string; ru: string; en: string }> = {
+  'Daily':        { uz: 'Kunlik ishlar',        ru: 'Ежедневная работа',   en: 'Daily jobs' },
+  'IT':           { uz: 'IT',                   ru: 'ИТ',                  en: 'IT' },
+  'Construction': { uz: 'Qurilish',             ru: 'Строительство',       en: 'Construction' },
+  'Driver':       { uz: 'Haydovchi',            ru: 'Водитель',            en: 'Driver' },
+  'Chef':         { uz: 'Oshpaz',               ru: 'Повар',               en: 'Chef' },
+  'Medical':      { uz: 'Tibbiyot',             ru: 'Медицина',            en: 'Medical' },
+  'Education':    { uz: "Ta'lim",               ru: 'Образование',         en: 'Education' },
+  'Finance':      { uz: 'Moliya',               ru: 'Финансы',             en: 'Finance' },
+  'Security':     { uz: 'Qorovul',              ru: 'Охрана',              en: 'Security' },
+  'Cleaning':     { uz: 'Tozalik',              ru: 'Уборка',              en: 'Cleaning' },
+  'Design':       { uz: 'Dizayn',               ru: 'Дизайн',              en: 'Design' },
+  'Marketing':    { uz: 'Marketing',            ru: 'Маркетинг',           en: 'Marketing' },
+  'Warehouse':    { uz: 'Ombor',                ru: 'Склад',               en: 'Warehouse' },
+  'Trade':        { uz: 'Savdo',                ru: 'Торговля',            en: 'Trade' },
+  'Agriculture':  { uz: "Qishloq xo'jaligi",   ru: 'Сельское хозяйство',  en: 'Agriculture' },
+  'Manufacturing':{ uz: 'Ishlab chiqarish',     ru: 'Производство',        en: 'Manufacturing' },
+  'Courier':      { uz: 'Kuryer',               ru: 'Курьер',              en: 'Courier' },
+  'Legal':        { uz: 'Huquq',                ru: 'Юридические услуги',  en: 'Legal' },
+  'HR':           { uz: 'Kadrlar',              ru: 'Кадры',               en: 'HR' },
+  'Real Estate':  { uz: "Ko'chmas mulk",        ru: 'Недвижимость',        en: 'Real Estate' },
+  'Beauty':       { uz: "Go'zallik",            ru: 'Красота',             en: 'Beauty' },
+  'Auto Service': { uz: "Avto ta'mir",          ru: 'Авто сервис',         en: 'Auto Service' },
+  'Textile':      { uz: "To'qimachilik",        ru: 'Текстиль',            en: 'Textile' },
+};
 
 function CategoryIcon({ name, color }: { name: string; color: string }) {
   const props = { size: 28, color };
   const map: Record<string, React.ReactElement> = {
-    construction: <ConstructionIcon {...props} />,
-    it:           <ITIcon {...props} />,
-    driver:       <DriverIcon {...props} />,
-    chef:         <ChefIcon {...props} />,
-    medical:      <MedicalIcon {...props} />,
-    education:    <EducationIcon {...props} />,
-    finance:      <FinanceIcon {...props} />,
-    security:     <SecurityIcon {...props} />,
-    cleaning:     <CleaningIcon {...props} />,
-    design:       <DesignIcon {...props} />,
-    marketing:    <MarketingIcon {...props} />,
-    warehouse:    <WarehouseIcon {...props} />,
+    construction:  <ConstructionIcon {...props} />,
+    it:            <ITIcon {...props} />,
+    driver:        <DriverIcon {...props} />,
+    chef:          <ChefIcon {...props} />,
+    medical:       <MedicalIcon {...props} />,
+    education:     <EducationIcon {...props} />,
+    finance:       <FinanceIcon {...props} />,
+    security:      <SecurityIcon {...props} />,
+    cleaning:      <CleaningIcon {...props} />,
+    design:        <DesignIcon {...props} />,
+    marketing:     <MarketingIcon {...props} />,
+    warehouse:     <WarehouseIcon {...props} />,
+    daily:         <BriefcaseIcon {...props} />,
+    trade:         <TradeIcon {...props} />,
+    agriculture:   <AgricultureIcon {...props} />,
+    manufacturing: <ManufacturingIcon {...props} />,
+    courier:       <CourierIcon {...props} />,
+    legal:         <LegalIcon {...props} />,
+    hr:            <HRIcon {...props} />,
+    'real estate': <RealEstateIcon {...props} />,
+    beauty:        <BeautyIcon {...props} />,
+    'auto service':<AutoServiceIcon {...props} />,
+    textile:       <TextileIcon {...props} />,
   };
-  return map[name?.toLowerCase()] ?? <ITIcon {...props} />;
+  return map[name?.toLowerCase()] ?? <BriefcaseIcon {...props} />;
 }
 
 export default function HomeScreen() {
   const { colors, isDark, toggleTheme } = useThemeStore();
+  const { t, language } = useLanguageStore();
 
   const firstName = useAuthStore((state: AuthState) => state.firstName);
   const [jobs,        setJobs]        = useState<Job[]>([]);
@@ -52,6 +92,7 @@ export default function HomeScreen() {
   const [error,       setError]       = useState<string | null>(null);
   const [search,      setSearch]      = useState('');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const [selectedSubCat, setSelectedSubCat] = useState<string | null>(null);
   const [page,        setPage]        = useState(1);
   const [totalCount,  setTotalCount]  = useState(0);
 
@@ -60,16 +101,17 @@ export default function HomeScreen() {
   const fetchJobs = useCallback(async (p: number, reset: boolean) => {
     try {
       let res: any;
-      if (search)       res = await jobService.searchJobs(search, p);
-      else if (selectedCat) res = await jobService.getJobsByCategory(selectedCat, p);
-      else              res = await jobService.getJobs(p, PAGE_SIZE);
+      if (search)              res = await jobService.searchJobs(search, p);
+      else if (selectedSubCat) res = await jobService.getJobsByCategory(selectedSubCat, p);
+      else if (selectedCat)    res = await jobService.getJobsByCategory(selectedCat, p);
+      else                     res = await jobService.getJobs(p, PAGE_SIZE);
 
       setTotalCount(res.totalCount ?? 0);
       setJobs(prev => reset ? res.items : [...prev, ...res.items]);
     } catch (e: any) {
-      setError(e?.message ?? 'Xatolik yuz berdi');
+      setError(e?.message ?? t.common.somethingWentWrong);
     }
-  }, [search, selectedCat]);
+  }, [search, selectedCat, selectedSubCat]);
 
   useEffect(() => {
     const load = async () => {
@@ -88,7 +130,7 @@ export default function HomeScreen() {
       }
     };
     load();
-  }, [search, selectedCat]);
+  }, [search, selectedCat, selectedSubCat]);
 
   useEffect(() => {
     if (page === 1) return;
@@ -118,15 +160,21 @@ export default function HomeScreen() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, ...Shadow.sm }]}>
         <View>
-          <Text style={[styles.greeting, { color: colors.textSecondary }]}>Salom, {firstName || 'Foydalanuvchi'}!</Text>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary   }]}>Ishlarni toping</Text>
+          <Text style={[styles.greeting, { color: colors.textSecondary }]}>
+            {t.home.greeting}, {firstName || t.common.noData}!
+          </Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+            {t.home.findJob}
+          </Text>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={[styles.iconButton, { backgroundColor: colors.primaryLight }]}
             onPress={toggleTheme} activeOpacity={0.8}
           >
-            {isDark ? <SunIcon size={20} color={colors.primary} /> : <MoonIcon size={20} color={colors.primary} />}
+            {isDark
+              ? <SunIcon size={20} color={colors.primary} />
+              : <MoonIcon size={20} color={colors.primary} />}
           </TouchableOpacity>
           <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.primaryLight }]}>
             <BellIcon size={20} color={colors.primary} />
@@ -150,10 +198,10 @@ export default function HomeScreen() {
           <SearchIcon size={18} color={colors.textTertiary} />
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }]}
-            placeholder="Ish qidiring..."
+            placeholder={t.search.placeholder}
             placeholderTextColor={colors.textTertiary}
             value={search}
-            onChangeText={t => { setSearch(t); setPage(1); }}
+            onChangeText={v => { setSearch(v); setPage(1); }}
             returnKeyType="search"
             autoCapitalize="none"
           />
@@ -166,10 +214,12 @@ export default function HomeScreen() {
 
         {/* Kategoriyalar */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Kategoriyalar</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {t.home.categories}
+          </Text>
           {selectedCat !== null && (
             <TouchableOpacity onPress={() => setSelectedCat(null)}>
-              <Text style={[styles.seeAll, { color: colors.primary }]}>Barchasi</Text>
+              <Text style={[styles.seeAll, { color: colors.primary }]}>{t.home.seeAll}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -190,18 +240,52 @@ export default function HomeScreen() {
                 >
                   <CategoryIcon name={cat.name?.toLowerCase()} color={isSelected ? '#fff' : colors.primary} />
                   <Text style={[styles.categoryName, { color: isSelected ? '#fff' : colors.textSecondary }]}>
-                    {cat.name}
-                  </Text>
+  {CATEGORY_NAMES[cat.name]?.[language] ?? cat.name}
+</Text>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
         )}
 
+        {/* Sub-kategoriyalar */}
+        {selectedCat && (() => {
+          const cat = categories.find(c => c.id === selectedCat);
+          const subs = cat?.subCategories ?? [];
+          if (subs.length === 0) return null;
+          return (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.subCategoriesContainer}>
+              {subs.map(sub => {
+                const isSelected = selectedSubCat === sub.id;
+                return (
+                  <TouchableOpacity
+                    key={sub.id}
+                    onPress={() => setSelectedSubCat(isSelected ? null : sub.id)}
+                    style={[styles.subCategoryChip, {
+                      backgroundColor: isSelected ? colors.primary : colors.card,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    }]}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.subCategoryText, {
+                      color: isSelected ? '#fff' : colors.textSecondary,
+                    }]}>
+                      {sub.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          );
+        })()}
+
         {/* Ishlar */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {selectedCat ? categories.find(c => c.id === selectedCat)?.name ?? 'Ishlar' : 'Yangi ishlar'}
+            {selectedCat
+              ? categories.find(c => c.id === selectedCat)?.name ?? t.home.recentJobs
+              : t.home.recentJobs}
           </Text>
           {!loading && (
             <Text style={[styles.seeAll, { color: colors.textTertiary }]}>{totalCount} ta</Text>
@@ -209,17 +293,20 @@ export default function HomeScreen() {
         </View>
 
         {loading && (
-  <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.md }}>
-    <JobListSkeleton count={4} />
-  </View>
-)}
+          <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.md }}>
+            <JobListSkeleton count={4} />
+          </View>
+        )}
 
         {!loading && error && (
           <View style={styles.centerBox}>
             <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
-            <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
-              onPress={() => { setError(null); setPage(1); }} activeOpacity={0.8}>
-              <Text style={styles.retryText}>Qayta urinish</Text>
+            <TouchableOpacity
+              style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+              onPress={() => { setError(null); setPage(1); }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.retryText}>{t.common.retry}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -227,7 +314,9 @@ export default function HomeScreen() {
         {!loading && !error && jobs.length === 0 && (
           <View style={styles.centerBox}>
             <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-              {search ? `"${search}" bo'yicha natija topilmadi` : "Hozircha ish e'lonlari yo'q"}
+              {search
+                ? `"${search}" ${t.search.noResults}`
+                : t.home.noJobs}
             </Text>
           </View>
         )}
@@ -246,12 +335,18 @@ export default function HomeScreen() {
                 </Text>
               </View>
               <View style={styles.jobInfo}>
-                <Text style={[styles.jobTitle,   { color: colors.textPrimary   }]} numberOfLines={1}>{job.title}</Text>
-                <Text style={[styles.companyName, { color: colors.textSecondary }]} numberOfLines={1}>{job.employerName}</Text>
+                <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {job.title}
+                </Text>
+                <Text style={[styles.companyName, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {job.employerName}
+                </Text>
               </View>
               <View style={[styles.salaryBadge, { backgroundColor: colors.primaryLight }]}>
                 <Text style={[styles.salaryText, { color: colors.primary }]}>
-                  {job.salary ? `${(job.salary / 1_000_000).toFixed(1)}M so'm` : 'Kelishiladi'}
+                  {job.salary
+                    ? `${(job.salary / 1_000_000).toFixed(1)}M ${t.common.currency}`
+                    : t.common.noData}
                 </Text>
               </View>
             </View>
@@ -351,4 +446,19 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg, marginTop: 4,
   },
   retryText: { color: '#fff', fontWeight: FontWeight.semiBold, fontSize: FontSize.sm },
+  subCategoriesContainer: {
+  paddingHorizontal: Spacing.xl,
+  paddingVertical: Spacing.sm,
+  gap: Spacing.sm,
+},
+subCategoryChip: {
+  paddingHorizontal: Spacing.md,
+  paddingVertical: 8,
+  borderRadius: BorderRadius.full,
+  borderWidth: 1.5,
+},
+subCategoryText: {
+  fontSize: FontSize.sm,
+  fontWeight: FontWeight.medium,
+},
 });

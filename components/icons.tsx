@@ -392,3 +392,107 @@ export function EyeOffIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: Ico
     </Svg>
   );
 }
+
+export const GlobeIcon = ({ size = 20, color = "#000" }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" />
+    <Path
+      d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+export function TradeIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.71 15.29C4.08 15.92 4.52 17 5.41 17H17M17 17C16.45 17 16 17.45 16 18C16 18.55 16.45 19 17 19C17.55 19 18 18.55 18 18C18 17.45 17.55 17 17 17ZM9 18C9 18.55 8.55 19 8 19C7.45 19 7 18.55 7 18C7 17.45 7.45 17 8 17C8.55 17 9 17.45 9 18Z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function AgricultureIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 22V12M12 12C12 12 7 10 4 5C8 4 13 6 16 9M12 12C12 12 17 10 20 5C16 4 11 6 8 9" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M5 22H19" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function ManufacturingIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M2 20H22M4 20V12L8 9V12L12 9V12L16 9V20M16 20V8H20V20" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Rect x="17" y="4" width="2" height="4" stroke={color} strokeWidth={strokeWidth} />
+    </Svg>
+  );
+}
+
+export function CourierIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M16 3H1V16H16V3Z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <Path d="M16 8H20L23 11V16H16V8Z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <Circle cx="5.5" cy="18.5" r="2.5" stroke={color} strokeWidth={strokeWidth} />
+      <Circle cx="18.5" cy="18.5" r="2.5" stroke={color} strokeWidth={strokeWidth} />
+    </Svg>
+  );
+}
+
+export function LegalIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 3L4 7V13C4 17.42 7.5 21.58 12 22C16.5 21.58 20 17.42 20 13V7L12 3Z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <Path d="M8 11L11 14L16 9" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function HRIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="9" cy="7" r="4" stroke={color} strokeWidth={strokeWidth} />
+      <Path d="M3 21V19C3 16.79 5.69 15 9 15" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M16 11L18 13L22 9" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function RealEstateIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 21H21M3 21V10L12 3L21 10V21M9 21V15H15V21" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M9 10H15" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function BeautyIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 2C12 2 9 6 9 9C9 10.66 10.34 12 12 12C13.66 12 15 10.66 15 9C15 6 12 2 12 2Z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <Path d="M6 22C6 22 6 17 12 17C18 17 18 22 18 22" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M8 14C8 14 9.5 16 12 16C14.5 16 16 14 16 14" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function AutoServiceIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function TextileIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 3L6 6M6 6C6 6 9 3 12 6C15 9 18 6 18 6L21 3M6 6V20M18 6V20M6 20H18M6 13H18" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}

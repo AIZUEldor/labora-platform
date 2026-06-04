@@ -12,6 +12,7 @@ import { ClockIcon, StarIcon } from '../../components/icons';
 import Svg, { Path } from 'react-native-svg';
 import { jobApplicationService } from '../../services/jobApplicationService';
 import { JobApplication, ApplicationStatus } from '../../types';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 
 const BASE_URL = 'http://10.210.81.66:5020';
 
@@ -31,14 +32,6 @@ const STATUS_COLOR: Record<number, { bg: string; text: string }> = {
   [ApplicationStatus.Completed]: { bg: '#EFF6FF', text: '#1D4ED8' },
 };
 
-const STATUS_LABEL: Record<number, string> = {
-  [ApplicationStatus.Pending]:   'Kutilmoqda',
-  [ApplicationStatus.Accepted]:  'Qabul qilindi',
-  [ApplicationStatus.Rejected]:  'Rad etildi',
-  [ApplicationStatus.Cancelled]: 'Bekor qilindi',
-  [ApplicationStatus.Completed]: 'Yakunlandi',
-};
-
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
@@ -46,7 +39,16 @@ function formatDate(dateStr: string): string {
 
 export default function JobApplicationsScreen() {
   const { colors, isDark } = useThemeStore();
+  const { t } = useLanguageStore();
   const { jobId, jobTitle } = useLocalSearchParams<{ jobId: string; jobTitle: string }>();
+
+  const STATUS_LABEL: Record<number, string> = {
+    [ApplicationStatus.Pending]:   t.applications.pending,
+    [ApplicationStatus.Accepted]:  t.applications.accepted,
+    [ApplicationStatus.Rejected]:  t.applications.rejected,
+    [ApplicationStatus.Cancelled]: t.common.cancel ?? 'Bekor',
+    [ApplicationStatus.Completed]: t.common.done,
+  };
 
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -60,7 +62,7 @@ export default function JobApplicationsScreen() {
       setApplications(data);
       setError(null);
     } catch (e: any) {
-      setError(e?.message ?? 'Xatolik yuz berdi');
+      setError(e?.message ?? t.common.somethingWentWrong);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -71,12 +73,12 @@ export default function JobApplicationsScreen() {
 
   const handleUpdateStatus = async (id: string, status: 'Accepted' | 'Rejected') => {
     Alert.alert(
-      status === 'Accepted' ? 'Qabul qilish' : 'Rad etish',
-      `Arizani ${status === 'Accepted' ? 'qabul qilasizmi' : 'rad etasizmi'}?`,
+      status === 'Accepted' ? t.employer.acceptApplicant : t.employer.rejectApplicant,
+      t.common.confirm,
       [
-        { text: 'Bekor', style: 'cancel' },
+        { text: t.common.cancel, style: 'cancel' },
         {
-          text: 'Ha',
+          text: t.common.yes,
           onPress: async () => {
             try {
               setUpdating(id);
@@ -88,7 +90,7 @@ export default function JobApplicationsScreen() {
                 )
               );
             } catch (e: any) {
-              Alert.alert('Xatolik', e?.message ?? 'Xatolik yuz berdi');
+              Alert.alert(t.common.error, e?.message ?? t.common.somethingWentWrong);
             } finally {
               setUpdating(null);
             }
@@ -100,12 +102,12 @@ export default function JobApplicationsScreen() {
 
   const handleComplete = async (id: string) => {
     Alert.alert(
-      'Ishni yakunlash',
-      'Ishni yakunlanganga belgilaysizmi?',
+      t.common.done,
+      t.common.confirm,
       [
-        { text: 'Bekor', style: 'cancel' },
+        { text: t.common.cancel, style: 'cancel' },
         {
-          text: 'Ha',
+          text: t.common.yes,
           onPress: async () => {
             try {
               setUpdating(id);
@@ -117,7 +119,7 @@ export default function JobApplicationsScreen() {
                 )
               );
             } catch (e: any) {
-              Alert.alert('Xatolik', e?.message ?? 'Xatolik yuz berdi');
+              Alert.alert(t.common.error, e?.message ?? t.common.somethingWentWrong);
             } finally {
               setUpdating(null);
             }
@@ -130,7 +132,7 @@ export default function JobApplicationsScreen() {
   const handleViewCv = (cvUrl: string) => {
     const fullUrl = `${BASE_URL}${cvUrl}`;
     Linking.openURL(fullUrl).catch(() => {
-      Alert.alert('Xatolik', 'CV ni ochib bo\'lmadi');
+      Alert.alert(t.common.error, t.common.somethingWentWrong);
     });
   };
 
@@ -149,7 +151,9 @@ export default function JobApplicationsScreen() {
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle} numberOfLines={1}>{jobTitle}</Text>
-            <Text style={styles.headerSubtitle}>{applications.length} ta ariza</Text>
+            <Text style={styles.headerSubtitle}>
+              {applications.length} {t.employer.applicants}
+            </Text>
           </View>
           <View style={{ width: 40 }} />
         </View>
@@ -166,14 +170,16 @@ export default function JobApplicationsScreen() {
           <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
           <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
             onPress={() => { setLoading(true); load(); }}>
-            <Text style={styles.retryText}>Qayta urinish</Text>
+            <Text style={styles.retryText}>{t.common.retry}</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {!loading && !error && applications.length === 0 && (
         <View style={styles.centerBox}>
-          <Text style={[styles.stateText, { color: colors.textSecondary }]}>Hali ariza yo'q</Text>
+          <Text style={[styles.stateText, { color: colors.textSecondary }]}>
+            {t.employer.noApplicants}
+          </Text>
         </View>
       )}
 
@@ -216,7 +222,7 @@ export default function JobApplicationsScreen() {
                   </View>
                 </View>
 
-                {/* CV ko'rish */}
+                {/* CV */}
                 {app.workerCvUrl && (
                   <>
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -225,7 +231,9 @@ export default function JobApplicationsScreen() {
                       onPress={() => handleViewCv(app.workerCvUrl!)}
                       activeOpacity={0.8}
                     >
-                      <Text style={[styles.actionBtnText, { color: '#1D4ED8' }]}>CV ko'rish</Text>
+                      <Text style={[styles.actionBtnText, { color: '#1D4ED8' }]}>
+                        {t.profile.myCV}
+                      </Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -253,7 +261,9 @@ export default function JobApplicationsScreen() {
                       >
                         {updating === app.id
                           ? <ActivityIndicator size="small" color="#991B1B" />
-                          : <Text style={[styles.actionBtnText, { color: '#991B1B' }]}>Rad etish</Text>
+                          : <Text style={[styles.actionBtnText, { color: '#991B1B' }]}>
+                              {t.employer.rejectApplicant}
+                            </Text>
                         }
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -264,14 +274,16 @@ export default function JobApplicationsScreen() {
                       >
                         {updating === app.id
                           ? <ActivityIndicator size="small" color="#166534" />
-                          : <Text style={[styles.actionBtnText, { color: '#166534' }]}>Qabul qilish</Text>
+                          : <Text style={[styles.actionBtnText, { color: '#166534' }]}>
+                              {t.employer.acceptApplicant}
+                            </Text>
                         }
                       </TouchableOpacity>
                     </View>
                   </>
                 )}
 
-                {/* Accepted: Ishni yakunlash */}
+                {/* Accepted: Yakunlash */}
                 {app.status === ApplicationStatus.Accepted && (
                   <>
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -283,7 +295,9 @@ export default function JobApplicationsScreen() {
                     >
                       {updating === app.id
                         ? <ActivityIndicator size="small" color="#1D4ED8" />
-                        : <Text style={[styles.actionBtnText, { color: '#1D4ED8' }]}>Ishni yakunlash</Text>
+                        : <Text style={[styles.actionBtnText, { color: '#1D4ED8' }]}>
+                            {t.common.done}
+                          </Text>
                       }
                     </TouchableOpacity>
                   </>
@@ -302,7 +316,9 @@ export default function JobApplicationsScreen() {
                       activeOpacity={0.8}
                     >
                       <StarIcon size={16} color={colors.primary} />
-                      <Text style={[styles.actionBtnText, { color: colors.primary }]}>Baholash</Text>
+                      <Text style={[styles.actionBtnText, { color: colors.primary }]}>
+                        {t.profile.reviews}
+                      </Text>
                     </TouchableOpacity>
                   </>
                 )}

@@ -13,6 +13,7 @@ import { StarIcon, CheckCircleIcon } from '../components/icons';
 import Svg, { Path } from 'react-native-svg';
 import { reviewService } from '../services/reviewService';
 import { UserRole } from '../types';
+import { useLanguageStore } from '../stores/useLanguageStore';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
   return (
@@ -22,7 +23,6 @@ function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string
   );
 }
 
-// ── Yulduz komponenti ─────────────────────────────────────────────────────────
 function StarRating({ value, onChange, label, colors }: {
   value: number;
   onChange: (v: number) => void;
@@ -45,6 +45,7 @@ function StarRating({ value, onChange, label, colors }: {
 
 export default function ReviewScreen() {
   const { colors, isDark } = useThemeStore();
+  const { t } = useLanguageStore();
   const role       = useAuthStore((state: AuthState) => state.role);
   const isEmployer = Number(role) === UserRole.Employer;
 
@@ -53,33 +54,29 @@ export default function ReviewScreen() {
     targetName: string;
   }>();
 
-  // Umumiy
-  const [overallRating,   setOverallRating]   = useState(0);
-  const [wouldWorkAgain,  setWouldWorkAgain]  = useState<boolean | null>(null);
-  const [comment,         setComment]         = useState('');
-  const [submitting,      setSubmitting]      = useState(false);
+  const [overallRating,              setOverallRating]              = useState(0);
+  const [wouldWorkAgain,             setWouldWorkAgain]             = useState<boolean | null>(null);
+  const [comment,                    setComment]                    = useState('');
+  const [submitting,                 setSubmitting]                 = useState(false);
 
-  // Worker → Employer
   const [paymentRating,              setPaymentRating]              = useState(0);
   const [employerCommunicationRating, setEmployerCommunicationRating] = useState(0);
 
-  // Employer → Worker
-  const [experienceRating,        setExperienceRating]        = useState(0);
-  const [workerCommunicationRating, setWorkerCommunicationRating] = useState(0);
-  const [workQualityRating,       setWorkQualityRating]       = useState(0);
-  const [punctualityRating,       setPunctualityRating]       = useState(0);
-  const [responsibilityRating,    setResponsibilityRating]    = useState(0);
+  const [experienceRating,           setExperienceRating]           = useState(0);
+  const [workerCommunicationRating,  setWorkerCommunicationRating]  = useState(0);
+  const [workQualityRating,          setWorkQualityRating]          = useState(0);
+  const [punctualityRating,          setPunctualityRating]          = useState(0);
+  const [responsibilityRating,       setResponsibilityRating]       = useState(0);
 
   const handleSubmit = async () => {
     if (overallRating === 0) {
-      Alert.alert('Xatolik', 'Umumiy bahoni kiriting');
+      Alert.alert(t.common.error, t.profile.rating);
       return;
     }
     if (wouldWorkAgain === null) {
-      Alert.alert('Xatolik', "Qayta ishlashni xohlaysizmi degan savolga javob bering");
+      Alert.alert(t.common.error, t.common.confirm);
       return;
     }
-
     try {
       setSubmitting(true);
       await reviewService.create({
@@ -88,7 +85,7 @@ export default function ReviewScreen() {
         wouldWorkAgain,
         comment: comment.trim() || undefined,
         ...(isEmployer ? {
-          experienceRating:         experienceRating         || undefined,
+          experienceRating:          experienceRating          || undefined,
           workerCommunicationRating: workerCommunicationRating || undefined,
           workQualityRating:         workQualityRating         || undefined,
           punctualityRating:         punctualityRating         || undefined,
@@ -98,11 +95,11 @@ export default function ReviewScreen() {
           employerCommunicationRating: employerCommunicationRating || undefined,
         }),
       });
-      Alert.alert('Muvaffaqiyat', 'Bahoyingiz yuborildi!', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t.common.success, t.profile.reviews, [
+        { text: t.common.ok, onPress: () => router.back() },
       ]);
     } catch (e: any) {
-      Alert.alert('Xatolik', e?.message ?? 'Xatolik yuz berdi');
+      Alert.alert(t.common.error, e?.message ?? t.common.somethingWentWrong);
     } finally {
       setSubmitting(false);
     }
@@ -122,7 +119,7 @@ export default function ReviewScreen() {
             <BackIcon size={22} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Baholash</Text>
+            <Text style={styles.headerTitle}>{t.profile.reviews}</Text>
             <Text style={styles.headerSubtitle}>{targetName}</Text>
           </View>
           <View style={{ width: 40 }} />
@@ -133,26 +130,29 @@ export default function ReviewScreen() {
 
         {/* Umumiy baho */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Umumiy baho *</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {t.profile.rating} *
+          </Text>
           <StarRating value={overallRating} onChange={setOverallRating} label="" colors={colors} />
         </View>
 
-        {/* Role ga qarab kategoriyalar */}
+        {/* Batafsil */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Batafsil baho</Text>
-
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {t.profile.reviews}
+          </Text>
           {isEmployer ? (
             <>
-              <StarRating value={experienceRating}         onChange={setExperienceRating}         label="Tajriba"        colors={colors} />
-              <StarRating value={workQualityRating}        onChange={setWorkQualityRating}         label="Ish sifati"     colors={colors} />
-              <StarRating value={punctualityRating}        onChange={setPunctualityRating}         label="Vaqtinchalik"   colors={colors} />
-              <StarRating value={responsibilityRating}     onChange={setResponsibilityRating}      label="Mas'uliyat"     colors={colors} />
-              <StarRating value={workerCommunicationRating} onChange={setWorkerCommunicationRating} label="Muloqot"        colors={colors} />
+              <StarRating value={experienceRating}          onChange={setExperienceRating}          label={t.editProfile.experience}  colors={colors} />
+              <StarRating value={workQualityRating}         onChange={setWorkQualityRating}          label={t.common.ok}               colors={colors} />
+              <StarRating value={punctualityRating}         onChange={setPunctualityRating}          label={t.common.ok}               colors={colors} />
+              <StarRating value={responsibilityRating}      onChange={setResponsibilityRating}       label={t.common.ok}               colors={colors} />
+              <StarRating value={workerCommunicationRating} onChange={setWorkerCommunicationRating}  label={t.common.ok}               colors={colors} />
             </>
           ) : (
             <>
-              <StarRating value={paymentRating}               onChange={setPaymentRating}               label="To'lov"     colors={colors} />
-              <StarRating value={employerCommunicationRating} onChange={setEmployerCommunicationRating} label="Muloqot"    colors={colors} />
+              <StarRating value={paymentRating}               onChange={setPaymentRating}               label={t.common.currency}  colors={colors} />
+              <StarRating value={employerCommunicationRating} onChange={setEmployerCommunicationRating} label={t.common.ok}        colors={colors} />
             </>
           )}
         </View>
@@ -160,7 +160,7 @@ export default function ReviewScreen() {
         {/* Qayta ishlash */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {isEmployer ? 'Qayta yollaysizmi?' : 'Qayta ishlaysizmi?'}
+            {isEmployer ? t.employer.acceptApplicant : t.common.confirm}
           </Text>
           <View style={styles.yesNoRow}>
             <TouchableOpacity
@@ -174,7 +174,7 @@ export default function ReviewScreen() {
             >
               <CheckCircleIcon size={20} color={wouldWorkAgain === true ? '#16A34A' : colors.textTertiary} />
               <Text style={[styles.yesNoText, { color: wouldWorkAgain === true ? '#16A34A' : colors.textSecondary }]}>
-                Ha
+                {t.common.yes}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -188,7 +188,7 @@ export default function ReviewScreen() {
             >
               <CheckCircleIcon size={20} color={wouldWorkAgain === false ? '#EF4444' : colors.textTertiary} />
               <Text style={[styles.yesNoText, { color: wouldWorkAgain === false ? '#EF4444' : colors.textSecondary }]}>
-                Yo'q
+                {t.common.no}
               </Text>
             </TouchableOpacity>
           </View>
@@ -196,10 +196,12 @@ export default function ReviewScreen() {
 
         {/* Izoh */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Izoh</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {t.editProfile.bio}
+          </Text>
           <TextInput
             style={[styles.commentInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-            placeholder="Qo'shimcha fikrlaringizni yozing..."
+            placeholder={t.editProfile.bio}
             placeholderTextColor={colors.textTertiary}
             value={comment}
             onChangeText={setComment}
@@ -227,7 +229,7 @@ export default function ReviewScreen() {
           >
             {submitting
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.submitText}>Yuborish</Text>
+              : <Text style={styles.submitText}>{t.common.done}</Text>
             }
           </LinearGradient>
         </TouchableOpacity>
@@ -252,14 +254,12 @@ const styles = StyleSheet.create({
   headerTitle:    { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#fff' },
   headerSubtitle: { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
   content:        { padding: Spacing.xl, gap: Spacing.lg },
-  section: {
-    borderRadius: BorderRadius.xl, padding: Spacing.lg, gap: Spacing.md,
-  },
-  sectionTitle: { fontSize: FontSize.md, fontWeight: FontWeight.bold },
-  ratingRow:    { gap: Spacing.sm },
-  ratingLabel:  { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
-  starsRow:     { flexDirection: 'row', gap: Spacing.sm },
-  yesNoRow:     { flexDirection: 'row', gap: Spacing.md },
+  section:        { borderRadius: BorderRadius.xl, padding: Spacing.lg, gap: Spacing.md },
+  sectionTitle:   { fontSize: FontSize.md, fontWeight: FontWeight.bold },
+  ratingRow:      { gap: Spacing.sm },
+  ratingLabel:    { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
+  starsRow:       { flexDirection: 'row', gap: Spacing.sm },
+  yesNoRow:       { flexDirection: 'row', gap: Spacing.md },
   yesNoBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: Spacing.sm, height: 48, borderRadius: BorderRadius.lg, borderWidth: 1.5,

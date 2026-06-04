@@ -48,14 +48,22 @@ export interface Job {
   title: string;
   description: string;
   salary: number;
-  location: string;
+  jobType: number;
+  location?: string;
+  city: string;
+  country: string;
   latitude: number;
   longitude: number;
   status: JobStatus;
-  categoryId: string;
+  categoryId?: string;
   categoryName: string;
+  subCategoryId?: string;
+  subCategoryName?: string;
   employerId: string;
-  employerName: string;
+  employerName?: string;
+  requiredSkills?: string;
+  experienceYears?: number;
+  deadline?: string;
   createdAt: string;
   distance?: number;
 }
@@ -103,7 +111,9 @@ export interface UserProfile {
 export interface Category {
   id: string;
   name: string;
-  iconUrl: string;
+  description?: string;
+  iconUrl?: string;
+  subCategories?: Category[];
 }
 
 // ==================== REVIEW ====================
