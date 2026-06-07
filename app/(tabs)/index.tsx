@@ -81,7 +81,7 @@ function CategoryIcon({ name, color }: { name: string; color: string }) {
 
 export default function HomeScreen() {
   const { colors, isDark, toggleTheme } = useThemeStore();
- const { language } = useLanguageStore();
+const { language, t } = useLanguageStore();
 
   const firstName = useAuthStore((state: AuthState) => state.firstName);
   const role = useAuthStore((state: AuthState) => state.role);

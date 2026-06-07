@@ -1,5 +1,8 @@
 export const en = {
   common: {
+    yes: 'Yes',
+no: 'No',
+done: 'Done',
     ok: 'OK',
     cancel: 'Cancel',
     save: 'Save',
@@ -15,6 +18,11 @@ export const en = {
     currency: 'UZS',
   },
   auth: {
+    haveAccount: 'Already have an account?',
+    phone: 'Phone number',
+phonePlaceholder: '+998 90 123 45 67',
+loginButton: 'Login',
+registerButton: 'Register',
     login: 'Login',
     register: 'Register',
     phoneNumber: 'Phone number',
@@ -48,6 +56,9 @@ export const en = {
     results: 'results',
   },
   job: {
+    applyNow: 'Apply now',
+    jobType: 'Job type',
+    requirements: 'Requirements',
     apply: 'Apply now',
     salary: 'Salary',
     location: 'Location',
@@ -75,6 +86,10 @@ export const en = {
     coverLetter: 'Cover letter',
   },
   profile: {
+    uploadCV: 'Upload CV',
+myCV: 'Update CV',
+darkMode: 'Dark mode',
+lightMode: 'Light mode',
     title: 'Profile',
     editProfile: 'Edit profile',
     myApplications: 'My applications',
@@ -104,4 +119,30 @@ export const en = {
     submit: 'Submit',
     placeholder: 'Write a comment...',
   },
+
+  editProfile: {
+    bio: 'Bio',
+experience: 'Experience',
+  save: 'Save',  
+  title: 'Edit Profile',
+  successMessage: 'Profile updated successfully.',
+  avatar: 'Error uploading avatar.',
+  firstName: 'First name',
+  lastName: 'Last name',
+  age: 'Age',
+  phone: 'Phone number',
+  city: 'City',
+  country: 'Country',
+  personalInfo: 'Personal information',
+  contact: 'Contact',
+  location: 'Location',
+  saveButton: 'Save',
+  changePhoto: 'Tap to change photo',
+},
+employer: {
+    publish: 'Active',
+  applicants: 'Applicants',
+  myJobs: 'My jobs',
+  postJob: 'Post a job',
+},
 };

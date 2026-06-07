@@ -1,5 +1,8 @@
 export const ru = {
   common: {
+    yes: 'Да',
+no: 'Нет',
+done: 'Готово',
     ok: 'OK',
     cancel: 'Отмена',
     save: 'Сохранить',
@@ -15,6 +18,11 @@ export const ru = {
     currency: 'сум',
   },
   auth: {
+    haveAccount: 'Уже есть аккаунт?',
+    phone: 'Номер телефона',
+phonePlaceholder: '+998 90 123 45 67',
+loginButton: 'Войти',
+registerButton: 'Зарегистрироваться',
     login: 'Войти',
     register: 'Регистрация',
     phoneNumber: 'Номер телефона',
@@ -48,6 +56,9 @@ export const ru = {
     results: 'результатов',
   },
   job: {
+    applyNow: 'Подать заявку',
+    jobType: 'Тип работы',
+    requirements: 'Требования',
     apply: 'Подать заявку',
     salary: 'Зарплата',
     location: 'Местоположение',
@@ -75,6 +86,10 @@ export const ru = {
     coverLetter: 'Сопроводительное письмо',
   },
   profile: {
+    uploadCV: 'Загрузить CV',
+myCV: 'Обновить CV',
+darkMode: 'Тёмный режим',
+lightMode: 'Светлый режим',
     title: 'Профиль',
     editProfile: 'Редактировать профиль',
     myApplications: 'Мои заявки',
@@ -104,4 +119,31 @@ export const ru = {
     submit: 'Отправить',
     placeholder: 'Напишите комментарий...',
   },
+
+  editProfile: {
+    bio: 'Био',
+experience: 'Опыт',
+    save: 'Сохранить',
+  title: 'Редактировать профиль',
+  successMessage: 'Профиль успешно обновлён.',
+  avatar: 'Ошибка при загрузке фото.',
+  firstName: 'Имя',
+  lastName: 'Фамилия',
+  age: 'Возраст',
+  phone: 'Номер телефона',
+  city: 'Город',
+  country: 'Страна',
+  personalInfo: 'Личные данные',
+  contact: 'Контакты',
+  location: 'Местоположение',
+  saveButton: 'Сохранить',
+  changePhoto: 'Нажмите, чтобы изменить фото',
+},
+
+employer: {
+    publish: 'Активные',
+  applicants: 'Соискатели',
+  myJobs: 'Мои вакансии',
+  postJob: 'Разместить вакансию',
+},
 };

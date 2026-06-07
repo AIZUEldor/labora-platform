@@ -23,6 +23,8 @@ import { jobService } from '../../services/jobService';
 import { UserProfile, UserRole } from '../../types';
 import { ProfileSkeleton } from '../../components/SkeletonLoader';
 import { MEDIA_URL } from '../../services/api';
+import { useLanguageStore } from '../../stores/useLanguageStore';
+import { LanguagePicker } from '../../components/LanguagePicker';
 
 type MenuItem = {
   icon: string;

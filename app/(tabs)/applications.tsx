@@ -178,6 +178,7 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
   const [refreshing,   setRefreshing]   = useState(false);
   const [error,        setError]        = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
+  const { t } = useLanguageStore();
 
   const load = useCallback(async () => {
     try {
@@ -296,6 +297,7 @@ function WorkerPostsList({ colors }: { colors: any }) {
   const [refreshing,   setRefreshing]   = useState(false);
   const [error,        setError]        = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState('Barchasi');
+  const { t } = useLanguageStore();
 
   const load = useCallback(async () => {
     try {
@@ -441,6 +443,7 @@ export default function ApplicationsScreen() {
   const { t } = useLanguageStore();
   const role       = useAuthStore((state: AuthState) => state.role);
   const isEmployer = Number(role) === UserRole.Employer;
+  
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
