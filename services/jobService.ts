@@ -39,10 +39,16 @@ export const jobService = {
   title: string;
   description: string;
   salary: number;
-  location: string;
+  jobType: number;
   categoryId: string;
+  subCategoryId?: string;
+  city: string;
+  country: string;
   latitude?: number;
   longitude?: number;
+  requiredSkills?: string;
+  experienceYears?: number;
+  deadline?: string;
 }): Promise<Job> => {
   const response = await api.post<Job>('/Job', data);
   return response.data;

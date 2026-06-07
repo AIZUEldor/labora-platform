@@ -19,6 +19,7 @@ import { Colors } from '../../constants/colors';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
 import { UserRole } from '../../types';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 
 export default function RegisterScreen() {
   const [firstName, setFirstName] = useState<string>('');
@@ -31,15 +32,16 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
   const login = useAuthStore((state: AuthState) => state.login);
+  const { t } = useLanguageStore();
 
   const handleRegister = async () => {
     if (!firstName.trim() || !lastName.trim() || !age.trim() || !password.trim() || !phoneNumber.trim()) {
-      Alert.alert('Xato', "Barcha maydonlarni to'ldiring");
+      Alert.alert('Xato', t.common.error);
       return;
     }
     const ageNum = parseInt(age);
     if (isNaN(ageNum) || ageNum < 16 || ageNum > 100) {
-      Alert.alert('Xato', 'Yosh 16 dan 100 gacha bo\'lishi kerak');
+      Alert.alert('Xato', t.common.somethingWentWrong);
       return;
     }
     setIsLoading(true);
@@ -58,7 +60,7 @@ export default function RegisterScreen() {
       const data = error.response?.data;
       const message = Array.isArray(data)
         ? data.join('\n')
-        : data?.message ?? error.message ?? 'Xatolik yuz berdi';
+        : data?.message ?? error.message ?? t.common.somethingWentWrong;
       Alert.alert('Xato', message);
     } finally {
       setIsLoading(false);
@@ -89,8 +91,8 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <Text style={styles.title}>Ro'yxatdan o'ting</Text>
-          <Text style={styles.subtitle}>Ma'lumotlaringizni kiriting</Text>
+          <Text style={styles.title}>{t.auth.register}</Text>
+          <Text style={styles.subtitle}>{t.auth.phone}</Text>
 
           {/* Role Selector */}
           <View style={styles.roleContainer}>
@@ -101,7 +103,7 @@ export default function RegisterScreen() {
             >
               <Text style={styles.roleIcon}>👷</Text>
               <Text style={[styles.roleText, role === UserRole.Worker && styles.roleTextActive]}>
-                Ishchi
+                {t.auth.worker}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -111,7 +113,7 @@ export default function RegisterScreen() {
             >
               <Text style={styles.roleIcon}>🏢</Text>
               <Text style={[styles.roleText, role === UserRole.Employer && styles.roleTextActive]}>
-                Ish beruvchi
+                {t.auth.employer}
               </Text>
             </TouchableOpacity>
           </View>
@@ -119,11 +121,11 @@ export default function RegisterScreen() {
           {/* Ism va Familiya */}
           <View style={styles.row}>
             <View style={[styles.inputWrapper, { flex: 1 }]}>
-              <Text style={styles.inputLabel}>Ism</Text>
+              <Text style={styles.inputLabel}>{t.auth.firstName}</Text>
               <View style={styles.inputContainer}>
                 <TextInput
                   style={styles.input}
-                  placeholder="Ismingiz"
+                  placeholder={t.auth.firstName}
                   placeholderTextColor={Colors.textTertiary}
                   value={firstName}
                   onChangeText={setFirstName}
@@ -132,11 +134,11 @@ export default function RegisterScreen() {
               </View>
             </View>
             <View style={[styles.inputWrapper, { flex: 1 }]}>
-              <Text style={styles.inputLabel}>Familiya</Text>
+              <Text style={styles.inputLabel}>{t.auth.lastName}</Text>
               <View style={styles.inputContainer}>
                 <TextInput
                   style={styles.input}
-                  placeholder="Familiyangiz"
+                  placeholder={t.auth.lastName}
                   placeholderTextColor={Colors.textTertiary}
                   value={lastName}
                   onChangeText={setLastName}
@@ -165,12 +167,12 @@ export default function RegisterScreen() {
 
           {/* Telefon raqam */}
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Telefon raqam</Text>
+            <Text style={styles.inputLabel}>{t.auth.phone}</Text>
             <View style={styles.inputContainer}>
               <Text style={styles.inputIcon}>📱</Text>
               <TextInput
                 style={styles.input}
-                placeholder="+998 90 123 45 67"
+                placeholder={t.auth.phonePlaceholder}
                 placeholderTextColor={Colors.textTertiary}
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
@@ -181,12 +183,12 @@ export default function RegisterScreen() {
 
           {/* Parol */}
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Parol</Text>
+            <Text style={styles.inputLabel}>{t.auth.password}</Text>
             <View style={styles.inputContainer}>
               <Text style={styles.inputIcon}>🔒</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Kamida 6 ta belgi"
+                placeholder={t.auth.password}
                 placeholderTextColor={Colors.textTertiary}
                 value={password}
                 onChangeText={setPassword}
@@ -217,16 +219,16 @@ export default function RegisterScreen() {
               {isLoading ? (
                 <ActivityIndicator color={Colors.white} size="small" />
               ) : (
-                <Text style={styles.registerButtonText}>Ro'yxatdan o'tish</Text>
+                <Text style={styles.registerButtonText}>{t.auth.registerButton}</Text>
               )}
             </LinearGradient>
           </TouchableOpacity>
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Hisobingiz bormi? </Text>
+            <Text style={styles.footerText}>{t.auth.haveAccount} </Text>
             <TouchableOpacity onPress={() => router.push('/auth/login')}>
-              <Text style={styles.loginText}>Kirish</Text>
+              <Text style={styles.loginText}>{t.auth.loginButton}</Text>
             </TouchableOpacity>
           </View>
         </View>

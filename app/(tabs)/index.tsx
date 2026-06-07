@@ -111,7 +111,7 @@ export default function HomeScreen() {
       setTotalCount(res.totalCount ?? 0);
       setJobs(prev => reset ? res.items : [...prev, ...res.items]);
     } catch (e: any) {
-      setError(e?.message ?? 'Xatolik yuz berdi');
+      setError(e?.message ?? t.common.somethingWentWrong);
     }
   }, [search, selectedCat, selectedSubCat]);
 
@@ -201,7 +201,7 @@ export default function HomeScreen() {
           <SearchIcon size={18} color={colors.textTertiary} />
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }]}
-            placeholder="Ish qidiring..."
+            placeholder={t.search.placeholder}
             placeholderTextColor={colors.textTertiary}
             value={search}
             onChangeText={v => { setSearch(v); setPage(1); }}
@@ -217,7 +217,9 @@ export default function HomeScreen() {
 
         {/* Kategoriyalar */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Kategoriyalar</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {t.home.categories}
+          </Text>
           {selectedCat !== null && (
             <TouchableOpacity onPress={() => { setSelectedCat(null); setSelectedSubCat(null); }}>
               <Text style={[styles.seeAll, { color: colors.primary }]}>Barchasi</Text>

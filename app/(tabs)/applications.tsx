@@ -14,6 +14,7 @@ import { jobService } from '../../services/jobService';
 import { workerPostService } from '../../services/workerPostService';
 import { JobApplication, ApplicationStatus, UserRole, Job, WorkerPost } from '../../types';
 import { ApplicationListSkeleton } from '../../components/SkeletonLoader';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 
 const STATUS_COLOR: Record<number, { bg: string; text: string }> = {
   [ApplicationStatus.Pending]:   { bg: '#FEF9C3', text: '#854D0E' },
@@ -83,6 +84,7 @@ function FilterTabs({ filters, active, onChange, colors }: {
 
 // ── Employer ──────────────────────────────────────────────────────────────────
 function EmployerJobsView({ colors }: { colors: any }) {
+  const { t } = useLanguageStore();
   const [jobs,       setJobs]       = useState<Job[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,7 +96,7 @@ function EmployerJobsView({ colors }: { colors: any }) {
       setJobs(data);
       setError(null);
     } catch (e: any) {
-      setError(e?.message ?? 'Xatolik yuz berdi');
+      setError(e?.message ?? t.common.somethingWentWrong);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -110,17 +112,17 @@ function EmployerJobsView({ colors }: { colors: any }) {
       <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
       <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
         onPress={() => { setLoading(true); load(); }}>
-        <Text style={styles.retryText}>Qayta urinish</Text>
+        <Text style={styles.retryText}>{t.common.retry}</Text>
       </TouchableOpacity>
     </View>
   );
 
   if (jobs.length === 0) return (
     <View style={styles.centerBox}>
-      <Text style={[styles.stateText, { color: colors.textSecondary }]}>Hali e'lon joylashtirilmagan</Text>
+      <Text style={[styles.stateText, { color: colors.textSecondary }]}>{t.employer.myJobs}</Text>
       <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
         onPress={() => router.push('/(tabs)/create-job')}>
-        <Text style={styles.retryText}>E'lon qilish</Text>
+        <Text style={styles.retryText}>{t.employer.postJob}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -175,7 +177,7 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
   const [loading,      setLoading]      = useState(true);
   const [refreshing,   setRefreshing]   = useState(false);
   const [error,        setError]        = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState('Barchasi');
+  const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
 
   const load = useCallback(async () => {
     try {
@@ -183,7 +185,7 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
       setApplications(data);
       setError(null);
     } catch (e: any) {
-      setError(e?.message ?? 'Xatolik yuz berdi');
+      setError(e?.message ?? t.common.somethingWentWrong);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -192,7 +194,7 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = activeFilter === 'Barchasi'
+  const filtered = activeFilter === FILTERS[0]
     ? applications
     : applications.filter(a => STATUS_LABEL[a.status] === activeFilter);
 
@@ -201,19 +203,20 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
       <FilterTabs filters={FILTERS} active={activeFilter} onChange={setActiveFilter} colors={colors} />
 
       {loading && <View style={{ padding: Spacing.xl }}><ApplicationListSkeleton count={4} /></View>}
+
       {!loading && error && (
         <View style={styles.centerBox}>
           <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
           <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
             onPress={() => { setLoading(true); load(); }}>
-            <Text style={styles.retryText}>Qayta urinish</Text>
+            <Text style={styles.retryText}>{t.common.retry}</Text>
           </TouchableOpacity>
         </View>
       )}
       {!loading && !error && filtered.length === 0 && (
         <View style={styles.centerBox}>
           <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-            {activeFilter === 'Barchasi' ? "Hali ariza yubormagansiz" : "Bu bo'limda ariza yo'q"}
+            {t.applications.noApplications}
           </Text>
         </View>
       )}
@@ -270,7 +273,9 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
                       activeOpacity={0.8}
                     >
                       <StarIcon size={16} color={colors.primary} />
-                      <Text style={[styles.reviewBtnText, { color: colors.primary }]}>Baholash</Text>
+                      <Text style={[styles.reviewBtnText, { color: colors.primary }]}>
+                        {t.profile.reviews}
+                      </Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -433,6 +438,7 @@ function WorkerView({ colors }: { colors: any }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ApplicationsScreen() {
   const { colors } = useThemeStore();
+  const { t } = useLanguageStore();
   const role       = useAuthStore((state: AuthState) => state.role);
   const isEmployer = Number(role) === UserRole.Employer;
 
@@ -440,7 +446,7 @@ export default function ApplicationsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-          {isEmployer ? "E'lonlarim" : 'Arizalarim'}
+          {isEmployer ? t.employer.myJobs : t.applications.title}
         </Text>
       </View>
       {isEmployer

@@ -18,6 +18,7 @@ import { Colors } from '../../constants/colors';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius } from '../../constants/spacing';
 import { PhoneIcon, LockIcon, EyeIcon, EyeOffIcon } from '../../components/icons';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 
 export default function LoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -28,10 +29,11 @@ export default function LoginScreen() {
   const [passwordFocused, setPasswordFocused] = useState(false);
 
   const login = useAuthStore((state: AuthState) => state.login);
+  const { t } = useLanguageStore();
 
   const handleLogin = async () => {
     if (!phoneNumber.trim() || !password.trim()) {
-      Alert.alert('Xato', 'Telefon raqam va parolni kiriting');
+      Alert.alert('Xato', t.common.error);
       return;
     }
     setIsLoading(true);
@@ -40,7 +42,7 @@ export default function LoginScreen() {
       await login(response.token, response.role, response.firstName, response.lastName);
       router.replace('/(tabs)');
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Login amalga oshmadi';
+      const message = error.response?.data?.message || t.common.somethingWentWrong;
       Alert.alert('Xato', message);
     } finally {
       setIsLoading(false);
@@ -71,15 +73,15 @@ export default function LoginScreen() {
 
       <View style={styles.card}>
         <Text style={styles.title}>Xush kelibsiz!</Text>
-        <Text style={styles.subtitle}>Hisobingizga kiring</Text>
+        <Text style={styles.subtitle}>{t.auth.login}</Text>
 
         <View style={styles.inputWrapper}>
-          <Text style={styles.inputLabel}>Telefon raqam</Text>
+          <Text style={styles.inputLabel}>{t.auth.phone}</Text>
           <View style={[styles.inputContainer, phoneFocused && styles.inputFocused]}>
             <PhoneIcon size={18} color={phoneFocused ? Colors.primary : Colors.textTertiary} />
             <TextInput
               style={styles.input}
-              placeholder="+998 90 123 45 67"
+              placeholder={t.auth.phonePlaceholder}
               placeholderTextColor={Colors.textTertiary}
               value={phoneNumber}
               onChangeText={setPhoneNumber}
@@ -93,12 +95,12 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.inputWrapper}>
-          <Text style={styles.inputLabel}>Parol</Text>
+          <Text style={styles.inputLabel}>{t.auth.password}</Text>
           <View style={[styles.inputContainer, passwordFocused && styles.inputFocused]}>
             <LockIcon size={18} color={passwordFocused ? Colors.primary : Colors.textTertiary} />
             <TextInput
               style={styles.input}
-              placeholder="Parolingizni kiriting"
+              placeholder={t.auth.password}
               placeholderTextColor={Colors.textTertiary}
               value={password}
               onChangeText={setPassword}
@@ -122,7 +124,7 @@ export default function LoginScreen() {
           style={styles.forgotButton}
           onPress={() => router.push('/forgot-password')}
         >
-          <Text style={styles.forgotText}>Parolni unutdingizmi?</Text>
+          <Text style={styles.forgotText}>{t.auth.forgotPassword}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -139,15 +141,15 @@ export default function LoginScreen() {
           >
             {isLoading
               ? <ActivityIndicator color={Colors.white} size="small" />
-              : <Text style={styles.loginButtonText}>Kirish</Text>
+              : <Text style={styles.loginButtonText}>{t.auth.loginButton}</Text>
             }
           </LinearGradient>
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Hisobingiz yo'qmi? </Text>
+          <Text style={styles.footerText}>{t.auth.noAccount} </Text>
           <TouchableOpacity onPress={() => router.push('/auth/register')}>
-            <Text style={styles.registerText}>Ro'yxatdan o'ting</Text>
+            <Text style={styles.registerText}>{t.auth.registerButton}</Text>
           </TouchableOpacity>
         </View>
       </View>
