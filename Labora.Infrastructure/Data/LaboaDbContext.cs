@@ -19,6 +19,8 @@ public class LaboaDbContext : DbContext
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<UserPreference> UserPreferences { get; set; }
     public DbSet<PushToken> PushTokens { get; set; }
+    public DbSet<WorkerPost> WorkerPosts => Set<WorkerPost>();
+    public DbSet<WorkerPortfolioImage> WorkerPortfolioImages => Set<WorkerPortfolioImage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert,
+  ActivityIndicator, RefreshControl, Alert, Image,
 } from 'react-native';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
@@ -22,23 +22,30 @@ import { jobApplicationService } from '../../services/jobApplicationService';
 import { jobService } from '../../services/jobService';
 import { UserProfile, UserRole } from '../../types';
 import { ProfileSkeleton } from '../../components/SkeletonLoader';
+import { MEDIA_URL } from '../../services/api';
 
-const WORKER_MENU = [
+type MenuItem = {
+  icon: string;
+  label: string;
+  route?: string;
+};
+
+ const WORKER_MENU: MenuItem[] = [
   { icon: 'edit',         label: 'Profilni tahrirlash', route: '/edit-profile' },
   { icon: 'applications', label: 'Arizalarim',          route: '/(tabs)/applications' },
   { icon: 'heart',        label: 'Saqlangan ishlar' },
   { icon: 'star',         label: 'Baholarim' },
   { icon: 'bell',         label: 'Bildirishnomalar',    route: '/notifications' },
-  { icon: 'lock',         label: "Parolni o'zgartirish" },
+  { icon: 'lock', label: "Parolni o'zgartirish", route: '/change-password' },
   { icon: 'help',         label: 'Yordam' },
 ];
 
-const EMPLOYER_MENU = [
+const EMPLOYER_MENU: MenuItem[] = [
   { icon: 'edit',      label: 'Profilni tahrirlash', route: '/edit-profile' },
   { icon: 'briefcase', label: "E'lonlarim",           route: '/(tabs)/applications' },
   { icon: 'star',      label: 'Baholarim' },
   { icon: 'bell',      label: 'Bildirishnomalar',     route: '/notifications' },
-  { icon: 'lock',      label: "Parolni o'zgartirish" },
+  {  icon: 'lock', label: "Parolni o'zgartirish", route: '/change-password' },
   { icon: 'help',      label: 'Yordam' },
 ];
 
@@ -189,8 +196,16 @@ const initials = profile?.firstName
         >
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
+  {profile?.profileImageUrl ? (
+    <Image
+      source={{ uri: `${MEDIA_URL}${profile.profileImageUrl}` }}
+      style={{ width: 90, height: 90, borderRadius: 45 }}
+      resizeMode="cover"
+    />
+  ) : (
+    <Text style={styles.avatarText}>{initials}</Text>
+  )}
+</View>
             <TouchableOpacity style={styles.cameraButton} onPress={handleUploadAvatar} disabled={uploadingAvatar}>
               {uploadingAvatar
                 ? <ActivityIndicator size="small" color={colors.primary} />

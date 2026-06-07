@@ -590,6 +590,104 @@ namespace Labora.Infrastructure.Migrations
                     b.ToTable("UserPreferences");
                 });
 
+            modelBuilder.Entity("Labora.Domain.Entities.WorkerPortfolioImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Caption")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("WorkerPostId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkerPostId");
+
+                    b.ToTable("WorkerPortfolioImages");
+                });
+
+            modelBuilder.Entity("Labora.Domain.Entities.WorkerPost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("ExpectedSalary")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("ExperienceYears")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Skills")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SubCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("SubCategoryId");
+
+                    b.HasIndex("WorkerId");
+
+                    b.ToTable("WorkerPosts");
+                });
+
             modelBuilder.Entity("Labora.Domain.Entities.Category", b =>
                 {
                     b.HasOne("Labora.Domain.Entities.Category", "ParentCategory")
@@ -721,6 +819,40 @@ namespace Labora.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Labora.Domain.Entities.WorkerPortfolioImage", b =>
+                {
+                    b.HasOne("Labora.Domain.Entities.WorkerPost", "WorkerPost")
+                        .WithMany("PortfolioImages")
+                        .HasForeignKey("WorkerPostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WorkerPost");
+                });
+
+            modelBuilder.Entity("Labora.Domain.Entities.WorkerPost", b =>
+                {
+                    b.HasOne("Labora.Domain.Entities.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId");
+
+                    b.HasOne("Labora.Domain.Entities.Category", "SubCategory")
+                        .WithMany()
+                        .HasForeignKey("SubCategoryId");
+
+                    b.HasOne("Labora.Domain.Entities.User", "Worker")
+                        .WithMany()
+                        .HasForeignKey("WorkerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("SubCategory");
+
+                    b.Navigation("Worker");
+                });
+
             modelBuilder.Entity("Labora.Domain.Entities.Category", b =>
                 {
                     b.Navigation("Jobs");
@@ -746,6 +878,11 @@ namespace Labora.Infrastructure.Migrations
                     b.Navigation("PushTokens");
 
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("Labora.Domain.Entities.WorkerPost", b =>
+                {
+                    b.Navigation("PortfolioImages");
                 });
 #pragma warning restore 612, 618
         }

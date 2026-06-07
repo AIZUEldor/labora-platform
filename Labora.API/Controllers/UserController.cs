@@ -49,4 +49,19 @@ public class UserController : ControllerBase
         string url = await _userService.UploadAvatarAsync(userId, file);
         return Ok(new { url });
     }
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request)
+    {
+        Guid userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        await _userService.ChangePasswordAsync(userId, request);
+        return Ok(new { message = "Parol muvaffaqiyatli o'zgartirildi." });
+    }
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
+    {
+        await _userService.ForgotPasswordAsync(request);
+        return Ok(new { message = "Parol muvaffaqiyatli yangilandi." });
+    }
 }

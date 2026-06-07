@@ -10,10 +10,11 @@ export default function RootLayout() {
   const loadToken = useAuthStore((state: AuthState) => state.loadToken);
   const token = useAuthStore((state: AuthState) => state.token);
   const isLoading = useAuthStore((state: AuthState) => state.isLoading);
-  const { isDark } = useThemeStore();
+  const { isDark, loadTheme } = useThemeStore();
 
   useEffect(() => {
     loadToken();
+    loadTheme();
   }, []);
 
   useEffect(() => {
@@ -27,31 +28,30 @@ export default function RootLayout() {
   }, [token, isLoading]);
 
   useEffect(() => {
-  if (!token) return;
+    if (!token) return;
 
-  const registerPush = async (): Promise<void> => {
-    try {
-      const pushToken = await pushNotificationService.registerForPushNotifications();
-      if (pushToken) {
-        await pushNotificationService.registerTokenToServer(pushToken);
+    const registerPush = async (): Promise<void> => {
+      try {
+        const pushToken = await pushNotificationService.registerForPushNotifications();
+        if (pushToken) {
+          await pushNotificationService.registerTokenToServer(pushToken);
+        }
+      } catch {
+        // silent fail
       }
-    } catch {
-      // silent fail
-    }
-  };
+    };
 
-  registerPush();
+    registerPush();
 
-  // Bildirishnomaga bosganda navigate qilish
-  const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-    const data = response.notification.request.content.data as any;
-    if (data?.referenceId) {
-      router.push(`/job-detail?id=${data.referenceId}`);
-    }
-  });
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data as any;
+      if (data?.referenceId) {
+        router.push(`/job-detail?id=${data.referenceId}`);
+      }
+    });
 
-  return () => subscription.remove();
-}, [token]);
+    return () => subscription.remove();
+  }, [token]);
 
   return (
     <>
@@ -59,6 +59,18 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="auth" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="post-worker" />
+        <Stack.Screen name="employer/post-job" />
+        <Stack.Screen name="employer/job-applications" />
+        <Stack.Screen name="job-detail" />
+        <Stack.Screen name="edit-profile" />
+        <Stack.Screen name="notifications" />
+        <Stack.Screen name="review" />
+        <Stack.Screen name="search" />
+        <Stack.Screen name="worker-post-detail" />
+        <Stack.Screen name="application-detail" />
+        <Stack.Screen name="change-password" />
+        <Stack.Screen name="forgot-password" />
       </Stack>
     </>
   );

@@ -9,4 +9,5 @@ public interface IJobApplicationService
     Task<IEnumerable<ApplicationResponseDto>> GetByJobIdAsync(Guid jobId);
     Task<ApplicationResponseDto> UpdateStatusAsync(Guid id, string status, Guid employerId);
     Task CancelAsync(Guid id, Guid workerId);
+    Task<ApplicationResponseDto?> GetByIdAsync(Guid id);
 }

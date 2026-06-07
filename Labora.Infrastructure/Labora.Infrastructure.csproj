@@ -6,9 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Labora.Domain\Labora.Domain.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Labora.Domain\Labora.Domain.csproj" />
+		<ProjectReference Include="..\Labora.Application\Labora.Application.csproj" />
+	</ItemGroup>
 
   <ItemGroup>
     <Folder Include="Migrations\" />

@@ -9,4 +9,6 @@ public interface IUserService
     Task<UserProfileResponseDto> UpdateProfileAsync(Guid userId, UpdateProfileRequestDto request);
     Task<string> UploadCvAsync(Guid userId, IFormFile file);
     Task<string> UploadAvatarAsync(Guid userId, IFormFile file);
+    Task ChangePasswordAsync(Guid userId, ChangePasswordRequestDto request);
+    Task ForgotPasswordAsync(ForgotPasswordRequestDto request);
 }

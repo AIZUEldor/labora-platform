@@ -120,7 +120,7 @@ export default function LoginScreen() {
 
         <TouchableOpacity
           style={styles.forgotButton}
-          onPress={() => router.push('/auth/forgot-password')}
+          onPress={() => router.push('/forgot-password')}
         >
           <Text style={styles.forgotText}>Parolni unutdingizmi?</Text>
         </TouchableOpacity>

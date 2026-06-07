@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 
 import * as SecureStore from 'expo-secure-store';
 
 const BASE_URL = 'http://10.106.130.66:5020/api';
+export const MEDIA_URL = 'http://10.106.130.66:5020';
 
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,

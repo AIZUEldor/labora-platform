@@ -103,7 +103,9 @@ export interface UserProfile {
 export interface Category {
   id: string;
   name: string;
-  iconUrl: string;
+  description?: string;
+  iconUrl?: string;
+  subCategories?: Category[];
 }
 
 // ==================== REVIEW ====================
@@ -128,4 +130,66 @@ export enum NotificationType {
   JobCompleted         = 3,
   ReviewRequest        = 4,
   NewJobRecommended    = 5,
+}
+
+// ==================== WORKER POST ====================
+export enum WorkerPostStatus {
+  Active = 1,
+  Inactive = 2,
+  Hired = 3,
+}
+
+export interface PortfolioImage {
+  id: string;
+  imageUrl: string;
+  caption?: string;
+}
+
+export interface WorkerPost {
+  id: string;
+  title: string;
+  description: string;
+  expectedSalary: number;
+  experienceYears: number;
+  skills?: string;
+  city: string;
+  country: string;
+  status: WorkerPostStatus;
+  workerId: string;
+  workerFirstName: string;
+  workerLastName: string;
+  workerAvatarUrl?: string;
+  workerPhone?: string;
+  categoryId?: string;
+  categoryName?: string;
+  subCategoryId?: string;
+  subCategoryName?: string;
+  createdAt: string;
+  portfolioImages: PortfolioImage[];
+  viewCount: number;
+}
+
+export interface CreateWorkerPostRequest {
+  title: string;
+  description: string;
+  expectedSalary: number;
+  experienceYears: number;
+  skills?: string;
+  city: string;
+  country: string;
+  categoryId?: string;
+  subCategoryId?: string;
+}
+
+export interface UpdateWorkerPostRequest {
+  title: string;
+  description: string;
+  expectedSalary: number;
+  experienceYears: number;
+  skills?: string;
+  city: string;
+  country: string;
+  categoryId?: string;
+  subCategoryId?: string;
+  status: number;
 }

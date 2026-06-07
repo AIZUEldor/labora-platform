@@ -61,4 +61,12 @@ public class JobApplicationController : ControllerBase
         await _jobApplicationService.CancelAsync(id, workerId);
         return NoContent();
     }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        ApplicationResponseDto? response = await _jobApplicationService.GetByIdAsync(id);
+        if (response == null) return NotFound();
+        return Ok(response);
+    }
 }

@@ -29,7 +29,13 @@ public class MappingProfile : Profile
 
         // User mappings
         CreateMap<User, UserProfileResponseDto>();
-        CreateMap<UpdateProfileRequestDto, User>();
+        CreateMap<UpdateProfileRequestDto, User>()
+    .ForMember(dest => dest.ProfileImageUrl, opt => opt.Ignore())
+    .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+    .ForMember(dest => dest.CvUrl, opt => opt.Ignore())
+    .ForMember(dest => dest.Role, opt => opt.Ignore())
+    .ForMember(dest => dest.IsVerified, opt => opt.Ignore())
+    .ForMember(dest => dest.CreatedAt, opt => opt.Ignore());
 
         // Category mappings
         CreateMap<Category, CategoryResponseDto>()

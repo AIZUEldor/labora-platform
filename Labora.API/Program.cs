@@ -4,11 +4,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FluentValidation;
+using Labora.Application.Interfaces;
+using Labora.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(swaggerGenOptions =>
 {
@@ -21,7 +27,6 @@ builder.Services.AddSwaggerGen(swaggerGenOptions =>
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "JWT token kiriting: Bearer {token}"
     });
-
     swaggerGenOptions.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
@@ -44,7 +49,6 @@ builder.Services.AddApplication();
 // FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<Labora.Application.Validators.Auth.RegisterRequestDtoValidator>();
 
-
 // Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -66,6 +70,10 @@ builder.Services.AddScoped<Labora.Domain.Interfaces.IUserPreferenceRepository,
     Labora.Infrastructure.Repositories.UserPreferenceRepository>();
 builder.Services.AddScoped<Labora.Application.Interfaces.INotificationService,
     Labora.Application.Services.NotificationService>();
+
+// WorkerPost
+builder.Services.AddScoped<IWorkerPostRepository, WorkerPostRepository>();
+builder.Services.AddScoped<IWorkerPostService, WorkerPostService>();
 
 // JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -98,5 +106,4 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
 app.Run();

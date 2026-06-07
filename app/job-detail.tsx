@@ -293,109 +293,124 @@ const [uploadingCv,  setUploadingCv]  = useState(false);
         </TouchableOpacity>
       </View>
 
-      {/* Modal */}
       <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-              {isEmployer ? 'Ishchi topish' : 'Ariza yuborish'}
+  <View style={styles.modalOverlay}>
+    <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+      {/* Header */}
+      <View style={[styles.modalTopBar, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+          {isEmployer ? 'Ishchi topish' : 'Ariza yuborish'}
+        </Text>
+        <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }}>
+          <Text style={{ fontSize: 22, color: colors.textSecondary }}>✕</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+        {job.title} — {job.employerName}
+      </Text>
+
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {isEmployer ? (
+          <>
+            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Byudjet (so'm)</Text>
+            <TextInput
+              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="Masalan: 5 000 000"
+              placeholderTextColor={colors.textTertiary}
+              value={budget}
+              onChangeText={setBudget}
+              keyboardType="numeric"
+            />
+            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+              Manzil <Text style={{ color: '#EF4444' }}>*</Text>
             </Text>
-            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
-              {job.title} — {job.employerName}
+            <TextInput
+              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="Masalan: Toshkent, Chilonzor"
+              placeholderTextColor={colors.textTertiary}
+              value={address}
+              onChangeText={setAddress}
+            />
+            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Muddat</Text>
+            <TextInput
+              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="Masalan: 2 hafta"
+              placeholderTextColor={colors.textTertiary}
+              value={deadline}
+              onChangeText={setDeadline}
+            />
+          </>
+        ) : (
+          <>
+            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+              O'zingiz haqida <Text style={{ color: '#EF4444' }}>*</Text>
             </Text>
+            <TextInput
+              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border, minHeight: 100 }]}
+              placeholder="Tajribangiz, ko'nikmalaringiz haqida yozing..."
+              placeholderTextColor={colors.textTertiary}
+              value={coverLetter}
+              onChangeText={setCoverLetter}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Tajriba</Text>
+            <TextInput
+              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="Masalan: 2 yil"
+              placeholderTextColor={colors.textTertiary}
+              value={experience}
+              onChangeText={setExperience}
+            />
+            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Telefon</Text>
+            <TextInput
+              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="+998 xx xxx xx xx"
+              placeholderTextColor={colors.textTertiary}
+              value={workerPhone}
+              onChangeText={setWorkerPhone}
+              keyboardType="phone-pad"
+            />
+            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>CV yuklash</Text>
+            <TouchableOpacity
+              style={[styles.cvPickerBtn, { backgroundColor: colors.background, borderColor: cvUri ? colors.primary : colors.border }]}
+              onPress={handlePickCv}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.cvPickerText, { color: cvUri ? colors.primary : colors.textTertiary }]}>
+                {cvUri ? cvName : 'PDF yoki Word fayl tanlang'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
 
-            {isEmployer ? (
-              <>
-                <TextInput
-                  style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                  placeholder="Byudjet (so'm)"
-                  placeholderTextColor={colors.textTertiary}
-                  value={budget}
-                  onChangeText={setBudget}
-                  keyboardType="numeric"
-                />
-                <TextInput
-                  style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                  placeholder="Manzil (shahar, tuman) *"
-                  placeholderTextColor={colors.textTertiary}
-                  value={address}
-                  onChangeText={setAddress}
-                />
-                <TextInput
-                  style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                  placeholder="Muddat (masalan: 2 hafta)"
-                  placeholderTextColor={colors.textTertiary}
-                  value={deadline}
-                  onChangeText={setDeadline}
-                />
-              </>
-            ) : (
-              <>
-                <TextInput
-                  style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border, minHeight: 100 }]}
-                  placeholder="O'zingiz haqida yozing *"
-                  placeholderTextColor={colors.textTertiary}
-                  value={coverLetter}
-                  onChangeText={setCoverLetter}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-                <TextInput
-                  style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                  placeholder="Tajriba (masalan: 2 yil)"
-                  placeholderTextColor={colors.textTertiary}
-                  value={experience}
-                  onChangeText={setExperience}
-                />
-                <TextInput
-                  style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                  placeholder="Telefon raqamingiz"
-                  placeholderTextColor={colors.textTertiary}
-                  value={workerPhone}
-                  onChangeText={setWorkerPhone}
-                  keyboardType="phone-pad"
-                />
-              </>
-            )}
-
-
-
-{!isEmployer && (
-              <TouchableOpacity
-                style={[styles.cvPickerBtn, { backgroundColor: colors.background, borderColor: cvUri ? colors.primary : colors.border }]}
-                onPress={handlePickCv}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.cvPickerText, { color: cvUri ? colors.primary : colors.textTertiary }]}>
-                  {cvUri ? cvName : 'CV yuklash (PDF yoki Word)'}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1 }]}
-                onPress={() => { setModalVisible(false); resetForm(); }}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>Bekor qilish</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#16A34A' }]}
-                onPress={handleApply}
-                activeOpacity={0.85}
-                disabled={applying}
-              >
-                {applying
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={[styles.modalBtnText, { color: '#fff' }]}>Yuborish</Text>
-                }
-              </TouchableOpacity>
-            </View>
-          </View>
+        <View style={styles.modalButtons}>
+          <TouchableOpacity
+            style={[styles.modalBtn, { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1 }]}
+            onPress={() => { setModalVisible(false); resetForm(); }}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>Bekor qilish</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modalBtn, { backgroundColor: '#16A34A' }]}
+            onPress={handleApply}
+            activeOpacity={0.85}
+            disabled={applying}
+          >
+            {applying
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={[styles.modalBtnText, { color: '#fff' }]}>Yuborish</Text>
+            }
+          </TouchableOpacity>
         </View>
-      </Modal>
+        <View style={{ height: 24 }} />
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
     </View>
   );
 }
@@ -473,9 +488,9 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: Spacing.xl, gap: Spacing.md,
-  },
+  borderTopLeftRadius: 24, borderTopRightRadius: 24,
+  padding: Spacing.xl,
+},
   modalTitle:    { fontSize: FontSize.xl, fontWeight: FontWeight.bold },
   modalSubtitle: { fontSize: FontSize.sm, marginBottom: Spacing.sm },
   coverInput: {
@@ -492,6 +507,14 @@ modalBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.semiBold },
     borderWidth: 1.5, borderRadius: BorderRadius.lg, borderStyle: 'dashed',
     padding: Spacing.md, minHeight: 52, alignItems: 'center', justifyContent: 'center',
   },
+
   cvPickerText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
+  modalTopBar: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', paddingBottom: 12, borderBottomWidth: 1, marginBottom: 8,
+  },
+  inputLabel: {
+    fontSize: 13, fontWeight: '600', marginBottom: 6, marginTop: 10,
+  },
 });
 

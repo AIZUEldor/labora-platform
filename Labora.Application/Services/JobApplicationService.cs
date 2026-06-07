@@ -92,4 +92,11 @@ public class JobApplicationService : IJobApplicationService
         jobApplication.Status = ApplicationStatus.Cancelled;
         await _jobApplicationRepository.UpdateAsync(jobApplication);
     }
+
+    public async Task<ApplicationResponseDto?> GetByIdAsync(Guid id)
+    {
+        JobApplication? jobApplication = await _jobApplicationRepository.GetByIdAsync(id);
+        if (jobApplication is null) return null;
+        return _mapper.Map<ApplicationResponseDto>(jobApplication);
+    }
 }

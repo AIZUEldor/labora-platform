@@ -20,6 +20,7 @@ import { useAuthStore } from '../store/authStore';
 import { ThemeColors, LightColors } from '../constants/colors';
 import { userService } from '../services/userService';
 import { UserProfile } from '../types';
+import { MEDIA_URL } from '../services/api';
 import {
   ArrowLeftIcon,
   CameraIcon,
@@ -86,8 +87,8 @@ export default function EditProfileScreen(): React.JSX.Element {
         country: data.country ?? '',
       });
       if (data.profileImageUrl) {
-        setAvatarUri(data.profileImageUrl);
-      }
+  setAvatarUri(`${MEDIA_URL}${data.profileImageUrl}`);
+}
     } catch {
       Alert.alert('Xatolik', "Profil ma'lumotlarini yuklashda xatolik yuz berdi.");
     } finally {
