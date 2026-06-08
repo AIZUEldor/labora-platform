@@ -15,6 +15,7 @@ public class Review : BaseEntity
     // Worker → Employer baholash kategoriyalari
     public int? PaymentRating { get; set; }          // Pulni kelishilgan holda berishi
     public int? EmployerCommunicationRating { get; set; }  // Muomalasi
+    public int? WorkConditionRating { get; set; }  // Ish sharoiti
 
     // Employer → Worker baholash kategoriyalari
     public int? ExperienceRating { get; set; }       // Ish tajribasi

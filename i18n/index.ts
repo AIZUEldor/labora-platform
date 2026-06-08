@@ -4,3 +4,4 @@ import { en } from './en';
 
 export const translations = { uz, ru, en };
 export type TranslationType = typeof uz;
+export type Language = 'uz' | 'ru' | 'en';

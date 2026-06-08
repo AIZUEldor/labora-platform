@@ -12,4 +12,6 @@ public class ApplicationResponseDto
     public DateTime CreatedAt { get; set; }
     public string? WorkerName { get; set; }
     public string? WorkerCvUrl { get; set; }
+    public string? JobTitle { get; set; }
+    public string? WorkerPhone { get; set; }
 }

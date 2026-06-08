@@ -40,7 +40,7 @@ export const jobService = {
   description: string;
   salary: number;
   jobType: number;
-  categoryId: string;
+  categoryId: string | undefined;
   subCategoryId?: string;
   city: string;
   country: string;
@@ -49,6 +49,8 @@ export const jobService = {
   requiredSkills?: string;
   experienceYears?: number;
   deadline?: string;
+  categoryName: string;
+subCategoryName?: string;
 }): Promise<Job> => {
   const response = await api.post<Job>('/Job', data);
   return response.data;

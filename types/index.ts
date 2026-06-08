@@ -86,6 +86,7 @@ export interface JobApplication {
   createdAt: string;
   workerName?: string;
   workerCvUrl?: string | null;
+  workerPhone?: string;
 }
 
 // ==================== USER ====================
@@ -167,7 +168,7 @@ export interface WorkerPost {
   workerFirstName: string;
   workerLastName: string;
   workerAvatarUrl?: string;
-  workerPhone?: string;
+  workerPhone?: string;        // ← shu qatorni qo'shing
   categoryId?: string;
   categoryName?: string;
   subCategoryId?: string;

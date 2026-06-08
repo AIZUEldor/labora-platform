@@ -6,6 +6,7 @@ using System.Text;
 using FluentValidation;
 using Labora.Application.Interfaces;
 using Labora.Infrastructure.Repositories;
+using Labora.Domain.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,6 +75,8 @@ builder.Services.AddScoped<Labora.Application.Interfaces.INotificationService,
 // WorkerPost
 builder.Services.AddScoped<IWorkerPostRepository, WorkerPostRepository>();
 builder.Services.AddScoped<IWorkerPostService, WorkerPostService>();
+builder.Services.AddScoped<ISavedJobRepository, SavedJobRepository>();
+builder.Services.AddScoped<ISavedJobService, SavedJobService>();
 
 // JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

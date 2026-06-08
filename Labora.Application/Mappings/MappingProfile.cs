@@ -18,14 +18,22 @@ public class MappingProfile : Profile
         CreateMap<JobRequestDto, Job>();
         CreateMap<ApplicationRequestDto, JobApplication>();
         CreateMap<JobApplication, ApplicationResponseDto>()
-     .ForMember(dest => dest.WorkerName,
-         opt => opt.MapFrom(src => src.Worker != null
-             ? $"{src.Worker.FirstName} {src.Worker.LastName}"
-             : null))
-     .ForMember(dest => dest.WorkerCvUrl,
-         opt => opt.MapFrom(src => src.Worker != null
-             ? src.Worker.CvUrl
-             : null));
+    .ForMember(dest => dest.WorkerName,
+        opt => opt.MapFrom(src => src.Worker != null
+            ? $"{src.Worker.FirstName} {src.Worker.LastName}"
+            : null))
+    .ForMember(dest => dest.WorkerCvUrl,
+        opt => opt.MapFrom(src => src.Worker != null
+            ? src.Worker.CvUrl
+            : null))
+    .ForMember(dest => dest.WorkerPhone,
+        opt => opt.MapFrom(src => src.Worker != null
+            ? src.Worker.PhoneNumber
+            : null))
+    .ForMember(dest => dest.JobTitle,
+        opt => opt.MapFrom(src => src.Job != null
+            ? src.Job.Title
+            : null));
 
         // User mappings
         CreateMap<User, UserProfileResponseDto>();

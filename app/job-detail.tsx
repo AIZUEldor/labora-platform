@@ -22,6 +22,7 @@ import { JobDetailSkeleton } from '../components/SkeletonLoader';
 import * as DocumentPicker from 'expo-document-picker';
 import { userService } from '../services/userService';
 import { useLanguageStore } from '../stores/useLanguageStore';
+import { savedJobService } from '../services/savedJobService';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
   return (
@@ -83,12 +84,17 @@ export default function JobDetailScreen() {
   const [address,  setAddress]  = useState('');
   const [deadline, setDeadline] = useState('');
 
+  const [isSaved, setIsSaved] = useState(false);
+const [savingJob, setSavingJob] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
         const data = await jobService.getJobById(id);
         setJob(data);
+        const saved = await savedJobService.isJobSaved(id);
+setIsSaved(saved);
       } catch (e: any) {
         setError(e?.message ?? t.common.somethingWentWrong);
       } finally {
@@ -114,6 +120,22 @@ export default function JobDetailScreen() {
     setCvUri(result.assets[0].uri);
     setCvName(result.assets[0].name);
   };
+
+  const handleToggleSave = async (): Promise<void> => {
+  try {
+    setSavingJob(true);
+    if (isSaved) {
+      await savedJobService.unsaveJob(id);
+      setIsSaved(false);
+    } else {
+      await savedJobService.saveJob(id);
+      setIsSaved(true);
+    }
+  } catch {}
+  finally {
+    setSavingJob(false);
+  }
+};
 
   const handleApply = async () => {
     let fullCoverLetter = '';
@@ -184,9 +206,12 @@ export default function JobDetailScreen() {
           <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
             <BackIcon size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton}>
-            <HeartIcon size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerButton} onPress={handleToggleSave} disabled={savingJob}>
+  {savingJob
+    ? <ActivityIndicator size="small" color="#FFFFFF" />
+    : <HeartIcon size={22} color={isSaved ? '#ef4444' : '#FFFFFF'} />
+  }
+</TouchableOpacity>
         </View>
         <View style={styles.companyLogoLarge}>
           <Text style={styles.companyLogoText}>

@@ -19,72 +19,72 @@ import { JobListSkeleton } from '../../components/SkeletonLoader';
 import { router } from 'expo-router';
 import { jobService } from '../../services/jobService';
 import { categoryService } from '../../services/categoryService';
-import { Job, Category } from '../../types';
+import { workerPostService } from '../../services/workerPostService';
+import { Job, Category, WorkerPost } from '../../types';
 import { useAuthStore, AuthState } from '../../store/authStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 
 const CATEGORY_NAMES: Record<string, { uz: string; ru: string; en: string }> = {
-  'Daily':        { uz: 'Kunlik ishlar',        ru: 'Ежедневная работа',   en: 'Daily jobs' },
-  'IT':           { uz: 'IT',                   ru: 'ИТ',                  en: 'IT' },
-  'Construction': { uz: 'Qurilish',             ru: 'Строительство',       en: 'Construction' },
-  'Driver':       { uz: 'Haydovchi',            ru: 'Водитель',            en: 'Driver' },
-  'Chef':         { uz: 'Oshpaz',               ru: 'Повар',               en: 'Chef' },
-  'Medical':      { uz: 'Tibbiyot',             ru: 'Медицина',            en: 'Medical' },
-  'Education':    { uz: "Ta'lim",               ru: 'Образование',         en: 'Education' },
-  'Finance':      { uz: 'Moliya',               ru: 'Финансы',             en: 'Finance' },
-  'Security':     { uz: 'Qorovul',              ru: 'Охрана',              en: 'Security' },
-  'Cleaning':     { uz: 'Tozalik',              ru: 'Уборка',              en: 'Cleaning' },
-  'Design':       { uz: 'Dizayn',               ru: 'Дизайн',              en: 'Design' },
-  'Marketing':    { uz: 'Marketing',            ru: 'Маркетинг',           en: 'Marketing' },
-  'Warehouse':    { uz: 'Ombor',                ru: 'Склад',               en: 'Warehouse' },
-  'Trade':        { uz: 'Savdo',                ru: 'Торговля',            en: 'Trade' },
-  'Agriculture':  { uz: "Qishloq xo'jaligi",   ru: 'Сельское хозяйство',  en: 'Agriculture' },
-  'Manufacturing':{ uz: 'Ishlab chiqarish',     ru: 'Производство',        en: 'Manufacturing' },
-  'Courier':      { uz: 'Kuryer',               ru: 'Курьер',              en: 'Courier' },
-  'Legal':        { uz: 'Huquq',                ru: 'Юридические услуgi',  en: 'Legal' },
-  'HR':           { uz: 'Kadrlar',              ru: 'Кадры',               en: 'HR' },
-  'Real Estate':  { uz: "Ko'chmas mulk",        ru: 'Недвижимость',        en: 'Real Estate' },
-  'Beauty':       { uz: "Go'zallik",            ru: 'Красота',             en: 'Beauty' },
-  'Auto Service': { uz: "Avto ta'mir",          ru: 'Авто сервис',         en: 'Auto Service' },
-  'Textile':      { uz: "To'qimachilik",        ru: 'Текстиль',            en: 'Textile' },
+  'Daily':         { uz: 'Kunlik ishlar',       ru: 'Ежедневная работа',  en: 'Daily jobs' },
+  'IT':            { uz: 'IT',                  ru: 'ИТ',                 en: 'IT' },
+  'Construction':  { uz: 'Qurilish',            ru: 'Строительство',      en: 'Construction' },
+  'Driver':        { uz: 'Haydovchi',           ru: 'Водитель',           en: 'Driver' },
+  'Chef':          { uz: 'Oshpaz',              ru: 'Повар',              en: 'Chef' },
+  'Medical':       { uz: 'Tibbiyot',            ru: 'Медицина',           en: 'Medical' },
+  'Education':     { uz: "Ta'lim",              ru: 'Образование',        en: 'Education' },
+  'Finance':       { uz: 'Moliya',              ru: 'Финансы',            en: 'Finance' },
+  'Security':      { uz: 'Qorovul',             ru: 'Охрана',             en: 'Security' },
+  'Cleaning':      { uz: 'Tozalik',             ru: 'Уборка',             en: 'Cleaning' },
+  'Design':        { uz: 'Dizayn',              ru: 'Дизайн',             en: 'Design' },
+  'Marketing':     { uz: 'Marketing',           ru: 'Маркетинг',          en: 'Marketing' },
+  'Warehouse':     { uz: 'Ombor',               ru: 'Склад',              en: 'Warehouse' },
+  'Trade':         { uz: 'Savdo',               ru: 'Торговля',           en: 'Trade' },
+  'Agriculture':   { uz: "Qishloq xo'jaligi",  ru: 'Сельское хозяйство', en: 'Agriculture' },
+  'Manufacturing': { uz: 'Ishlab chiqarish',    ru: 'Производство',       en: 'Manufacturing' },
+  'Courier':       { uz: 'Kuryer',              ru: 'Курьер',             en: 'Courier' },
+  'Legal':         { uz: 'Huquq',               ru: 'Юридические услуги', en: 'Legal' },
+  'HR':            { uz: 'Kadrlar',             ru: 'Кадры',              en: 'HR' },
+  'Real Estate':   { uz: "Ko'chmas mulk",       ru: 'Недвижимость',       en: 'Real Estate' },
+  'Beauty':        { uz: "Go'zallik",           ru: 'Красота',            en: 'Beauty' },
+  'Auto Service':  { uz: "Avto ta'mir",         ru: 'Авто сервис',        en: 'Auto Service' },
+  'Textile':       { uz: "To'qimachilik",       ru: 'Текстиль',           en: 'Textile' },
 };
 
 function CategoryIcon({ name, color }: { name: string; color: string }) {
   const props = { size: 28, color };
   const map: Record<string, React.ReactElement> = {
-    construction:  <ConstructionIcon {...props} />,
-    it:            <ITIcon {...props} />,
-    driver:        <DriverIcon {...props} />,
-    chef:          <ChefIcon {...props} />,
-    medical:       <MedicalIcon {...props} />,
-    education:     <EducationIcon {...props} />,
-    finance:       <FinanceIcon {...props} />,
-    security:      <SecurityIcon {...props} />,
-    cleaning:      <CleaningIcon {...props} />,
-    design:        <DesignIcon {...props} />,
-    marketing:     <MarketingIcon {...props} />,
-    warehouse:     <WarehouseIcon {...props} />,
-    daily:         <BriefcaseIcon {...props} />,
-    trade:         <TradeIcon {...props} />,
-    agriculture:   <AgricultureIcon {...props} />,
-    manufacturing: <ManufacturingIcon {...props} />,
-    courier:       <CourierIcon {...props} />,
-    legal:         <LegalIcon {...props} />,
-    hr:            <HRIcon {...props} />,
-    'real estate': <RealEstateIcon {...props} />,
-    beauty:        <BeautyIcon {...props} />,
-    'auto service':<AutoServiceIcon {...props} />,
-    textile:       <TextileIcon {...props} />,
+    construction:   <ConstructionIcon {...props} />,
+    it:             <ITIcon {...props} />,
+    driver:         <DriverIcon {...props} />,
+    chef:           <ChefIcon {...props} />,
+    medical:        <MedicalIcon {...props} />,
+    education:      <EducationIcon {...props} />,
+    finance:        <FinanceIcon {...props} />,
+    security:       <SecurityIcon {...props} />,
+    cleaning:       <CleaningIcon {...props} />,
+    design:         <DesignIcon {...props} />,
+    marketing:      <MarketingIcon {...props} />,
+    warehouse:      <WarehouseIcon {...props} />,
+    daily:          <BriefcaseIcon {...props} />,
+    trade:          <TradeIcon {...props} />,
+    agriculture:    <AgricultureIcon {...props} />,
+    manufacturing:  <ManufacturingIcon {...props} />,
+    courier:        <CourierIcon {...props} />,
+    legal:          <LegalIcon {...props} />,
+    hr:             <HRIcon {...props} />,
+    'real estate':  <RealEstateIcon {...props} />,
+    beauty:         <BeautyIcon {...props} />,
+    'auto service': <AutoServiceIcon {...props} />,
+    textile:        <TextileIcon {...props} />,
   };
   return map[name?.toLowerCase()] ?? <BriefcaseIcon {...props} />;
 }
 
-export default function HomeScreen() {
+// ─── WORKER HOME ─────────────────────────────────────────────────────────────
+function WorkerHome() {
   const { colors, isDark, toggleTheme } = useThemeStore();
-const { language, t } = useLanguageStore();
-
+  const { language, t } = useLanguageStore();
   const firstName = useAuthStore((state: AuthState) => state.firstName);
-  const role = useAuthStore((state: AuthState) => state.role);
 
   const [jobs,           setJobs]           = useState<Job[]>([]);
   const [categories,     setCategories]     = useState<Category[]>([]);
@@ -107,7 +107,6 @@ const { language, t } = useLanguageStore();
       else if (selectedSubCat) res = await jobService.getJobsByCategory(selectedSubCat, p);
       else if (selectedCat)    res = await jobService.getJobsByCategory(selectedCat, p);
       else                     res = await jobService.getJobs(p, PAGE_SIZE);
-
       setTotalCount(res.totalCount ?? 0);
       setJobs(prev => reset ? res.items : [...prev, ...res.items]);
     } catch (e: any) {
@@ -159,15 +158,13 @@ const { language, t } = useLanguageStore();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-
-      {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, ...Shadow.sm }]}>
         <View>
           <Text style={[styles.greeting, { color: colors.textSecondary }]}>
-            Salom, {firstName || 'Foydalanuvchi'}!
+            {t.home.greeting}, {firstName || t.common.noData}!
           </Text>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-            Ishlarni toping
+            {t.home.findJob}
           </Text>
         </View>
         <View style={styles.headerRight}>
@@ -179,7 +176,10 @@ const { language, t } = useLanguageStore();
               ? <SunIcon size={20} color={colors.primary} />
               : <MoonIcon size={20} color={colors.primary} />}
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.primaryLight }]}>
+          <TouchableOpacity
+            style={[styles.iconButton, { backgroundColor: colors.primaryLight }]}
+            onPress={() => router.push('/notifications')}
+          >
             <BellIcon size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>
@@ -196,7 +196,6 @@ const { language, t } = useLanguageStore();
             tintColor={colors.primary} colors={[colors.primary]} />
         }
       >
-        {/* Search */}
         <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <SearchIcon size={18} color={colors.textTertiary} />
           <TextInput
@@ -215,14 +214,11 @@ const { language, t } = useLanguageStore();
           )}
         </View>
 
-        {/* Kategoriyalar */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {t.home.categories}
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.home.categories}</Text>
           {selectedCat !== null && (
             <TouchableOpacity onPress={() => { setSelectedCat(null); setSelectedSubCat(null); }}>
-              <Text style={[styles.seeAll, { color: colors.primary }]}>Barchasi</Text>
+              <Text style={[styles.seeAll, { color: colors.primary }]}>{t.home.seeAll}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -235,14 +231,8 @@ const { language, t } = useLanguageStore();
               return (
                 <TouchableOpacity
                   key={cat.id}
-                  onPress={() => {
-                    const newCat = isSelected ? null : cat.id;
-                    setSelectedCat(newCat);
-                    setSelectedSubCat(null);
-                  }}
-                  style={[styles.categoryCard, {
-                    backgroundColor: isSelected ? colors.primary : colors.card, ...Shadow.sm,
-                  }]}
+                  onPress={() => { setSelectedCat(isSelected ? null : cat.id); setSelectedSubCat(null); }}
+                  style={[styles.categoryCard, { backgroundColor: isSelected ? colors.primary : colors.card, ...Shadow.sm }]}
                   activeOpacity={0.8}
                 >
                   <CategoryIcon name={cat.name?.toLowerCase()} color={isSelected ? '#fff' : colors.primary} />
@@ -255,10 +245,8 @@ const { language, t } = useLanguageStore();
           </ScrollView>
         )}
 
-        {/* Sub-kategoriyalar */}
         {selectedCat && (() => {
-          const cat = categories.find(c => c.id === selectedCat);
-          const subs = cat?.subCategories ?? [];
+          const subs = categories.find(c => c.id === selectedCat)?.subCategories ?? [];
           if (subs.length === 0) return null;
           return (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}
@@ -275,9 +263,7 @@ const { language, t } = useLanguageStore();
                     }]}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.subCategoryText, {
-                      color: isSelected ? '#fff' : colors.textSecondary,
-                    }]}>
+                    <Text style={[styles.subCategoryText, { color: isSelected ? '#fff' : colors.textSecondary }]}>
                       {sub.name}
                     </Text>
                   </TouchableOpacity>
@@ -287,15 +273,15 @@ const { language, t } = useLanguageStore();
           );
         })()}
 
-        {/* Ishlar */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             {selectedCat
-              ? categories.find(c => c.id === selectedCat)?.name ?? 'Ishlar'
-              : 'Yangi ishlar'}
+              ? CATEGORY_NAMES[categories.find(c => c.id === selectedCat)?.name ?? '']?.[language as 'uz' | 'ru' | 'en']
+                ?? categories.find(c => c.id === selectedCat)?.name
+              : t.home.recentJobs}
           </Text>
           {!loading && (
-            <Text style={[styles.seeAll, { color: colors.textTertiary }]}>{totalCount} ta</Text>
+            <Text style={[styles.seeAll, { color: colors.textTertiary }]}>{totalCount}</Text>
           )}
         </View>
 
@@ -308,12 +294,9 @@ const { language, t } = useLanguageStore();
         {!loading && error && (
           <View style={styles.centerBox}>
             <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
-            <TouchableOpacity
-              style={[styles.retryBtn, { backgroundColor: colors.primary }]}
-              onPress={() => { setError(null); setPage(1); }}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.retryText}>Qayta urinish</Text>
+            <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+              onPress={() => { setError(null); setPage(1); }} activeOpacity={0.8}>
+              <Text style={styles.retryText}>{t.common.retry}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -321,9 +304,7 @@ const { language, t } = useLanguageStore();
         {!loading && !error && jobs.length === 0 && (
           <View style={styles.centerBox}>
             <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-              {search
-                ? `"${search}" bo'yicha natija topilmadi`
-                : "Hozircha ish e'lonlari yo'q"}
+              {search ? `"${search}" ${t.search.noResults}` : t.home.noJobs}
             </Text>
           </View>
         )}
@@ -342,18 +323,12 @@ const { language, t } = useLanguageStore();
                 </Text>
               </View>
               <View style={styles.jobInfo}>
-                <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                  {job.title}
-                </Text>
-                <Text style={[styles.companyName, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {job.employerName}
-                </Text>
+                <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>{job.title}</Text>
+                <Text style={[styles.companyName, { color: colors.textSecondary }]} numberOfLines={1}>{job.employerName}</Text>
               </View>
               <View style={[styles.salaryBadge, { backgroundColor: colors.primaryLight }]}>
                 <Text style={[styles.salaryText, { color: colors.primary }]}>
-                  {job.salary
-                    ? `${(job.salary / 1_000_000).toFixed(1)}M so'm`
-                    : 'Kelishiladi'}
+                  {job.salary ? `${(job.salary / 1_000_000).toFixed(1)}M ${t.common.currency}` : t.common.noData}
                 </Text>
               </View>
             </View>
@@ -361,17 +336,7 @@ const { language, t } = useLanguageStore();
               {job.location && (
                 <View style={styles.jobMeta}>
                   <LocationIcon size={12} color={colors.textTertiary} />
-                  <Text style={[styles.jobMetaText, { color: colors.textTertiary }]} numberOfLines={1}>
-                    {job.location}
-                  </Text>
-                </View>
-              )}
-              {job.distance !== undefined && (
-                <View style={styles.jobMeta}>
-                  <ClockIcon size={12} color={colors.textTertiary} />
-                  <Text style={[styles.jobMetaText, { color: colors.textTertiary }]}>
-                    {job.distance.toFixed(1)} km
-                  </Text>
+                  <Text style={[styles.jobMetaText, { color: colors.textTertiary }]} numberOfLines={1}>{job.location}</Text>
                 </View>
               )}
             </View>
@@ -383,35 +348,262 @@ const { language, t } = useLanguageStore();
             <ActivityIndicator size="small" color={colors.primary} />
           </View>
         )}
-
         <View style={{ height: 24 }} />
       </ScrollView>
 
-      {/* Floating + tugma */}
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.primary }]}
-        onPress={() => {
-          if (Number(role) === 2) router.push('/employer/post-job');
-else router.push('/post-worker');
-        }}
+        onPress={() => router.push('/post-worker')}
         activeOpacity={0.85}
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
-
     </View>
   );
 }
 
+// ─── EMPLOYER HOME ────────────────────────────────────────────────────────────
+function EmployerHome() {
+  const { colors, isDark, toggleTheme } = useThemeStore();
+  const { language, t } = useLanguageStore();
+  const firstName = useAuthStore((state: AuthState) => state.firstName);
+
+  const [posts,      setPosts]      = useState<WorkerPost[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+  const [search,     setSearch]     = useState('');
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
+
+  const fetchPosts = useCallback(async () => {
+    try {
+      const data = await workerPostService.getAll(selectedCat ?? undefined);
+      const filtered = search
+        ? data.filter(p =>
+            p.title?.toLowerCase().includes(search.toLowerCase()) ||
+            p.description?.toLowerCase().includes(search.toLowerCase())
+          )
+        : data;
+      setPosts(filtered);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message ?? t.common.somethingWentWrong);
+    }
+  }, [selectedCat, search]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [, cats] = await Promise.all([
+          fetchPosts(),
+          categories.length === 0 ? categoryService.getCategories() : Promise.resolve(null),
+        ]);
+        if (cats) setCategories(cats as Category[]);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    };
+    load();
+  }, [selectedCat, search]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setSearch('');
+    setSelectedCat(null);
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, ...Shadow.sm }]}>
+        <View>
+          <Text style={[styles.greeting, { color: colors.textSecondary }]}>
+            {t.home.greeting}, {firstName || t.common.noData}!
+          </Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+            {language === 'uz' ? 'Ishchi toping' : language === 'ru' ? 'Найти работника' : 'Find Workers'}
+          </Text>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={[styles.iconButton, { backgroundColor: colors.primaryLight }]}
+            onPress={toggleTheme} activeOpacity={0.8}
+          >
+            {isDark
+              ? <SunIcon size={20} color={colors.primary} />
+              : <MoonIcon size={20} color={colors.primary} />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.iconButton, { backgroundColor: colors.primaryLight }]}
+            onPress={() => router.push('/notifications')}
+          >
+            <BellIcon size={20} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh}
+            tintColor={colors.primary} colors={[colors.primary]} />
+        }
+      >
+        <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <SearchIcon size={18} color={colors.textTertiary} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.textPrimary }]}
+            placeholder={language === 'uz' ? 'Ishchi qidiring...' : language === 'ru' ? 'Поиск работника...' : 'Search workers...'}
+            placeholderTextColor={colors.textTertiary}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            autoCapitalize="none"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Text style={{ color: colors.textTertiary, fontSize: 16, paddingLeft: 4 }}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.home.categories}</Text>
+          {selectedCat !== null && (
+            <TouchableOpacity onPress={() => setSelectedCat(null)}>
+              <Text style={[styles.seeAll, { color: colors.primary }]}>{t.home.seeAll}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {categories.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesContainer}>
+            {categories.map(cat => {
+              const isSelected = selectedCat === cat.id;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  onPress={() => setSelectedCat(isSelected ? null : cat.id)}
+                  style={[styles.categoryCard, { backgroundColor: isSelected ? colors.primary : colors.card, ...Shadow.sm }]}
+                  activeOpacity={0.8}
+                >
+                  <CategoryIcon name={cat.name?.toLowerCase()} color={isSelected ? '#fff' : colors.primary} />
+                  <Text style={[styles.categoryName, { color: isSelected ? '#fff' : colors.textSecondary }]}>
+                    {CATEGORY_NAMES[cat.name]?.[language as 'uz' | 'ru' | 'en'] ?? cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {language === 'uz' ? 'Ishchilar' : language === 'ru' ? 'Работники' : 'Workers'}
+          </Text>
+          {!loading && (
+            <Text style={[styles.seeAll, { color: colors.textTertiary }]}>{posts.length}</Text>
+          )}
+        </View>
+
+        {loading && (
+          <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.md }}>
+            <JobListSkeleton count={4} />
+          </View>
+        )}
+
+        {!loading && error && (
+          <View style={styles.centerBox}>
+            <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
+            <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+              onPress={() => { setError(null); setLoading(true); fetchPosts(); }} activeOpacity={0.8}>
+              <Text style={styles.retryText}>{t.common.retry}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!loading && !error && posts.length === 0 && (
+          <View style={styles.centerBox}>
+            <Text style={[styles.stateText, { color: colors.textSecondary }]}>
+              {language === 'uz' ? 'Ishchilar topilmadi' : language === 'ru' ? 'Работники не найдены' : 'No workers found'}
+            </Text>
+          </View>
+        )}
+
+        {!loading && !error && posts.map(post => (
+          <TouchableOpacity
+            key={post.id}
+            style={[styles.jobCard, { backgroundColor: colors.card, ...Shadow.md }]}
+            activeOpacity={0.85}
+            onPress={() => router.push({ pathname: '/worker-post-detail', params: { id: post.id } })}
+          >
+            <View style={styles.jobCardTop}>
+              <View style={[styles.companyLogo, { backgroundColor: colors.primaryLight }]}>
+                <Text style={[styles.companyLogoText, { color: colors.primary }]}>
+                  {(post.workerFirstName ?? post.title ?? '?')[0].toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.jobInfo}>
+                <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {post.title}
+                </Text>
+                <Text style={[styles.companyName, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {`${post.workerFirstName} ${post.workerLastName}`}
+                </Text>
+              </View>
+              {post.expectedSalary && (
+                <View style={[styles.salaryBadge, { backgroundColor: colors.primaryLight }]}>
+                  <Text style={[styles.salaryText, { color: colors.primary }]}>
+                    {`${(post.expectedSalary / 1_000_000).toFixed(1)}M ${t.common.currency}`}
+                  </Text>
+                </View>
+              )}
+            </View>
+            {post.city && (
+              <View style={styles.jobCardBottom}>
+                <View style={styles.jobMeta}>
+                  <LocationIcon size={12} color={colors.textTertiary} />
+                  <Text style={[styles.jobMetaText, { color: colors.textTertiary }]} numberOfLines={1}>
+                    {post.city}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+
+        <View style={{ height: 24 }} />
+      </ScrollView>
+
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: colors.primary }]}
+        onPress={() => router.push('/employer/post-job')}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── MAIN ─────────────────────────────────────────────────────────────────────
+export default function HomeScreen() {
+  const role = useAuthStore((state: AuthState) => state.role);
+  return Number(role) === 2 ? <EmployerHome /> : <WorkerHome />;
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container:    { flex: 1 },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: Spacing.xl, paddingTop: 56, paddingBottom: Spacing.lg,
   },
-  greeting:    { fontSize: FontSize.sm,  fontWeight: FontWeight.medium },
-  headerTitle: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold   },
-  headerRight: { flexDirection: 'row', gap: Spacing.sm },
+  greeting:     { fontSize: FontSize.sm,  fontWeight: FontWeight.medium },
+  headerTitle:  { fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
+  headerRight:  { flexDirection: 'row', gap: Spacing.sm },
   iconButton: {
     width: 44, height: 44, borderRadius: BorderRadius.full,
     alignItems: 'center', justifyContent: 'center',
@@ -422,38 +614,23 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.lg,
     height: 52, borderWidth: 1.5, gap: Spacing.sm,
   },
-  searchInput: { flex: 1, fontSize: FontSize.md, paddingVertical: 0 },
+  searchInput:  { flex: 1, fontSize: FontSize.md, paddingVertical: 0 },
   sectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: Spacing.xl, marginTop: Spacing.xl, marginBottom: Spacing.md,
   },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold    },
+  sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold },
   seeAll:       { fontSize: FontSize.sm, fontWeight: FontWeight.semiBold },
-  categoriesContainer: { paddingHorizontal: Spacing.xl, gap: Spacing.md },
+  categoriesContainer:    { paddingHorizontal: Spacing.xl, gap: Spacing.md },
   categoryCard: {
     alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, gap: Spacing.xs, minWidth: 80,
   },
   categoryName: { fontSize: FontSize.xs, fontWeight: FontWeight.semiBold },
-  subCategoriesContainer: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  subCategoryChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1.5,
-  },
-  subCategoryText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-  },
-  jobCard: {
-    borderRadius: BorderRadius.xl,
-    marginHorizontal: Spacing.xl, marginBottom: Spacing.md, padding: Spacing.lg,
-  },
+  subCategoriesContainer: { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.sm, gap: Spacing.sm },
+  subCategoryChip: { paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 1.5 },
+  subCategoryText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
+  jobCard: { borderRadius: BorderRadius.xl, marginHorizontal: Spacing.xl, marginBottom: Spacing.md, padding: Spacing.lg },
   jobCardTop:      { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md },
   companyLogo: {
     width: 48, height: 48, borderRadius: BorderRadius.md,
@@ -463,10 +640,7 @@ const styles = StyleSheet.create({
   jobInfo:         { flex: 1 },
   jobTitle:        { fontSize: FontSize.md, fontWeight: FontWeight.bold, marginBottom: 2 },
   companyName:     { fontSize: FontSize.sm },
-  salaryBadge: {
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
-  },
+  salaryBadge: { borderRadius: BorderRadius.sm, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
   salaryText:    { fontSize: FontSize.xs, fontWeight: FontWeight.bold },
   jobCardBottom: { flexDirection: 'row', gap: Spacing.lg },
   jobMeta:       { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -475,31 +649,15 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     paddingVertical: 40, paddingHorizontal: Spacing.xl, gap: 12,
   },
-  stateText: { fontSize: FontSize.sm, textAlign: 'center' },
-  retryBtn: {
-    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.lg, marginTop: 4,
-  },
-  retryText: { color: '#fff', fontWeight: FontWeight.semiBold, fontSize: FontSize.sm },
+  stateText:  { fontSize: FontSize.sm, textAlign: 'center' },
+  retryBtn: { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg, marginTop: 4 },
+  retryText:  { color: '#fff', fontWeight: FontWeight.semiBold, fontSize: FontSize.sm },
   fab: {
-    position: 'absolute',
-    bottom: 32,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    position: 'absolute', bottom: 32, right: 24,
+    width: 56, height: 56, borderRadius: 28,
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 6, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 4,
   },
-  fabText: {
-    color: '#fff',
-    fontSize: 32,
-    lineHeight: 36,
-    fontWeight: '400',
-  },
-}); 
+  fabText: { color: '#fff', fontSize: 32, lineHeight: 36, fontWeight: '400' },
+});

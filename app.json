@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Labora",
+    "name": "Top",
     "slug": "labora-mobile",
     "version": "1.0.0",
     "scheme": "labora",
@@ -37,7 +37,13 @@
           "color": "#15803d"
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "TOP ilova yaqin atrofdagi ishlarni ko'rsatish uchun joylashuvingizdan foydalanadi."
+        }
+      ]
     ],
     "extra": {
       "router": {},

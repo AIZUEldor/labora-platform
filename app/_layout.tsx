@@ -5,16 +5,20 @@ import { pushNotificationService } from '../services/pushNotificationService';
 import * as Notifications from 'expo-notifications';
 import { useAuthStore, AuthState } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
+import { useLanguageStore } from '../stores/useLanguageStore';
+
 
 export default function RootLayout() {
   const loadToken = useAuthStore((state: AuthState) => state.loadToken);
   const token = useAuthStore((state: AuthState) => state.token);
   const isLoading = useAuthStore((state: AuthState) => state.isLoading);
   const { isDark, loadTheme } = useThemeStore();
+  const { loadLanguage } = useLanguageStore();
 
   useEffect(() => {
     loadToken();
     loadTheme();
+     loadLanguage();
   }, []);
 
   useEffect(() => {

@@ -3,6 +3,7 @@ using System;
 using Labora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Labora.Infrastructure.Migrations
 {
     [DbContext(typeof(LaboaDbContext))]
-    partial class LaboaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260607192525_AddWorkConditionRating")]
+    partial class AddWorkConditionRating
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -426,9 +429,6 @@ namespace Labora.Infrastructure.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("WorkConditionRating")
-                        .HasColumnType("integer");
 
                     b.Property<int?>("WorkQualityRating")
                         .HasColumnType("integer");

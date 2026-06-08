@@ -24,22 +24,11 @@ const STATUS_COLOR: Record<number, { bg: string; text: string }> = {
   [ApplicationStatus.Completed]: { bg: '#EFF6FF', text: '#1D4ED8' },
 };
 
-const STATUS_LABEL: Record<number, string> = {
-  [ApplicationStatus.Pending]:   'Kutilmoqda',
-  [ApplicationStatus.Accepted]:  'Qabul qilindi',
-  [ApplicationStatus.Rejected]:  'Rad etildi',
-  [ApplicationStatus.Cancelled]: 'Bekor qilindi',
-  [ApplicationStatus.Completed]: 'Yakunlandi',
+const WORKER_POST_STATUS: Record<number, { bg: string; text: string }> = {
+  1: { bg: '#DCFCE7', text: '#166534' },
+  2: { bg: '#F3F4F6', text: '#6B7280' },
+  3: { bg: '#EFF6FF', text: '#1D4ED8' },
 };
-
-const WORKER_POST_STATUS_LABEL: Record<number, { label: string; bg: string; text: string }> = {
-  1: { label: 'Faol',          bg: '#DCFCE7', text: '#166534' },
-  2: { label: 'Nofaol',        bg: '#F3F4F6', text: '#6B7280' },
-  3: { label: 'Qabul qilindi', bg: '#EFF6FF', text: '#1D4ED8' },
-};
-
-const FILTERS      = ['Barchasi', 'Kutilmoqda', 'Qabul qilindi', 'Rad etildi', 'Yakunlandi'];
-const POST_FILTERS = ['Barchasi', 'Faol', 'Nofaol', 'Qabul qilindi'];
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
@@ -53,11 +42,7 @@ function FilterTabs({ filters, active, onChange, colors }: {
   colors: any;
 }) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.filterContainer}
-    >
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
       {filters.map(filter => (
         <TouchableOpacity
           key={filter}
@@ -69,11 +54,7 @@ function FilterTabs({ filters, active, onChange, colors }: {
           onPress={() => onChange(filter)}
           activeOpacity={0.8}
         >
-          <Text style={[
-            styles.filterText,
-            { color: colors.textSecondary },
-            active === filter && { color: '#fff' },
-          ]}>
+          <Text style={[styles.filterText, { color: colors.textSecondary }, active === filter && { color: '#fff' }]}>
             {filter}
           </Text>
         </TouchableOpacity>
@@ -121,7 +102,7 @@ function EmployerJobsView({ colors }: { colors: any }) {
     <View style={styles.centerBox}>
       <Text style={[styles.stateText, { color: colors.textSecondary }]}>{t.employer.myJobs}</Text>
       <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
-        onPress={() => router.push('/(tabs)/create-job')}>
+        onPress={() => router.push('/employer/post-job')}>
         <Text style={styles.retryText}>{t.employer.postJob}</Text>
       </TouchableOpacity>
     </View>
@@ -149,7 +130,7 @@ function EmployerJobsView({ colors }: { colors: any }) {
             </View>
             <View style={styles.cardInfo}>
               <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>{item.title}</Text>
-              <Text style={[styles.subText, { color: colors.textSecondary }]} numberOfLines={1}>{item.location}</Text>
+              <Text style={[styles.subText,  { color: colors.textSecondary }]} numberOfLines={1}>{item.location}</Text>
             </View>
             <ChevronRightIcon size={20} color={colors.textTertiary} />
           </View>
@@ -161,7 +142,7 @@ function EmployerJobsView({ colors }: { colors: any }) {
             </View>
             <View style={[styles.badge, { backgroundColor: item.status === 0 ? '#DCFCE7' : '#FEE2E2' }]}>
               <Text style={[styles.badgeText, { color: item.status === 0 ? '#166534' : '#991B1B' }]}>
-                {item.status === 0 ? 'Faol' : 'Yopilgan'}
+                {item.status === 0 ? t.employer.publish : t.common.done}
               </Text>
             </View>
           </View>
@@ -173,12 +154,36 @@ function EmployerJobsView({ colors }: { colors: any }) {
 
 // ── Worker Applications ───────────────────────────────────────────────────────
 function WorkerApplicationsList({ colors }: { colors: any }) {
+  const { t } = useLanguageStore();
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [refreshing,   setRefreshing]   = useState(false);
   const [error,        setError]        = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
-  const { t } = useLanguageStore();
+  const [activeFilter, setActiveFilter] = useState('all');
+
+  const STATUS_LABEL: Record<number, string> = {
+    [ApplicationStatus.Pending]:   t.applications.pending,
+    [ApplicationStatus.Accepted]:  t.applications.accepted,
+    [ApplicationStatus.Rejected]:  t.applications.rejected,
+    [ApplicationStatus.Cancelled]: t.applications.cancelled,
+    [ApplicationStatus.Completed]: t.applications.completed,
+  };
+
+  const FILTERS = [
+    { key: 'all',      label: t.home.seeAll },
+    { key: 'pending',  label: t.applications.pending },
+    { key: 'accepted', label: t.applications.accepted },
+    { key: 'rejected', label: t.applications.rejected },
+    { key: 'completed',label: t.applications.completed },
+  ];
+
+  const STATUS_KEY: Record<number, string> = {
+    [ApplicationStatus.Pending]:   'pending',
+    [ApplicationStatus.Accepted]:  'accepted',
+    [ApplicationStatus.Rejected]:  'rejected',
+    [ApplicationStatus.Cancelled]: 'cancelled',
+    [ApplicationStatus.Completed]: 'completed',
+  };
 
   const load = useCallback(async () => {
     try {
@@ -195,13 +200,21 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = activeFilter === FILTERS[0]
+  const filtered = activeFilter === 'all'
     ? applications
-    : applications.filter(a => STATUS_LABEL[a.status] === activeFilter);
+    : applications.filter(a => STATUS_KEY[a.status] === activeFilter);
 
   return (
     <>
-      <FilterTabs filters={FILTERS} active={activeFilter} onChange={setActiveFilter} colors={colors} />
+      <FilterTabs
+        filters={FILTERS.map(f => f.label)}
+        active={FILTERS.find(f => f.key === activeFilter)?.label ?? FILTERS[0].label}
+        onChange={label => {
+          const found = FILTERS.find(f => f.label === label);
+          if (found) setActiveFilter(found.key);
+        }}
+        colors={colors}
+      />
 
       {loading && <View style={{ padding: Spacing.xl }}><ApplicationListSkeleton count={4} /></View>}
 
@@ -216,9 +229,7 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
       )}
       {!loading && !error && filtered.length === 0 && (
         <View style={styles.centerBox}>
-          <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-            {t.applications.noApplications}
-          </Text>
+          <Text style={[styles.stateText, { color: colors.textSecondary }]}>{t.applications.noApplications}</Text>
         </View>
       )}
       {!loading && !error && filtered.length > 0 && (
@@ -233,7 +244,12 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
           {filtered.map(app => {
             const statusColor = STATUS_COLOR[app.status] ?? STATUS_COLOR[1];
             return (
-              <TouchableOpacity key={app.id} style={[styles.card, { backgroundColor: colors.card, ...Shadow.md }]} activeOpacity={0.85} onPress={() => router.push({ pathname: '/application-detail', params: { id: app.id } })}>
+              <TouchableOpacity
+                key={app.id}
+                style={[styles.card, { backgroundColor: colors.card, ...Shadow.md }]}
+                activeOpacity={0.85}
+                onPress={() => router.push({ pathname: '/application-detail', params: { id: app.id } })}
+              >
                 <View style={styles.cardHeader}>
                   <View style={[styles.logo, { backgroundColor: colors.primaryLight }]}>
                     <Text style={[styles.logoText, { color: colors.primary }]}>
@@ -242,7 +258,7 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
                   </View>
                   <View style={styles.cardInfo}>
                     <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>{app.jobTitle}</Text>
-                    <Text style={[styles.subText, { color: colors.textSecondary }]} numberOfLines={1}>{app.workerName}</Text>
+                    <Text style={[styles.subText,  { color: colors.textSecondary }]} numberOfLines={1}>{app.workerName}</Text>
                   </View>
                   <View style={[styles.badge, { backgroundColor: statusColor.bg }]}>
                     <Text style={[styles.badgeText, { color: statusColor.text }]}>{STATUS_LABEL[app.status]}</Text>
@@ -274,9 +290,7 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
                       activeOpacity={0.8}
                     >
                       <StarIcon size={16} color={colors.primary} />
-                      <Text style={[styles.reviewBtnText, { color: colors.primary }]}>
-                        {t.profile.reviews}
-                      </Text>
+                      <Text style={[styles.reviewBtnText, { color: colors.primary }]}>{t.profile.reviews}</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -292,12 +306,27 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
 
 // ── Worker Posts ──────────────────────────────────────────────────────────────
 function WorkerPostsList({ colors }: { colors: any }) {
+  const { t } = useLanguageStore();
   const [posts,        setPosts]        = useState<WorkerPost[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [refreshing,   setRefreshing]   = useState(false);
   const [error,        setError]        = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState('Barchasi');
-  const { t } = useLanguageStore();
+  const [activeFilter, setActiveFilter] = useState('all');
+
+  const POST_STATUS_LABEL: Record<number, string> = {
+    1: t.employer.publish,
+    2: t.common.no,
+    3: t.applications.accepted,
+  };
+
+  const POST_STATUS_KEY: Record<number, string> = { 1: 'active', 2: 'inactive', 3: 'accepted' };
+
+  const POST_FILTERS = [
+    { key: 'all',      label: t.home.seeAll },
+    { key: 'active',   label: t.employer.publish },
+    { key: 'inactive', label: t.common.no },
+    { key: 'accepted', label: t.applications.accepted },
+  ];
 
   const load = useCallback(async () => {
     try {
@@ -305,7 +334,7 @@ function WorkerPostsList({ colors }: { colors: any }) {
       setPosts(data);
       setError(null);
     } catch (e: any) {
-      setError(e?.message ?? 'Xatolik yuz berdi');
+      setError(e?.message ?? t.common.somethingWentWrong);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -314,9 +343,9 @@ function WorkerPostsList({ colors }: { colors: any }) {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = activeFilter === 'Barchasi'
+  const filtered = activeFilter === 'all'
     ? posts
-    : posts.filter(p => WORKER_POST_STATUS_LABEL[p.status]?.label === activeFilter);
+    : posts.filter(p => POST_STATUS_KEY[p.status] === activeFilter);
 
   if (loading) return <View style={{ padding: Spacing.xl }}><ApplicationListSkeleton count={4} /></View>;
 
@@ -325,24 +354,32 @@ function WorkerPostsList({ colors }: { colors: any }) {
       <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
       <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
         onPress={() => { setLoading(true); load(); }}>
-        <Text style={styles.retryText}>Qayta urinish</Text>
+        <Text style={styles.retryText}>{t.common.retry}</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
     <>
-      <FilterTabs filters={POST_FILTERS} active={activeFilter} onChange={setActiveFilter} colors={colors} />
+      <FilterTabs
+        filters={POST_FILTERS.map(f => f.label)}
+        active={POST_FILTERS.find(f => f.key === activeFilter)?.label ?? POST_FILTERS[0].label}
+        onChange={label => {
+          const found = POST_FILTERS.find(f => f.label === label);
+          if (found) setActiveFilter(found.key);
+        }}
+        colors={colors}
+      />
 
       {filtered.length === 0 ? (
         <View style={styles.centerBox}>
           <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-            {activeFilter === 'Barchasi' ? "Hali e'lon joylashtirilmagan" : "Bu bo'limda e'lon yo'q"}
+            {activeFilter === 'all' ? t.home.noJobs : t.applications.noApplications}
           </Text>
-          {activeFilter === 'Barchasi' && (
+          {activeFilter === 'all' && (
             <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
               onPress={() => router.push('/post-worker')}>
-              <Text style={styles.retryText}>E'lon qo'shish</Text>
+              <Text style={styles.retryText}>{t.employer.postJob}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -356,7 +393,7 @@ function WorkerPostsList({ colors }: { colors: any }) {
           }
         >
           {filtered.map(post => {
-            const statusInfo = WORKER_POST_STATUS_LABEL[post.status] ?? WORKER_POST_STATUS_LABEL[1];
+            const statusInfo = WORKER_POST_STATUS[post.status] ?? WORKER_POST_STATUS[1];
             return (
               <TouchableOpacity
                 key={post.id}
@@ -370,12 +407,12 @@ function WorkerPostsList({ colors }: { colors: any }) {
                   </View>
                   <View style={styles.cardInfo}>
                     <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>{post.title}</Text>
-                    <Text style={[styles.subText, { color: colors.textSecondary }]} numberOfLines={1}>
+                    <Text style={[styles.subText,  { color: colors.textSecondary }]} numberOfLines={1}>
                       {post.city}, {post.country}
                     </Text>
                   </View>
                   <View style={[styles.badge, { backgroundColor: statusInfo.bg }]}>
-                    <Text style={[styles.badgeText, { color: statusInfo.text }]}>{statusInfo.label}</Text>
+                    <Text style={[styles.badgeText, { color: statusInfo.text }]}>{POST_STATUS_LABEL[post.status]}</Text>
                   </View>
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -386,11 +423,11 @@ function WorkerPostsList({ colors }: { colors: any }) {
                   </View>
                   <View style={styles.metaItem}>
                     <EyeIcon size={12} color={colors.textTertiary} />
-                    <Text style={[styles.metaText, { color: colors.textTertiary }]}>{post.viewCount ?? 0} ko'rish</Text>
+                    <Text style={[styles.metaText, { color: colors.textTertiary }]}>{post.viewCount ?? 0}</Text>
                   </View>
                   {post.expectedSalary > 0 && (
                     <Text style={[styles.metaText, { color: colors.primary, fontWeight: FontWeight.semiBold }]}>
-                      {post.expectedSalary.toLocaleString()} so'm
+                      {post.expectedSalary.toLocaleString()} {t.common.currency}
                     </Text>
                   )}
                 </View>
@@ -406,6 +443,7 @@ function WorkerPostsList({ colors }: { colors: any }) {
 
 // ── Worker Main ───────────────────────────────────────────────────────────────
 function WorkerView({ colors }: { colors: any }) {
+  const { t } = useLanguageStore();
   const [activeTab, setActiveTab] = useState<'applications' | 'posts'>('applications');
 
   return (
@@ -416,7 +454,7 @@ function WorkerView({ colors }: { colors: any }) {
           onPress={() => setActiveTab('applications')}
         >
           <Text style={[styles.tabText, { color: activeTab === 'applications' ? colors.primary : colors.textSecondary }]}>
-            Arizalarim
+            {t.applications.title}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -424,11 +462,10 @@ function WorkerView({ colors }: { colors: any }) {
           onPress={() => setActiveTab('posts')}
         >
           <Text style={[styles.tabText, { color: activeTab === 'posts' ? colors.primary : colors.textSecondary }]}>
-            E'lonlarim
+            {t.employer.myJobs}
           </Text>
         </TouchableOpacity>
       </View>
-
       {activeTab === 'applications'
         ? <WorkerApplicationsList colors={colors} />
         : <WorkerPostsList colors={colors} />
@@ -440,10 +477,9 @@ function WorkerView({ colors }: { colors: any }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ApplicationsScreen() {
   const { colors } = useThemeStore();
-  const { t } = useLanguageStore();
+  const { t }      = useLanguageStore();
   const role       = useAuthStore((state: AuthState) => state.role);
   const isEmployer = Number(role) === UserRole.Employer;
-  
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -468,26 +504,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl, paddingTop: 56, paddingBottom: Spacing.lg,
   },
   headerTitle:     { fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
-  tabRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    marginHorizontal: Spacing.xl,
-  },
+  tabRow:          { flexDirection: 'row', borderBottomWidth: 1, marginHorizontal: Spacing.xl },
   tab:             { flex: 1, alignItems: 'center', paddingVertical: Spacing.md },
   tabText:         { fontSize: FontSize.md, fontWeight: FontWeight.semiBold },
-  filterContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  filterTab: {
-  paddingHorizontal: 12,
-  paddingVertical: 6,
-  borderRadius: 20,
-  borderWidth: 1.5,
-  alignSelf: 'flex-start',
-},
+  filterContainer: { paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', gap: 8 },
+  filterTab:       { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, alignSelf: 'flex-start' },
   filterText:      { fontSize: 12, fontWeight: '600' },
   listContainer:   { padding: Spacing.xl, gap: Spacing.md },
   card:            { borderRadius: BorderRadius.xl, padding: Spacing.lg },
@@ -514,9 +535,6 @@ const styles = StyleSheet.create({
   },
   reviewBtnText:   { fontSize: FontSize.sm, fontWeight: FontWeight.semiBold },
   stateText:       { fontSize: FontSize.sm, textAlign: 'center' },
-  retryBtn: {
-    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.lg, marginTop: 4,
-  },
+  retryBtn:        { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg, marginTop: 4 },
   retryText:       { color: '#fff', fontWeight: FontWeight.semiBold, fontSize: FontSize.sm },
 });

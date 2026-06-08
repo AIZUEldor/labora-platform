@@ -2,21 +2,23 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, Alert, Image,
-  TextInput, Modal,
+  TextInput, Modal, Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeStore } from '../store/themeStore';
+import { useAuthStore, AuthState } from '../store/authStore';
 import { workerPostService } from '../services/workerPostService';
-import { WorkerPost, UpdateWorkerPostRequest } from '../types';
-import { BackIcon, ClockIcon, EyeIcon, MapPinIcon, MoneyIcon, BriefcaseIcon, EditIcon, CloseIcon, PlusIcon } from '../components/icons';
+import { WorkerPost, UserRole } from '../types';
+import {
+  BackIcon, ClockIcon, EyeIcon, MapPinIcon, MoneyIcon,
+  BriefcaseIcon, EditIcon, CloseIcon, PlusIcon, PhoneIcon,
+} from '../components/icons';
 import { BorderRadius, Shadow, Spacing } from '../constants/spacing';
 import { FontSize, FontWeight } from '../constants/typography';
 import { MEDIA_URL } from '../services/api';
-
-
-
+import { useLanguageStore } from '../stores/useLanguageStore';
 
 const WORKER_POST_STATUS_LABEL: Record<number, { label: string; bg: string; text: string }> = {
   1: { label: 'Faol',          bg: '#DCFCE7', text: '#166534' },
@@ -31,23 +33,20 @@ function formatDate(dateStr: string): string {
 
 export default function WorkerPostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const router  = useRouter();
+  const insets  = useSafeAreaInsets();
   const { colors } = useThemeStore();
+  const { language } = useLanguageStore();
+  const role       = useAuthStore((state: AuthState) => state.role);
+  const isEmployer = Number(role) === UserRole.Employer;
 
   const [post,          setPost]          = useState<WorkerPost | null>(null);
   const [loading,       setLoading]       = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving,        setSaving]        = useState(false);
   const [form,          setForm]          = useState({
-    title: '',
-    description: '',
-    expectedSalary: 0,
-    experienceYears: 0,
-    skills: '',
-    city: '',
-    country: '',
-    status: 1,
+    title: '', description: '', expectedSalary: 0,
+    experienceYears: 0, skills: '', city: '', country: '', status: 1,
   });
 
   useEffect(() => { loadPost(); }, [id]);
@@ -81,8 +80,7 @@ export default function WorkerPostDetailScreen() {
       [
         { text: 'Bekor qilish', style: 'cancel' },
         {
-          text: "O'chirish",
-          style: 'destructive',
+          text: "O'chirish", style: 'destructive',
           onPress: async () => {
             try {
               await workerPostService.delete(id!);
@@ -99,18 +97,12 @@ export default function WorkerPostDetailScreen() {
   const handleSave = async () => {
     if (!form.title.trim()) { Alert.alert('Xato', 'Lavozim nomini kiriting'); return; }
     if (!form.city.trim())  { Alert.alert('Xato', 'Shahar kiriting'); return; }
-
     setSaving(true);
     try {
       await workerPostService.update(id!, {
-        title:           form.title,
-        description:     form.description,
-        expectedSalary:  form.expectedSalary,
-        experienceYears: form.experienceYears,
-        skills:          form.skills,
-        city:            form.city,
-        country:         form.country,
-        status:          form.status,
+        title: form.title, description: form.description,
+        expectedSalary: form.expectedSalary, experienceYears: form.experienceYears,
+        skills: form.skills, city: form.city, country: form.country, status: form.status,
       });
       await loadPost();
       setShowEditModal(false);
@@ -120,6 +112,15 @@ export default function WorkerPostDetailScreen() {
       setSaving(false);
     }
   };
+
+  const handleCall = (phone: string) => {
+    Linking.openURL(`tel:${phone}`).catch(() => {
+      Alert.alert('Xato', 'Qo\'ng\'iroq qilishda xato');
+    });
+  };
+
+  const label = (uz: string, ru: string, en: string) =>
+    language === 'uz' ? uz : language === 'ru' ? ru : en;
 
   if (loading) {
     return (
@@ -142,17 +143,24 @@ export default function WorkerPostDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
           <BackIcon size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>E'lon tafsiloti</Text>
-        <TouchableOpacity onPress={handleDelete} style={styles.headerBtn}>
-          <CloseIcon size={24} color="#fff" />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {label("E'lon tafsiloti", 'Детали объявления', 'Post Details')}
+        </Text>
+        {/* Faqat Worker o'zi ko'ra oladi o'chirish tugmasini */}
+        {!isEmployer ? (
+          <TouchableOpacity onPress={handleDelete} style={styles.headerBtn}>
+            <CloseIcon size={24} color="#fff" />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
       </LinearGradient>
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Status + Ko'rish + Tahrirlash */}
+        {/* Status + Ko'rish + Tahrirlash (faqat Worker uchun) */}
         <View style={styles.topRow}>
           <View style={[styles.badge, { backgroundColor: statusInfo.bg }]}>
             <Text style={[styles.badgeText, { color: statusInfo.text }]}>{statusInfo.label}</Text>
@@ -160,20 +168,33 @@ export default function WorkerPostDetailScreen() {
           <View style={styles.rightMeta}>
             <View style={styles.viewRow}>
               <EyeIcon size={14} color={colors.textSecondary} />
-              <Text style={[styles.viewText, { color: colors.textSecondary }]}>{post.viewCount ?? 0} ko'rish</Text>
+              <Text style={[styles.viewText, { color: colors.textSecondary }]}>
+                {post.viewCount ?? 0} {label("ko'rish", 'просмотров', 'views')}
+              </Text>
             </View>
-            <TouchableOpacity
-              style={[styles.editBtn, { backgroundColor: colors.primaryLight }]}
-              onPress={() => setShowEditModal(true)}
-            >
-              <EditIcon size={14} color="#16A34A" />
-              <Text style={[styles.editBtnText, { color: '#16A34A' }]}>Tahrirlash</Text>
-            </TouchableOpacity>
+            {!isEmployer && (
+              <TouchableOpacity
+                style={[styles.editBtn, { backgroundColor: colors.primaryLight }]}
+                onPress={() => setShowEditModal(true)}
+              >
+                <EditIcon size={14} color="#16A34A" />
+                <Text style={[styles.editBtnText, { color: '#16A34A' }]}>
+                  {label('Tahrirlash', 'Редактировать', 'Edit')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
         {/* Sarlavha */}
         <Text style={[styles.title, { color: colors.textPrimary }]}>{post.title}</Text>
+
+        {/* Ishchi ismi (Employer uchun ko'rsatiladi) */}
+        {isEmployer && (
+          <Text style={[styles.workerName, { color: colors.textSecondary }]}>
+            {post.workerFirstName} {post.workerLastName}
+          </Text>
+        )}
 
         {/* Meta */}
         <View style={[styles.metaCard, { backgroundColor: colors.card, ...Shadow.sm }]}>
@@ -185,14 +206,14 @@ export default function WorkerPostDetailScreen() {
           <View style={styles.metaRow}>
             <MoneyIcon size={16} color="#16A34A" />
             <Text style={[styles.metaText, { color: colors.textPrimary }]}>
-              {post.expectedSalary.toLocaleString()} so'm
+              {post.expectedSalary.toLocaleString()} {label("so'm", 'сум', 'UZS')}
             </Text>
           </View>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <View style={styles.metaRow}>
             <BriefcaseIcon size={16} color="#16A34A" />
             <Text style={[styles.metaText, { color: colors.textPrimary }]}>
-              {post.experienceYears} yil tajriba
+              {post.experienceYears} {label('yil tajriba', 'лет опыта', 'years experience')}
             </Text>
           </View>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -202,10 +223,26 @@ export default function WorkerPostDetailScreen() {
           </View>
         </View>
 
+        {/* Employer: Telefon raqam */}
+        {isEmployer && post.workerPhone && (
+          <TouchableOpacity
+            style={[styles.callBtn, { backgroundColor: colors.primaryLight }]}
+            onPress={() => handleCall(post.workerPhone!)}
+            activeOpacity={0.8}
+          >
+            <PhoneIcon size={20} color={colors.primary} />
+            <Text style={[styles.callBtnText, { color: colors.primary }]}>
+              {post.workerPhone}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Kategoriya */}
         {post.categoryName && (
           <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Kategoriya</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              {label('Kategoriya', 'Категория', 'Category')}
+            </Text>
             <Text style={[styles.sectionText, { color: colors.textSecondary }]}>
               {post.categoryName}{post.subCategoryName ? ` › ${post.subCategoryName}` : ''}
             </Text>
@@ -214,14 +251,18 @@ export default function WorkerPostDetailScreen() {
 
         {/* Tavsif */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>O'zim haqimda</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {label("O'zim haqimda", 'О себе', 'About me')}
+          </Text>
           <Text style={[styles.sectionText, { color: colors.textSecondary }]}>{post.description}</Text>
         </View>
 
         {/* Ko'nikmalar */}
         {post.skills && (
           <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Ko'nikmalar</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              {label("Ko'nikmalar", 'Навыки', 'Skills')}
+            </Text>
             <View style={styles.skillsRow}>
               {post.skills.split(',').map((skill, i) => (
                 <View key={i} style={[styles.skillChip, { backgroundColor: colors.primaryLight }]}>
@@ -232,10 +273,12 @@ export default function WorkerPostDetailScreen() {
           </View>
         )}
 
-        {/* Portfolio rasmlari */}
+        {/* Portfolio */}
         {post.portfolioImages && post.portfolioImages.length > 0 && (
           <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Ishlarim namunasi</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              {label('Ishlarim namunasi', 'Портфолио', 'Portfolio')}
+            </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
               {post.portfolioImages.map((img, i) => (
                 <Image
@@ -248,188 +291,210 @@ export default function WorkerPostDetailScreen() {
           </View>
         )}
 
-        {/* O'chirish tugmasi */}
-        <TouchableOpacity
-          style={[styles.deleteBtn, { borderColor: '#EF4444' }]}
-          onPress={handleDelete}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.deleteBtnText, { color: '#EF4444' }]}>E'lonni o'chirish</Text>
-        </TouchableOpacity>
+        {/* Faqat Worker uchun o'chirish tugmasi */}
+        {!isEmployer && (
+          <TouchableOpacity
+            style={[styles.deleteBtn, { borderColor: '#EF4444' }]}
+            onPress={handleDelete}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.deleteBtnText, { color: '#EF4444' }]}>
+              {label("E'lonni o'chirish", 'Удалить объявление', 'Delete post')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
-      {/* Tahrirlash Modal */}
-      <Modal visible={showEditModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>E'lonni tahrirlash</Text>
-              <TouchableOpacity onPress={() => setShowEditModal(false)}>
-                <CloseIcon size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
+      {/* Tahrirlash Modal — faqat Worker uchun */}
+      {!isEmployer && (
+        <Modal visible={showEditModal} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+                  {label("E'lonni tahrirlash", 'Редактировать', 'Edit Post')}
+                </Text>
+                <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                  <CloseIcon size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalBody}
-              keyboardShouldPersistTaps="handled">
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalBody}
+                keyboardShouldPersistTaps="handled">
 
-              <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Lavozim nomi</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-                value={form.title}
-                onChangeText={t => setForm(p => ({ ...p, title: t }))}
-                placeholderTextColor={colors.textSecondary}
-              />
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  {label('Lavozim nomi', 'Название', 'Title')}
+                </Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={form.title}
+                  onChangeText={t => setForm(p => ({ ...p, title: t }))}
+                  placeholderTextColor={colors.textSecondary}
+                />
 
-              <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>O'zingiz haqida</Text>
-              <TextInput
-                style={[styles.input, styles.textArea, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-                value={form.description}
-                onChangeText={t => setForm(p => ({ ...p, description: t }))}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                placeholderTextColor={colors.textSecondary}
-              />
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  {label("O'zingiz haqida", 'О себе', 'About yourself')}
+                </Text>
+                <TextInput
+                  style={[styles.input, styles.textArea, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={form.description}
+                  onChangeText={t => setForm(p => ({ ...p, description: t }))}
+                  multiline numberOfLines={4} textAlignVertical="top"
+                  placeholderTextColor={colors.textSecondary}
+                />
 
-              <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Maosh (so'm)</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-                value={form.expectedSalary > 0 ? String(form.expectedSalary) : ''}
-                onChangeText={t => setForm(p => ({ ...p, expectedSalary: Number(t) || 0 }))}
-                keyboardType="numeric"
-                placeholderTextColor={colors.textSecondary}
-              />
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  {label("Maosh (so'm)", 'Зарплата (сум)', 'Salary (UZS)')}
+                </Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={form.expectedSalary > 0 ? String(form.expectedSalary) : ''}
+                  onChangeText={t => setForm(p => ({ ...p, expectedSalary: Number(t) || 0 }))}
+                  keyboardType="numeric"
+                  placeholderTextColor={colors.textSecondary}
+                />
 
-              <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Tajriba (yil)</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-                value={form.experienceYears > 0 ? String(form.experienceYears) : ''}
-                onChangeText={t => setForm(p => ({ ...p, experienceYears: Number(t) || 0 }))}
-                keyboardType="numeric"
-                placeholderTextColor={colors.textSecondary}
-              />
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  {label('Tajriba (yil)', 'Опыт (лет)', 'Experience (years)')}
+                </Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={form.experienceYears > 0 ? String(form.experienceYears) : ''}
+                  onChangeText={t => setForm(p => ({ ...p, experienceYears: Number(t) || 0 }))}
+                  keyboardType="numeric"
+                  placeholderTextColor={colors.textSecondary}
+                />
 
-              <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Ko'nikmalar</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-                value={form.skills}
-                onChangeText={t => setForm(p => ({ ...p, skills: t }))}
-                placeholderTextColor={colors.textSecondary}
-              />
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  {label("Ko'nikmalar", 'Навыки', 'Skills')}
+                </Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={form.skills}
+                  onChangeText={t => setForm(p => ({ ...p, skills: t }))}
+                  placeholderTextColor={colors.textSecondary}
+                />
 
-              <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Shahar</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-                value={form.city}
-                onChangeText={t => setForm(p => ({ ...p, city: t }))}
-                placeholderTextColor={colors.textSecondary}
-              />
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  {label('Shahar', 'Город', 'City')}
+                </Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={form.city}
+                  onChangeText={t => setForm(p => ({ ...p, city: t }))}
+                  placeholderTextColor={colors.textSecondary}
+                />
 
-              <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Davlat</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-                value={form.country}
-                onChangeText={t => setForm(p => ({ ...p, country: t }))}
-                placeholderTextColor={colors.textSecondary}
-              />
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  {label('Davlat', 'Страна', 'Country')}
+                </Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={form.country}
+                  onChangeText={t => setForm(p => ({ ...p, country: t }))}
+                  placeholderTextColor={colors.textSecondary}
+                />
 
-              <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Ishlarim namunasi</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-                {post.portfolioImages.map((img) => (
-                  <View key={img.id} style={{ position: 'relative', marginRight: 10 }}>
-                    <Image
-                      source={{ uri: `${MEDIA_URL}${img.imageUrl}` }}
-                      style={{ width: 90, height: 90, borderRadius: 10 }}
-                    />
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  {label('Ishlarim namunasi', 'Портфолио', 'Portfolio')}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+                  {post.portfolioImages.map((img) => (
+                    <View key={img.id} style={{ position: 'relative', marginRight: 10 }}>
+                      <Image
+                        source={{ uri: `${MEDIA_URL}${img.imageUrl}` }}
+                        style={{ width: 90, height: 90, borderRadius: 10 }}
+                      />
+                      <TouchableOpacity
+                        style={{
+                          position: 'absolute', top: 4, right: 4,
+                          backgroundColor: 'rgba(0,0,0,0.6)',
+                          borderRadius: 10, padding: 3,
+                        }}
+                        onPress={async () => {
+                          try {
+                            await workerPostService.deletePortfolioImage(id!, img.id);
+                            await loadPost();
+                          } catch {
+                            Alert.alert('Xato', "Rasmni o'chirishda xato");
+                          }
+                        }}
+                      >
+                        <CloseIcon size={12} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  {post.portfolioImages.length < 5 && (
                     <TouchableOpacity
                       style={{
-                        position: 'absolute', top: 4, right: 4,
-                        backgroundColor: 'rgba(0,0,0,0.6)',
-                        borderRadius: 10, padding: 3,
+                        width: 90, height: 90, borderRadius: 10,
+                        borderWidth: 1.5, borderStyle: 'dashed',
+                        borderColor: colors.border,
+                        justifyContent: 'center', alignItems: 'center',
                       }}
                       onPress={async () => {
-                        try {
-                          await workerPostService.deletePortfolioImage(id!, img.id);
-                          await loadPost();
-                        } catch {
-                          Alert.alert('Xato', "Rasmni o'chirishda xato");
+                        const picker = await import('expo-image-picker');
+                        const result = await picker.launchImageLibraryAsync({
+                          mediaTypes: picker.MediaTypeOptions.Images, quality: 0.8,
+                        });
+                        if (!result.canceled && result.assets[0]) {
+                          try {
+                            await workerPostService.uploadPortfolioImage(id!, result.assets[0].uri);
+                            await loadPost();
+                          } catch {
+                            Alert.alert('Xato', 'Rasm yuklashda xato');
+                          }
                         }
                       }}
                     >
-                      <CloseIcon size={12} color="#fff" />
+                      <PlusIcon size={28} color="#16A34A" />
                     </TouchableOpacity>
-                  </View>
-                ))}
-                {post.portfolioImages.length < 5 && (
-                  <TouchableOpacity
-                    style={{
-                      width: 90, height: 90, borderRadius: 10,
-                      borderWidth: 1.5, borderStyle: 'dashed',
-                      borderColor: colors.border,
-                      justifyContent: 'center', alignItems: 'center',
-                    }}
-                    onPress={async () => {
-                      const result = await (await import('expo-image-picker')).launchImageLibraryAsync({
-                        mediaTypes: (await import('expo-image-picker')).MediaTypeOptions.Images,
-                        quality: 0.8,
-                      });
-                      if (!result.canceled && result.assets[0]) {
-                        try {
-                          await workerPostService.uploadPortfolioImage(id!, result.assets[0].uri);
-                          await loadPost();
-                        } catch {
-                          Alert.alert('Xato', 'Rasm yuklashda xato');
-                        }
-                      }
-                    }}
-                  >
-                    <PlusIcon size={28} color="#16A34A" />
-                  </TouchableOpacity>
-                )}
+                  )}
+                </ScrollView>
+
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Status</Text>
+                <View style={styles.statusRow}>
+                  {[
+                    { value: 1, label: label('Faol', 'Активно', 'Active') },
+                    { value: 2, label: label('Nofaol', 'Неактивно', 'Inactive') },
+                  ].map(s => (
+                    <TouchableOpacity
+                      key={s.value}
+                      style={[
+                        styles.statusBtn,
+                        { borderColor: colors.border },
+                        form.status === s.value && { backgroundColor: '#16A34A', borderColor: '#16A34A' },
+                      ]}
+                      onPress={() => setForm(p => ({ ...p, status: s.value }))}
+                    >
+                      <Text style={[
+                        styles.statusBtnText,
+                        { color: colors.textSecondary },
+                        form.status === s.value && { color: '#fff' },
+                      ]}>
+                        {s.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.saveBtn, saving && { opacity: 0.7 }]}
+                  onPress={handleSave}
+                  disabled={saving}
+                >
+                  <LinearGradient colors={['#16A34A', '#15803D']} style={styles.saveGradient}>
+                    {saving
+                      ? <ActivityIndicator color="#fff" />
+                      : <Text style={styles.saveBtnText}>{label('Saqlash', 'Сохранить', 'Save')}</Text>
+                    }
+                  </LinearGradient>
+                </TouchableOpacity>
               </ScrollView>
-
-              <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Status</Text>
-              <View style={styles.statusRow}>
-                {[
-                  { value: 1, label: 'Faol' },
-                  { value: 2, label: 'Nofaol' },
-                ].map(s => (
-                  <TouchableOpacity
-                    key={s.value}
-                    style={[
-                      styles.statusBtn,
-                      { borderColor: colors.border },
-                      form.status === s.value && { backgroundColor: '#16A34A', borderColor: '#16A34A' },
-                    ]}
-                    onPress={() => setForm(p => ({ ...p, status: s.value }))}
-                  >
-                    <Text style={[
-                      styles.statusBtnText,
-                      { color: colors.textSecondary },
-                      form.status === s.value && { color: '#fff' },
-                    ]}>
-                      {s.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <TouchableOpacity
-                style={[styles.saveBtn, saving && { opacity: 0.7 }]}
-                onPress={handleSave}
-                disabled={saving}
-              >
-                <LinearGradient colors={['#16A34A', '#15803D']} style={styles.saveGradient}>
-                  {saving
-                    ? <ActivityIndicator color="#fff" />
-                    : <Text style={styles.saveBtnText}>Saqlash</Text>
-                  }
-                </LinearGradient>
-              </TouchableOpacity>
-            </ScrollView>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -462,10 +527,17 @@ const styles = StyleSheet.create({
   },
   editBtnText:  { fontSize: 12, fontWeight: '600' },
   title:        { fontSize: FontSize.xl, fontWeight: FontWeight.bold, marginBottom: 4 },
+  workerName:   { fontSize: FontSize.md, marginBottom: 4 },
   metaCard:     { borderRadius: BorderRadius.xl, padding: Spacing.lg },
   metaRow:      { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   metaText:     { fontSize: FontSize.md },
   divider:      { height: 1, marginVertical: Spacing.md },
+  callBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.sm, borderRadius: BorderRadius.xl,
+    paddingVertical: 14, marginTop: 4,
+  },
+  callBtnText:  { fontSize: FontSize.md, fontWeight: FontWeight.bold },
   section:      { borderRadius: BorderRadius.xl, padding: Spacing.lg, gap: 8 },
   sectionTitle: { fontSize: FontSize.md, fontWeight: FontWeight.bold },
   sectionText:  { fontSize: FontSize.sm, lineHeight: 22 },
@@ -484,15 +556,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14, alignItems: 'center', marginTop: 8,
   },
   deleteBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.semiBold },
-
-  // Modal
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    maxHeight: '90%',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%',
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

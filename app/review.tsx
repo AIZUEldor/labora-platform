@@ -9,19 +9,10 @@ import { FontSize, FontWeight } from '../constants/typography';
 import { Spacing, BorderRadius, Shadow } from '../constants/spacing';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore, AuthState } from '../store/authStore';
-import { StarIcon, CheckCircleIcon } from '../components/icons';
-import Svg, { Path } from 'react-native-svg';
+import { StarIcon, CheckCircleIcon, ArrowLeftIcon } from '../components/icons';
 import { reviewService } from '../services/reviewService';
 import { UserRole } from '../types';
 import { useLanguageStore } from '../stores/useLanguageStore';
-
-function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
 
 function StarRating({ value, onChange, label, colors }: {
   value: number;
@@ -31,11 +22,11 @@ function StarRating({ value, onChange, label, colors }: {
 }) {
   return (
     <View style={styles.ratingRow}>
-      <Text style={[styles.ratingLabel, { color: colors.textPrimary }]}>{label}</Text>
+      <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{label}</Text>
       <View style={styles.starsRow}>
         {[1, 2, 3, 4, 5].map(star => (
           <TouchableOpacity key={star} onPress={() => onChange(star)} activeOpacity={0.7}>
-            <StarIcon size={32} color={star <= value ? '#F59E0B' : colors.border} />
+            <StarIcon size={30} color={star <= value ? '#F59E0B' : colors.border} />
           </TouchableOpacity>
         ))}
       </View>
@@ -54,27 +45,30 @@ export default function ReviewScreen() {
     targetName: string;
   }>();
 
-  const [overallRating,              setOverallRating]              = useState(0);
-  const [wouldWorkAgain,             setWouldWorkAgain]             = useState<boolean | null>(null);
-  const [comment,                    setComment]                    = useState('');
-  const [submitting,                 setSubmitting]                 = useState(false);
+  const [overallRating,               setOverallRating]               = useState(0);
+  const [wouldWorkAgain,              setWouldWorkAgain]              = useState<boolean | null>(null);
+  const [comment,                     setComment]                     = useState('');
+  const [submitting,                  setSubmitting]                  = useState(false);
 
-  const [paymentRating,              setPaymentRating]              = useState(0);
+  // Worker → Employer
+  const [paymentRating,               setPaymentRating]               = useState(0);
   const [employerCommunicationRating, setEmployerCommunicationRating] = useState(0);
+  const [workConditionRating,         setWorkConditionRating]         = useState(0);
 
-  const [experienceRating,           setExperienceRating]           = useState(0);
-  const [workerCommunicationRating,  setWorkerCommunicationRating]  = useState(0);
-  const [workQualityRating,          setWorkQualityRating]          = useState(0);
-  const [punctualityRating,          setPunctualityRating]          = useState(0);
-  const [responsibilityRating,       setResponsibilityRating]       = useState(0);
+  // Employer → Worker
+  const [experienceRating,            setExperienceRating]            = useState(0);
+  const [workerCommunicationRating,   setWorkerCommunicationRating]   = useState(0);
+  const [workQualityRating,           setWorkQualityRating]           = useState(0);
+  const [punctualityRating,           setPunctualityRating]           = useState(0);
+  const [responsibilityRating,        setResponsibilityRating]        = useState(0);
 
   const handleSubmit = async () => {
     if (overallRating === 0) {
-      Alert.alert(t.common.error, t.profile.rating);
+      Alert.alert(t.common.error, t.review.rating);
       return;
     }
     if (wouldWorkAgain === null) {
-      Alert.alert(t.common.error, t.common.confirm);
+      Alert.alert(t.common.error, t.review.wouldWorkAgain);
       return;
     }
     try {
@@ -93,9 +87,10 @@ export default function ReviewScreen() {
         } : {
           paymentRating:               paymentRating               || undefined,
           employerCommunicationRating: employerCommunicationRating || undefined,
+          workConditionRating:         workConditionRating         || undefined,
         }),
       });
-      Alert.alert(t.common.success, t.profile.reviews, [
+      Alert.alert(t.common.success, t.review.title, [
         { text: t.common.ok, onPress: () => router.back() },
       ]);
     } catch (e: any) {
@@ -116,11 +111,11 @@ export default function ReviewScreen() {
       >
         <View style={styles.headerTop}>
           <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.7}>
-            <BackIcon size={22} color="#fff" />
+            <ArrowLeftIcon size={22} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>{t.profile.reviews}</Text>
-            <Text style={styles.headerSubtitle}>{targetName}</Text>
+            <Text style={styles.headerTitle}>{t.review.title}</Text>
+            {targetName ? <Text style={styles.headerSubtitle}>{targetName}</Text> : null}
           </View>
           <View style={{ width: 40 }} />
         </View>
@@ -131,28 +126,49 @@ export default function ReviewScreen() {
         {/* Umumiy baho */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {t.profile.rating} *
+            {t.review.rating} *
           </Text>
-          <StarRating value={overallRating} onChange={setOverallRating} label="" colors={colors} />
+          <View style={styles.starsRowCenter}>
+            {[1, 2, 3, 4, 5].map(star => (
+              <TouchableOpacity key={star} onPress={() => setOverallRating(star)} activeOpacity={0.7}>
+                <StarIcon size={40} color={star <= overallRating ? '#F59E0B' : colors.border} />
+              </TouchableOpacity>
+            ))}
+          </View>
+          {overallRating > 0 && (
+            <Text style={[styles.ratingValue, { color: '#F59E0B' }]}>
+              {overallRating}/5
+            </Text>
+          )}
         </View>
 
-        {/* Batafsil */}
+        {/* Batafsil baholash */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {t.profile.reviews}
+            {t.review.categories}
           </Text>
+
           {isEmployer ? (
+            // Employer → Worker
             <>
-              <StarRating value={experienceRating}          onChange={setExperienceRating}          label={t.editProfile.experience}  colors={colors} />
-              <StarRating value={workQualityRating}         onChange={setWorkQualityRating}          label={t.common.ok}               colors={colors} />
-              <StarRating value={punctualityRating}         onChange={setPunctualityRating}          label={t.common.ok}               colors={colors} />
-              <StarRating value={responsibilityRating}      onChange={setResponsibilityRating}       label={t.common.ok}               colors={colors} />
-              <StarRating value={workerCommunicationRating} onChange={setWorkerCommunicationRating}  label={t.common.ok}               colors={colors} />
+              <StarRating value={responsibilityRating}      onChange={setResponsibilityRating}      label={t.review.responsibility}       colors={colors} />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <StarRating value={workQualityRating}         onChange={setWorkQualityRating}          label={t.review.workQuality}           colors={colors} />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <StarRating value={punctualityRating}         onChange={setPunctualityRating}          label={t.review.punctuality}           colors={colors} />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <StarRating value={workerCommunicationRating} onChange={setWorkerCommunicationRating}  label={t.review.workerCommunication}   colors={colors} />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <StarRating value={experienceRating}          onChange={setExperienceRating}           label={t.editProfile.experience}       colors={colors} />
             </>
           ) : (
+            // Worker → Employer
             <>
-              <StarRating value={paymentRating}               onChange={setPaymentRating}               label={t.common.currency}  colors={colors} />
-              <StarRating value={employerCommunicationRating} onChange={setEmployerCommunicationRating} label={t.common.ok}        colors={colors} />
+              <StarRating value={paymentRating}               onChange={setPaymentRating}               label={t.review.paymentOnTime}          colors={colors} />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <StarRating value={employerCommunicationRating} onChange={setEmployerCommunicationRating} label={t.review.employerCommunication}  colors={colors} />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <StarRating value={workConditionRating}         onChange={setWorkConditionRating}         label={t.review.workCondition}          colors={colors} />
             </>
           )}
         </View>
@@ -160,7 +176,7 @@ export default function ReviewScreen() {
         {/* Qayta ishlash */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {isEmployer ? t.employer.acceptApplicant : t.common.confirm}
+            {t.review.wouldWorkAgain}
           </Text>
           <View style={styles.yesNoRow}>
             <TouchableOpacity
@@ -197,11 +213,11 @@ export default function ReviewScreen() {
         {/* Izoh */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {t.editProfile.bio}
+            {t.review.comment}
           </Text>
           <TextInput
             style={[styles.commentInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-            placeholder={t.editProfile.bio}
+            placeholder={t.review.placeholder}
             placeholderTextColor={colors.textTertiary}
             value={comment}
             onChangeText={setComment}
@@ -211,13 +227,13 @@ export default function ReviewScreen() {
           />
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* Submit */}
       <View style={[styles.bottomBar, { backgroundColor: colors.surface, ...Shadow.lg }]}>
         <TouchableOpacity
-          style={styles.submitWrapper}
+          style={[styles.submitWrapper, { opacity: submitting ? 0.7 : 1 }]}
           onPress={handleSubmit}
           activeOpacity={0.85}
           disabled={submitting}
@@ -229,7 +245,7 @@ export default function ReviewScreen() {
           >
             {submitting
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.submitText}>{t.common.done}</Text>
+              : <Text style={styles.submitText}>{t.review.submit}</Text>
             }
           </LinearGradient>
         </TouchableOpacity>
@@ -239,8 +255,8 @@ export default function ReviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1 },
-  gradientHeader: { paddingTop: 56, paddingBottom: Spacing.lg },
+  container:       { flex: 1 },
+  gradientHeader:  { paddingTop: 56, paddingBottom: Spacing.lg },
   headerTop: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', paddingHorizontal: Spacing.xl,
@@ -250,16 +266,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
-  headerCenter:   { flex: 1, alignItems: 'center' },
-  headerTitle:    { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#fff' },
-  headerSubtitle: { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
-  content:        { padding: Spacing.xl, gap: Spacing.lg },
-  section:        { borderRadius: BorderRadius.xl, padding: Spacing.lg, gap: Spacing.md },
-  sectionTitle:   { fontSize: FontSize.md, fontWeight: FontWeight.bold },
-  ratingRow:      { gap: Spacing.sm },
-  ratingLabel:    { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
-  starsRow:       { flexDirection: 'row', gap: Spacing.sm },
-  yesNoRow:       { flexDirection: 'row', gap: Spacing.md },
+  headerCenter:    { flex: 1, alignItems: 'center' },
+  headerTitle:     { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#fff' },
+  headerSubtitle:  { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  content:         { padding: Spacing.xl, gap: Spacing.lg },
+  section:         { borderRadius: BorderRadius.xl, padding: Spacing.lg, gap: Spacing.md },
+  sectionTitle:    { fontSize: FontSize.md, fontWeight: FontWeight.bold },
+  starsRowCenter:  { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm },
+  ratingValue:     { textAlign: 'center', fontSize: FontSize.md, fontWeight: FontWeight.bold },
+  ratingRow:       { gap: Spacing.xs },
+  ratingLabel:     { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
+  starsRow:        { flexDirection: 'row', gap: Spacing.sm },
+  divider:         { height: 1 },
+  yesNoRow:        { flexDirection: 'row', gap: Spacing.md },
   yesNoBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: Spacing.sm, height: 48, borderRadius: BorderRadius.lg, borderWidth: 1.5,
@@ -273,7 +292,7 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg, paddingBottom: Spacing.xl,
   },
-  submitWrapper: { borderRadius: BorderRadius.lg, overflow: 'hidden', ...Shadow.md },
+  submitWrapper: { borderRadius: BorderRadius.lg, overflow: 'hidden' },
   submitButton:  { height: 54, alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius.lg },
   submitText:    { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#fff' },
 });

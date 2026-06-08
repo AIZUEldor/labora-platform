@@ -2,15 +2,37 @@ import { Tabs } from 'expo-router';
 import { useAuthStore, AuthState } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { UserRole } from '../../types';
+import { router } from 'expo-router';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+function PlusButton({ colors }: { colors: any }) {
+  const role       = useAuthStore((state: AuthState) => state.role);
+  const isEmployer = Number(role) === UserRole.Employer;
+
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        if (isEmployer) router.push('/employer/post-job');
+        else router.push('/post-worker');
+      }}
+      activeOpacity={0.85}
+      style={styles.plusWrapper}
+    >
+      <View style={[styles.plusButton, { backgroundColor: colors.primary }]}>
+        <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+          <Path d="M12 5V19M5 12H19" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" />
+        </Svg>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function TabsLayout() {
   const role       = useAuthStore((state: AuthState) => state.role);
   const { colors } = useThemeStore();
   const insets     = useSafeAreaInsets();
-
   const isEmployer = Number(role) === UserRole.Employer;
 
   return (
@@ -27,6 +49,7 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: '#9CA3AF',
       }}
     >
+      {/* Home */}
       <Tabs.Screen
         name="index"
         options={{
@@ -42,10 +65,10 @@ export default function TabsLayout() {
         }}
       />
 
+      {/* Worker: Arizalarim | Employer: E'lonlarim */}
       <Tabs.Screen
         name="applications"
         options={{
-          href: isEmployer ? null : undefined,
           tabBarIcon: ({ focused, color }) => (
             <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
               <Rect
@@ -59,24 +82,15 @@ export default function TabsLayout() {
         }}
       />
 
+      {/* O'rtadagi + tugma */}
       <Tabs.Screen
         name="create-job"
         options={{
-          href: isEmployer ? undefined : null,
-          tabBarIcon: ({ focused, color }) => (
-            <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-              <Circle cx="12" cy="12" r="10"
-                fill={focused ? '#16A34A' : 'none'}
-                stroke={color} strokeWidth={1.8}
-              />
-              <Path d="M12 8V16M8 12H16"
-                stroke={focused ? '#fff' : color} strokeWidth={1.8} strokeLinecap="round"
-              />
-            </Svg>
-          ),
+          tabBarButton: () => <PlusButton colors={colors} />,
         }}
       />
 
+      {/* Profil */}
       <Tabs.Screen
         name="profile"
         options={{
@@ -106,5 +120,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 12,
+  },
+  plusWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
 });

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert, Image,
+  ActivityIndicator, RefreshControl, Alert, Image, Linking,
 } from 'react-native';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
@@ -16,6 +16,7 @@ import {
   LockIcon, HelpIcon, LogoutIcon, SunIcon,
   MoonIcon, ChevronRightIcon, CameraIcon,
   ApplicationsIcon, BriefcaseIcon,
+  InstagramIcon, TelegramIcon,
 } from '../../components/icons';
 import { userService } from '../../services/userService';
 import { jobApplicationService } from '../../services/jobApplicationService';
@@ -26,30 +27,6 @@ import { MEDIA_URL } from '../../services/api';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 import { LanguagePicker } from '../../components/LanguagePicker';
 
-type MenuItem = {
-  icon: string;
-  label: string;
-  route?: string;
-};
-
- const WORKER_MENU: MenuItem[] = [
-  { icon: 'edit',         label: 'Profilni tahrirlash', route: '/edit-profile' },
-  { icon: 'applications', label: 'Arizalarim',          route: '/(tabs)/applications' },
-  { icon: 'heart',        label: 'Saqlangan ishlar' },
-  { icon: 'star',         label: 'Baholarim' },
-  { icon: 'bell',         label: 'Bildirishnomalar',    route: '/notifications' },
-  { icon: 'lock', label: "Parolni o'zgartirish", route: '/change-password' },
-  { icon: 'help',         label: 'Yordam' },
-];
-
-const EMPLOYER_MENU: MenuItem[] = [
-  { icon: 'edit',      label: 'Profilni tahrirlash', route: '/edit-profile' },
-  { icon: 'briefcase', label: "E'lonlarim",           route: '/(tabs)/applications' },
-  { icon: 'star',      label: 'Baholarim' },
-  { icon: 'bell',      label: 'Bildirishnomalar',     route: '/notifications' },
-  {  icon: 'lock', label: "Parolni o'zgartirish", route: '/change-password' },
-  { icon: 'help',      label: 'Yordam' },
-];
 
 function MenuIcon({ name, color }: { name: string; color: string }) {
   const props = { size: 22, color };
@@ -74,23 +51,23 @@ export default function ProfileScreen() {
   const isEmployer = Number(role) === UserRole.Employer;
 
   const WORKER_MENU = [
-    { icon: 'edit',         label: t.profile.editProfile,      route: '/edit-profile' },
-    { icon: 'applications', label: t.applications.title,        route: '/(tabs)/applications' },
-    { icon: 'heart', label: "Saqlangan ishlar" },
-{ icon: 'star',  label: t.profile.reviews },
-{ icon: 'bell',  label: t.notifications.title, route: '/notifications' },
-{ icon: 'lock',  label: "Parolni o'zgartirish" },
-{ icon: 'help',  label: "Yordam" },
-  ];
+  { icon: 'edit',         label: t.profile.editProfile,   route: '/edit-profile' },
+  { icon: 'applications', label: t.applications.title,    route: '/(tabs)/applications' },
+  { icon: 'heart',        label: t.profile.savedJobs,     route: '/saved-jobs' },
+  { icon: 'star',         label: t.profile.reviews,       route: '/my-reviews' },
+  { icon: 'bell',         label: t.notifications.title,   route: '/notifications' },
+  { icon: 'lock',         label: t.profile.changePassword, route: '/change-password' },
+  { icon: 'help', label: t.profile.help, route: '/help' },
+];
 
   const EMPLOYER_MENU = [
-    { icon: 'edit',      label: t.profile.editProfile,   route: '/edit-profile' },
-    { icon: 'briefcase', label: t.employer.myJobs,        route: '/(tabs)/applications' },
-    { icon: 'star',      label: t.profile.reviews },
-    { icon: 'bell',      label: t.notifications.title,    route: '/notifications' },
-    { icon: 'lock', label: "Parolni o'zgartirish" },
-{ icon: 'help', label: "Yordam" },
-  ];
+  { icon: 'edit',      label: t.profile.editProfile,    route: '/edit-profile' },
+  { icon: 'briefcase', label: t.employer.myJobs,        route: '/(tabs)/applications' },
+  { icon: 'star',      label: t.profile.reviews,        route: '/my-reviews' },
+  { icon: 'bell',      label: t.notifications.title,    route: '/notifications' },
+  { icon: 'lock',      label: t.profile.changePassword, route: '/change-password' },
+  { icon: 'help', label: t.profile.help, route: '/help' },
+];
 
   const [profile,         setProfile]         = useState<UserProfile | null>(null);
   const [statCount,       setStatCount]       = useState(0);
@@ -159,14 +136,12 @@ export default function ProfileScreen() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
+        allowsEditing: true, aspect: [1, 1], quality: 0.8,
       });
       if (result.canceled) return;
-      const file = result.assets[0];
+      const file     = result.assets[0];
       const fileName = file.uri.split('/').pop() ?? 'avatar.jpg';
-      const type = file.mimeType ?? 'image/jpeg';
+      const type     = file.mimeType ?? 'image/jpeg';
       setUploadingAvatar(true);
       const url = await userService.uploadAvatar(file.uri, fileName, type);
       setProfile(prev => prev ? { ...prev, profileImageUrl: url } : prev);
@@ -178,14 +153,14 @@ export default function ProfileScreen() {
     }
   };
 
-  const fullName = profile
+  const fullName  = profile
     ? [profile.firstName, profile.lastName].filter(Boolean).join(' ') || '...'
     : '...';
-  const initials = profile?.firstName
+  const initials  = profile?.firstName
     ? `${profile.firstName[0]}${profile.lastName?.[0] ?? ''}`.toUpperCase()
     : '?';
-  const roleLabel  = isEmployer ? t.auth.employer : t.auth.worker;
-  const menuItems  = isEmployer ? EMPLOYER_MENU : WORKER_MENU;
+  const roleLabel = isEmployer ? t.auth.employer : t.auth.worker;
+  const menuItems = isEmployer ? EMPLOYER_MENU : WORKER_MENU;
 
   if (loading) {
     return (
@@ -212,16 +187,16 @@ export default function ProfileScreen() {
         >
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-  {profile?.profileImageUrl ? (
-    <Image
-      source={{ uri: `${MEDIA_URL}${profile.profileImageUrl}` }}
-      style={{ width: 90, height: 90, borderRadius: 45 }}
-      resizeMode="cover"
-    />
-  ) : (
-    <Text style={styles.avatarText}>{initials}</Text>
-  )}
-</View>
+              {profile?.profileImageUrl ? (
+                <Image
+                  source={{ uri: `${MEDIA_URL}${profile.profileImageUrl}` }}
+                  style={{ width: 90, height: 90, borderRadius: 45 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.avatarText}>{initials}</Text>
+              )}
+            </View>
             <TouchableOpacity style={styles.cameraButton} onPress={handleUploadAvatar} disabled={uploadingAvatar}>
               {uploadingAvatar
                 ? <ActivityIndicator size="small" color={colors.primary} />
@@ -253,7 +228,7 @@ export default function ProfileScreen() {
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{profile?.isVerified ? t.common.yes : t.common.no}</Text>
-                  <Text style={styles.statLabel}>{t.common.ok}</Text>
+                  <Text style={styles.statLabel}>{t.profile.verified}</Text>
                 </View>
               </>
             ) : (
@@ -270,7 +245,7 @@ export default function ProfileScreen() {
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{profile?.age ?? '—'}</Text>
-                  <Text style={styles.statLabel}>{t.common.noData}</Text>
+                  <Text style={styles.statLabel}>{t.auth.age}</Text>
                 </View>
               </>
             )}
@@ -312,7 +287,7 @@ export default function ProfileScreen() {
         {isEmployer && (
           <TouchableOpacity
             style={styles.createJobBtn}
-            onPress={() => router.push('/(tabs)/create-job')}
+            onPress={() => router.push('/employer/post-job')}
             activeOpacity={0.85}
           >
             <LinearGradient
@@ -369,6 +344,32 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Ijtimoiy tarmoqlar */}
+<View style={[styles.socialCard, { backgroundColor: colors.card, ...Shadow.sm }]}>
+  <Text style={[styles.socialTitle, { color: colors.textSecondary }]}>
+    Bizni kuzating
+  </Text>
+  <View style={styles.socialRow}>
+    <TouchableOpacity
+      style={[styles.socialBtn, { backgroundColor: '#E1306C18' }]}
+      onPress={() => Linking.openURL('https://www.instagram.com/top_ilovasi?igsh=Mnh0MW5wMGNqYzFh')}
+      activeOpacity={0.8}
+    >
+      <InstagramIcon size={22} color="#E1306C" />
+      <Text style={[styles.socialLabel, { color: '#E1306C' }]}>Instagram</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[styles.socialBtn, { backgroundColor: '#0088cc18' }]}
+      onPress={() => Linking.openURL('https://t.me/topilovasi')}
+      activeOpacity={0.8}
+    >
+      <TelegramIcon size={22} color="#0088cc" />
+      <Text style={[styles.socialLabel, { color: '#0088cc' }]}>Telegram</Text>
+    </TouchableOpacity>
+  </View>
+</View>
 
         {/* Logout */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
@@ -430,15 +431,9 @@ const styles = StyleSheet.create({
   cvBtnInfo:      { flex: 1 },
   cvBtnTitle:     { fontSize: FontSize.md, fontWeight: FontWeight.semiBold },
   cvBtnSub:       { fontSize: FontSize.xs, marginTop: 2 },
-  cvBtnBadge: {
-    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.md,
-  },
+  cvBtnBadge:     { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: BorderRadius.md },
   cvBtnBadgeText: { fontSize: FontSize.xs, fontWeight: FontWeight.bold },
-  createJobBtn: {
-    marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
-    borderRadius: BorderRadius.xl, overflow: 'hidden',
-  },
+  createJobBtn:      { marginHorizontal: Spacing.xl, marginTop: Spacing.lg, borderRadius: BorderRadius.xl, overflow: 'hidden' },
   createJobGradient: { height: 52, alignItems: 'center', justifyContent: 'center' },
   createJobText:     { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: '#fff' },
   themeCard: {
@@ -450,10 +445,7 @@ const styles = StyleSheet.create({
   themeLabel:   { fontSize: FontSize.md, fontWeight: FontWeight.semiBold },
   toggleButton: { width: 48, height: 28, borderRadius: BorderRadius.full, padding: 3, justifyContent: 'center' },
   toggleCircle: { width: 22, height: 22, borderRadius: BorderRadius.full, backgroundColor: '#FFFFFF' },
-  menuCard: {
-    marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
-    borderRadius: BorderRadius.xl, overflow: 'hidden',
-  },
+  menuCard:     { marginHorizontal: Spacing.xl, marginTop: Spacing.lg, borderRadius: BorderRadius.xl, overflow: 'hidden' },
   menuItem: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.md,
@@ -469,5 +461,34 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl, padding: Spacing.lg,
     gap: Spacing.sm, backgroundColor: '#FEE2E2',
   },
+  socialCard: {
+  marginHorizontal: Spacing.xl,
+  marginTop: Spacing.lg,
+  borderRadius: BorderRadius.xl,
+  padding: Spacing.lg,
+},
+socialTitle: {
+  fontSize: FontSize.sm,
+  fontWeight: FontWeight.medium,
+  marginBottom: Spacing.md,
+  textAlign: 'center',
+},
+socialRow: {
+  flexDirection: 'row',
+  gap: Spacing.md,
+},
+socialBtn: {
+  flex: 1,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: Spacing.sm,
+  paddingVertical: Spacing.md,
+  borderRadius: BorderRadius.lg,
+},
+socialLabel: {
+  fontSize: FontSize.md,
+  fontWeight: FontWeight.semiBold,
+},
   logoutText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: '#DC2626' },
 });

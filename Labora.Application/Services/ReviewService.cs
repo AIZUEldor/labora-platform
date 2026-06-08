@@ -3,6 +3,7 @@ using Labora.Application.DTOs.Reviews;
 using Labora.Application.Interfaces;
 using Labora.Domain.Entities;
 using Labora.Domain.Enums;
+using Labora.Domain.Exceptions;
 using Labora.Domain.Interfaces;
 
 namespace Labora.Application.Services;
@@ -39,7 +40,7 @@ public class ReviewService : IReviewService
         bool hasReviewed = await _reviewRepository.HasReviewedAsync(reviewerId, request.JobApplicationId);
 
         if (hasReviewed)
-            throw new InvalidOperationException("Siz bu ishni allaqachon baholagansiz.");
+            throw new AlreadyReviewedException();
 
         User? reviewer = await _userRepository.GetByIdAsync(reviewerId);
 

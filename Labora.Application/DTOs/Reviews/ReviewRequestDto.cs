@@ -8,6 +8,7 @@ public class ReviewRequestDto
     // Worker → Employer kategoriyalari
     public int? PaymentRating { get; set; }
     public int? EmployerCommunicationRating { get; set; }
+    public int? WorkConditionRating { get; set; }
 
     // Employer → Worker kategoriyalari
     public int? ExperienceRating { get; set; }

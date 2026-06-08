@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  TextInput, ScrollView, ActivityIndicator, Alert, Modal, FlatList, Platform,
+  TextInput, ScrollView, ActivityIndicator, Alert, Modal, FlatList,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useThemeStore } from '../../store/themeStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 import { jobService } from '../../services/jobService';
+import { categoryService } from '../../services/categoryService';
 import { Category } from '../../types';
-import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
+import { Spacing, BorderRadius } from '../../constants/spacing';
 import { FontSize, FontWeight } from '../../constants/typography';
 import Svg, { Path } from 'react-native-svg';
-import api from '../../services/api';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
   return (
@@ -31,60 +30,55 @@ function ChevronIcon({ size = 20, color = '#000' }: { size?: number; color?: str
   );
 }
 
-function CalendarIcon({ size = 20, color = '#000' }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M8 2v3M16 2v3M3.5 9.09h17M21 8.5V17c0 3-1.5 5-5 5H8c-3.5 0-5-2-5-5V8.5c0-3 1.5-5 5-5h8c3.5 0 5 2 5 5z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
 const JOB_TYPES = [
-  { value: 0, label: 'Full-time' },
-  { value: 1, label: 'Part-time' },
-  { value: 2, label: 'Remote' },
-  { value: 3, label: 'Contract' },
-  { value: 4, label: 'Internship' },
+  { value: 1, labelUz: 'Kunlik',    labelRu: 'Ежедневная',  labelEn: 'Daily' },
+  { value: 2, labelUz: 'Mavsumiy',  labelRu: 'Сезонная',    labelEn: 'Seasonal' },
+  { value: 3, labelUz: 'Oylik',     labelRu: 'Ежемесячная', labelEn: 'Monthly' },
+  { value: 4, labelUz: 'Part-time', labelRu: 'Part-time',   labelEn: 'Part-time' },
+  { value: 5, labelUz: 'Full-time', labelRu: 'Full-time',   labelEn: 'Full-time' },
+  { value: 6, labelUz: 'Masofaviy', labelRu: 'Удалённая',   labelEn: 'Remote' },
 ];
+
+function getJobTypeLabel(value: number, language: string): string {
+  const found = JOB_TYPES.find(j => j.value === value);
+  if (!found) return '';
+  return language === 'uz' ? found.labelUz : language === 'ru' ? found.labelRu : found.labelEn;
+}
 
 export default function PostJobScreen() {
   const { colors } = useThemeStore();
   const { language } = useLanguageStore();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [salary, setSalary] = useState('');
-  const [city, setCity] = useState('');
-  const [country, setCountry] = useState("O'zbekiston");
-  const [requiredSkills, setRequiredSkills] = useState('');
+  const [title,           setTitle]           = useState('');
+  const [description,     setDescription]     = useState('');
+  const [salary,          setSalary]          = useState('');
+  const [city,            setCity]            = useState('');
+  const [country,         setCountry]         = useState("O'zbekiston");
   const [experienceYears, setExperienceYears] = useState('');
-  const [jobType, setJobType] = useState(0);
+  const [jobType,         setJobType]         = useState(5);
 
-  const [deadline, setDeadline] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [categories,          setCategories]          = useState<Category[]>([]);
+  const [selectedCategory,    setSelectedCategory]    = useState<Category | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<Category | null>(null);
 
-  const [categoryModal, setCategoryModal] = useState(false);
+  const [categoryModal,    setCategoryModal]    = useState(false);
   const [subCategoryModal, setSubCategoryModal] = useState(false);
-  const [jobTypeModal, setJobTypeModal] = useState(false);
+  const [jobTypeModal,     setJobTypeModal]     = useState(false);
 
-  const [loading, setLoading] = useState(false);
+  const [loading,           setLoading]           = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
   useEffect(() => { loadCategories(); }, []);
 
   const loadCategories = async () => {
     try {
-      const res = await api.get<Category[]>('/categories');
+      const data = await categoryService.getCategories();
       const other: Category = {
         id: 'other',
         name: language === 'uz' ? 'Boshqa' : language === 'ru' ? 'Другое' : 'Other',
         subCategories: [],
       };
-      setCategories([...res.data, other]);
+      setCategories([...data, other]);
     } catch {
       Alert.alert('Xato', 'Kategoriyalarni yuklashda xatolik');
     } finally {
@@ -101,38 +95,32 @@ export default function PostJobScreen() {
     }
   };
 
-  const formatDate = (date: Date) => {
-    const d = date.getDate().toString().padStart(2, '0');
-    const m = (date.getMonth() + 1).toString().padStart(2, '0');
-    const y = date.getFullYear();
-    return `${d}.${m}.${y}`;
-  };
-
   const handleSubmit = async () => {
-    if (!title.trim())          { Alert.alert('Xato', "Ish nomi kiritilmagan"); return; }
-    if (!description.trim())    { Alert.alert('Xato', 'Tavsif kiritilmagan'); return; }
-    if (!salary)                { Alert.alert('Xato', 'Maosh kiritilmagan'); return; }
-    if (!city.trim())           { Alert.alert('Xato', 'Shahar kiritilmagan'); return; }
-    if (!selectedCategory)      { Alert.alert('Xato', 'Kategoriya tanlanmagan'); return; }
+    if (!title.trim())     { Alert.alert('Xato', "Ish nomi kiritilmagan"); return; }
+    if (!description.trim()) { Alert.alert('Xato', 'Tavsif kiritilmagan'); return; }
+    if (!salary)           { Alert.alert('Xato', 'Maosh kiritilmagan'); return; }
+    if (!city.trim())      { Alert.alert('Xato', 'Shahar kiritilmagan'); return; }
+    if (!selectedCategory) { Alert.alert('Xato', 'Kategoriya tanlanmagan'); return; }
 
     try {
-      setLoading(true);
       await jobService.createJob({
-        title:           title.trim(),
-        description:     description.trim(),
-        salary:          parseFloat(salary),
-        jobType,
-        categoryId:      selectedCategory.id === 'other' ? '' : selectedCategory.id,
-        subCategoryId:   selectedSubCategory?.id,
-        city:            city.trim(),
-        country:         country.trim(),
-        requiredSkills:  requiredSkills.trim() || undefined,
-        experienceYears: experienceYears ? parseInt(experienceYears) : undefined,
-        deadline:        deadline ? deadline.toISOString() : undefined,
-      });
-      Alert.alert('Muvaffaqiyat', "Ish e'loni joylashtirildi!", [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+  title:           title.trim(),
+  description:     description.trim(),
+  salary:          parseFloat(salary),
+  jobType,
+  categoryId:      selectedCategory.id === 'other' ? undefined : selectedCategory.id,
+  categoryName:    selectedCategory.name,
+  subCategoryId:   selectedSubCategory?.id,
+  subCategoryName: selectedSubCategory?.name,
+  city:            city.trim(),
+  country:         country.trim(),
+  experienceYears: experienceYears ? parseInt(experienceYears) : undefined,
+});
+      Alert.alert(
+        language === 'uz' ? 'Muvaffaqiyat' : language === 'ru' ? 'Успех' : 'Success',
+        language === 'uz' ? "Ish e'loni joylashtirildi!" : language === 'ru' ? 'Вакансия размещена!' : 'Job posted!',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
     } catch {
       Alert.alert('Xato', "Ish e'lonini joylashtirishda xatolik");
     } finally {
@@ -186,7 +174,6 @@ export default function PostJobScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <LinearGradient colors={[colors.primary, '#15803d']} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
           <BackIcon size={22} color="#fff" />
@@ -203,7 +190,7 @@ export default function PostJobScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="always"
       >
-        {/* Ish nomi — majburiy */}
+        {/* Ish nomi */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label('Ish nomi', 'Название вакансии', 'Job Title')}
           <Text style={{ color: colors.primary }}> *</Text>
@@ -216,14 +203,14 @@ export default function PostJobScreen() {
           onChangeText={setTitle}
         />
 
-        {/* Tavsif — majburiy */}
+        {/* Tavsif */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label('Tavsif', 'Описание', 'Description')}
           <Text style={{ color: colors.primary }}> *</Text>
         </Text>
         <TextInput
           style={[styles.input, styles.textArea, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-          placeholder={label('Ish haqida batafsil...', 'Подробнее о работе...', 'Job details...')}
+          placeholder={label('Ish haqida batafsil, talab qilinadigan ko\'nikmalar...', 'Подробнее о работе, требуемые навыки...', 'Job details, required skills...')}
           placeholderTextColor={colors.textTertiary}
           value={description}
           onChangeText={setDescription}
@@ -232,7 +219,7 @@ export default function PostJobScreen() {
           textAlignVertical="top"
         />
 
-        {/* Maosh — majburiy */}
+        {/* Maosh */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label("Maosh (so'm)", 'Зарплата (сум)', 'Salary (UZS)')}
           <Text style={{ color: colors.primary }}> *</Text>
@@ -246,7 +233,7 @@ export default function PostJobScreen() {
           keyboardType="numeric"
         />
 
-        {/* Ish turi — majburiy */}
+        {/* Ish turi */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label('Ish turi', 'Тип работы', 'Job Type')}
           <Text style={{ color: colors.primary }}> *</Text>
@@ -257,12 +244,12 @@ export default function PostJobScreen() {
           activeOpacity={0.7}
         >
           <Text style={[styles.selectorText, { color: colors.textPrimary }]}>
-            {JOB_TYPES.find(j => j.value === jobType)?.label ?? 'Full-time'}
+            {getJobTypeLabel(jobType, language)}
           </Text>
           <ChevronIcon size={18} color={colors.textSecondary} />
         </TouchableOpacity>
 
-        {/* Kategoriya — majburiy */}
+        {/* Kategoriya */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label('Kategoriya', 'Категория', 'Category')}
           <Text style={{ color: colors.primary }}> *</Text>
@@ -282,7 +269,7 @@ export default function PostJobScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Sub-kategoriya — ixtiyoriy */}
+        {/* Sub-kategoriya */}
         {selectedCategory && (selectedCategory.subCategories?.length ?? 0) > 0 && (
           <>
             <Text style={[styles.label, { color: colors.textSecondary }]}>
@@ -304,7 +291,7 @@ export default function PostJobScreen() {
           </>
         )}
 
-        {/* Shahar — majburiy */}
+        {/* Shahar */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label('Shahar', 'Город', 'City')}
           <Text style={{ color: colors.primary }}> *</Text>
@@ -317,7 +304,7 @@ export default function PostJobScreen() {
           onChangeText={setCity}
         />
 
-        {/* Davlat — ixtiyoriy */}
+        {/* Davlat */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label('Davlat', 'Страна', 'Country')}
           <Text style={[styles.optional, { color: colors.textTertiary }]}>
@@ -331,22 +318,7 @@ export default function PostJobScreen() {
           placeholderTextColor={colors.textTertiary}
         />
 
-        {/* Ko'nikmalar — ixtiyoriy */}
-        <Text style={[styles.label, { color: colors.textSecondary }]}>
-          {label("Ko'nikmalar", 'Навыки', 'Skills')}
-          <Text style={[styles.optional, { color: colors.textTertiary }]}>
-            {label(' (ixtiyoriy)', ' (необязательно)', ' (optional)')}
-          </Text>
-        </Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-          placeholder={label("Masalan: Excel, 1C, haydovchilik guvohnomasi", 'Например: Excel, 1C, права', 'e.g. Excel, 1C, driving license')}
-          placeholderTextColor={colors.textTertiary}
-          value={requiredSkills}
-          onChangeText={setRequiredSkills}
-        />
-
-        {/* Tajriba — ixtiyoriy */}
+        {/* Tajriba */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label('Tajriba (yil)', 'Опыт (лет)', 'Experience (years)')}
           <Text style={[styles.optional, { color: colors.textTertiary }]}>
@@ -361,46 +333,6 @@ export default function PostJobScreen() {
           onChangeText={setExperienceYears}
           keyboardType="numeric"
         />
-
-        {/* Deadline — ixtiyoriy, DatePicker */}
-        <Text style={[styles.label, { color: colors.textSecondary }]}>
-          {label('Oxirgi muddati', 'Срок подачи', 'Application Deadline')}
-          <Text style={[styles.optional, { color: colors.textTertiary }]}>
-            {label(' (ixtiyoriy)', ' (необязательно)', ' (optional)')}
-          </Text>
-        </Text>
-        <TouchableOpacity
-          style={[styles.selector, { backgroundColor: colors.card, borderColor: colors.border }]}
-          onPress={() => setShowDatePicker(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.selectorText, { color: deadline ? colors.textPrimary : colors.textTertiary }]}>
-            {deadline ? formatDate(deadline) : label('Sana tanlang', 'Выберите дату', 'Select date')}
-          </Text>
-          <CalendarIcon size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
-        {deadline && (
-          <TouchableOpacity onPress={() => setDeadline(null)} style={{ marginTop: 4 }}>
-            <Text style={{ color: colors.textTertiary, fontSize: FontSize.xs }}>
-              {label("Sanani o'chirish", 'Очистить дату', 'Clear date')}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* DatePicker */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={deadline ?? new Date()}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            minimumDate={new Date()}
-            onChange={(event, date) => {
-              setShowDatePicker(Platform.OS === 'ios');
-              if (event.type === 'set' && date) setDeadline(date);
-              else if (Platform.OS !== 'ios') setShowDatePicker(false);
-            }}
-          />
-        )}
 
         {/* Submit */}
         <TouchableOpacity
@@ -421,7 +353,6 @@ export default function PostJobScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Kategoriya modal */}
       {renderModal(
         categoryModal,
         () => setCategoryModal(false),
@@ -432,7 +363,6 @@ export default function PostJobScreen() {
         (item) => item.name,
       )}
 
-      {/* Sub-kategoriya modal */}
       {selectedCategory && renderModal(
         subCategoryModal,
         () => setSubCategoryModal(false),
@@ -443,7 +373,6 @@ export default function PostJobScreen() {
         (item) => item.name,
       )}
 
-      {/* Ish turi modal */}
       {renderModal(
         jobTypeModal,
         () => setJobTypeModal(false),
@@ -451,7 +380,7 @@ export default function PostJobScreen() {
         JOB_TYPES,
         (item) => { setJobType(item.value); setJobTypeModal(false); },
         (item) => item.value.toString(),
-        (item) => item.label,
+        (item) => language === 'uz' ? item.labelUz : language === 'ru' ? item.labelRu : item.labelEn,
       )}
     </View>
   );
@@ -466,7 +395,7 @@ const styles = StyleSheet.create({
   label:           { fontSize: FontSize.sm, fontWeight: FontWeight.medium, marginBottom: 6, marginTop: Spacing.md },
   optional:        { fontSize: FontSize.xs, fontWeight: FontWeight.regular },
   input:           { borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.md, paddingVertical: 12, fontSize: FontSize.md, borderWidth: 1.5 },
-  textArea:        { height: 100, paddingTop: 12 },
+  textArea:        { height: 120, paddingTop: 12 },
   selector:        { borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.md, paddingVertical: 14, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   selectorText:    { fontSize: FontSize.md },
   submitBtn:       { marginTop: Spacing.xl, borderRadius: BorderRadius.xl, overflow: 'hidden' },

@@ -82,6 +82,7 @@ public class JobController : ControllerBase
         return Ok(response);
     }
 
+
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = "Employer")]
     public async Task<IActionResult> Delete(Guid id)

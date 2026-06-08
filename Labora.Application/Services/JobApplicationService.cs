@@ -11,15 +11,18 @@ public class JobApplicationService : IJobApplicationService
 {
     private readonly IJobApplicationRepository _jobApplicationRepository;
     private readonly IJobRepository _jobRepository;
+    private readonly INotificationService _notificationService;
     private readonly IMapper _mapper;
 
     public JobApplicationService(
         IJobApplicationRepository jobApplicationRepository,
         IJobRepository jobRepository,
+        INotificationService notificationService,
         IMapper mapper)
     {
         _jobApplicationRepository = jobApplicationRepository;
         _jobRepository = jobRepository;
+        _notificationService = notificationService;
         _mapper = mapper;
     }
 
@@ -39,7 +42,6 @@ public class JobApplicationService : IJobApplicationService
 
         JobApplication createdApplication = await _jobApplicationRepository.AddAsync(jobApplication);
 
-        // Worker ni qayta yuklash
         JobApplication? withWorker = await _jobApplicationRepository.GetByIdWithWorkerAsync(createdApplication.Id);
 
         return _mapper.Map<ApplicationResponseDto>(withWorker ?? createdApplication);
@@ -73,6 +75,26 @@ public class JobApplicationService : IJobApplicationService
         jobApplication.Status = newStatus;
 
         JobApplication updatedApplication = await _jobApplicationRepository.UpdateAsync(jobApplication);
+
+        if (newStatus == ApplicationStatus.Completed)
+        {
+            string jobTitle = jobApplication.Job?.Title ?? "Ish";
+
+            await _notificationService.CreateAsync(
+                jobApplication.WorkerId,
+                "Ish yakunlandi",
+                $"\"{jobTitle}\" ishi yakunlandi. Ish beruvchini baholang!",
+                NotificationType.ReviewRequest,
+                jobApplication.Id);
+
+            await _notificationService.CreateAsync(
+                employerId,
+                "Ish yakunlandi",
+                $"\"{jobTitle}\" ishi yakunlandi. Ishchini baholang!",
+                NotificationType.ReviewRequest,
+                jobApplication.Id);
+        }
+
         return _mapper.Map<ApplicationResponseDto>(updatedApplication);
     }
 

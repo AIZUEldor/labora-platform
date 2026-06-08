@@ -1,5 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
+using Labora.Domain.Exceptions;
+using Labora.Domain.Exceptions;
 
 namespace Labora.API.Middleware;
 
@@ -33,6 +35,7 @@ public class ExceptionHandlingMiddleware
 
         int statusCode = exception switch
         {
+            AlreadyReviewedException => (int)HttpStatusCode.Conflict,
             InvalidOperationException => (int)HttpStatusCode.BadRequest,
             KeyNotFoundException => (int)HttpStatusCode.NotFound,
             UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,

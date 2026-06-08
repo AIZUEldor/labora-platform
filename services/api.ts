@@ -1,8 +1,8 @@
 import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'http://10.106.130.66:5020/api';
-export const MEDIA_URL = 'http://10.106.130.66:5020';
+const BASE_URL = 'http://10.246.61.66:5020/api';
+export const MEDIA_URL = 'http://10.246.61.66:5020';
 
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -32,7 +32,11 @@ api.interceptors.response.use(
       await SecureStore.deleteItemAsync('access_token');
       await SecureStore.deleteItemAsync('user_role');
     }
-    return Promise.reject(error);
+    const message = error.response?.data?.message
+      || error.response?.data
+      || error.message
+      || 'Xatolik yuz berdi';
+    return Promise.reject(new Error(typeof message === 'string' ? message : JSON.stringify(message)));
   }
 );
 

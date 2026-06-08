@@ -145,8 +145,11 @@ export default function NotificationsScreen(): React.JSX.Element {
         router.push(`/job-detail?id=${item.referenceId}`);
         break;
       case NotificationType.ReviewRequest:
-        router.push(`/review?applicationId=${item.referenceId}`);
-        break;
+  router.push({
+    pathname: '/review',
+    params: { jobApplicationId: item.referenceId },
+  });
+  break;
     }
   };
 

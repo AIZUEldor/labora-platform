@@ -21,6 +21,7 @@ public class LaboaDbContext : DbContext
     public DbSet<PushToken> PushTokens { get; set; }
     public DbSet<WorkerPost> WorkerPosts => Set<WorkerPost>();
     public DbSet<WorkerPortfolioImage> WorkerPortfolioImages => Set<WorkerPortfolioImage>();
+    public DbSet<SavedJob> SavedJobs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -160,6 +161,21 @@ public class LaboaDbContext : DbContext
                 .WithMany(u => u.PushTokens)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // SavedJob
+        modelBuilder.Entity<SavedJob>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Job)
+                .WithMany()
+                .HasForeignKey(e => e.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.UserId, e.JobId }).IsUnique();
         });
     }
 }

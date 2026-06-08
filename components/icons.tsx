@@ -507,3 +507,31 @@ export function BackIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconP
     </Svg>
   );
 }
+
+export function GlobeIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={strokeWidth} />
+      <Path d="M2 12H22M12 2C9.33 6 8 9 8 12C8 15 9.33 18 12 22C14.67 18 16 15 16 12C16 9 14.67 6 12 2Z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function TelegramIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M22 2L11 13" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M22 2L15 22L11 13L2 9L22 2Z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function InstagramIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="2" y="2" width="20" height="20" rx="5" stroke={color} strokeWidth={strokeWidth} />
+      <Circle cx="12" cy="12" r="4" stroke={color} strokeWidth={strokeWidth} />
+      <Circle cx="17.5" cy="6.5" r="0.5" fill={color} stroke={color} strokeWidth={strokeWidth} />
+    </Svg>
+  );
+}
