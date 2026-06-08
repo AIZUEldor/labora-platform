@@ -202,3 +202,21 @@ export interface UpdateWorkerPostRequest {
   subCategoryId?: string;
   status: number;
 }
+
+// ==================== NEARBY JOB ====================
+export interface NearbyJob {
+  id: string;
+  title: string;
+  description: string;
+  salary: number;
+  jobType: number;
+  status: JobStatus;
+  categoryName: string;
+  latitude: number;
+  longitude: number;
+  city: string;
+  country: string;
+  employerId: string;
+  createdAt: string;
+  distanceKm: number;
+}

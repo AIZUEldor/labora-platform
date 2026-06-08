@@ -1,5 +1,5 @@
 import api from './api';
-import { Job, JobListResponse } from '../types';
+import { Job, JobListResponse, NearbyJob } from '../types';
 
 export const jobService = {
   getJobs: async (page: number = 1, pageSize: number = 10): Promise<JobListResponse> => {
@@ -14,8 +14,8 @@ export const jobService = {
     return response.data;
   },
 
-  getNearbyJobs: async (latitude: number, longitude: number, radiusKm: number = 10): Promise<Job[]> => {
-    const response = await api.get<Job[]>('/Job/nearby', {
+  getNearbyJobs: async (latitude: number, longitude: number, radiusKm: number = 10): Promise<NearbyJob[]> => {
+    const response = await api.get<NearbyJob[]>('/Job/nearby', {
       params: { latitude, longitude, radiusKm },
     });
     return response.data;
@@ -36,28 +36,28 @@ export const jobService = {
   },
 
   createJob: async (data: {
-  title: string;
-  description: string;
-  salary: number;
-  jobType: number;
-  categoryId: string | undefined;
-  subCategoryId?: string;
-  city: string;
-  country: string;
-  latitude?: number;
-  longitude?: number;
-  requiredSkills?: string;
-  experienceYears?: number;
-  deadline?: string;
-  categoryName: string;
-subCategoryName?: string;
-}): Promise<Job> => {
-  const response = await api.post<Job>('/Job', data);
-  return response.data;
-},
-getMyJobs: async (): Promise<Job[]> => {
-  const response = await api.get<Job[]>('/Job/my-jobs');
-  return response.data;
-},
-};
+    title: string;
+    description: string;
+    salary: number;
+    jobType: number;
+    categoryId: string | undefined;
+    subCategoryId?: string;
+    city: string;
+    country: string;
+    latitude?: number;
+    longitude?: number;
+    requiredSkills?: string;
+    experienceYears?: number;
+    deadline?: string;
+    categoryName: string;
+    subCategoryName?: string;
+  }): Promise<Job> => {
+    const response = await api.post<Job>('/Job', data);
+    return response.data;
+  },
 
+  getMyJobs: async (): Promise<Job[]> => {
+    const response = await api.get<Job[]>('/Job/my-jobs');
+    return response.data;
+  },
+};

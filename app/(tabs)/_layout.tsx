@@ -33,7 +33,6 @@ export default function TabsLayout() {
   const role       = useAuthStore((state: AuthState) => state.role);
   const { colors } = useThemeStore();
   const insets     = useSafeAreaInsets();
-  const isEmployer = Number(role) === UserRole.Employer;
 
   return (
     <Tabs
@@ -49,7 +48,7 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: '#9CA3AF',
       }}
     >
-      {/* Home */}
+      {/* Uy */}
       <Tabs.Screen
         name="index"
         options={{
@@ -65,7 +64,31 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* Worker: Arizalarim | Employer: E'lonlarim */}
+      {/* Xarita */}
+      <Tabs.Screen
+        name="map"
+        options={{
+          tabBarIcon: ({ focused, color }) => (
+            <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M9 20L3 17V4L9 7M9 20L15 17M9 20V7M15 17L21 20V7L15 4M15 17V4M9 7L15 4"
+                fill={focused ? '#DCFCE7' : 'none'}
+                stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+              />
+            </Svg>
+          ),
+        }}
+      />
+
+      {/* O'rtadagi + tugma */}
+      <Tabs.Screen
+        name="create-job"
+        options={{
+          tabBarButton: () => <PlusButton colors={colors} />,
+        }}
+      />
+
+      {/* Arizalar */}
       <Tabs.Screen
         name="applications"
         options={{
@@ -79,14 +102,6 @@ export default function TabsLayout() {
               <Path d="M8 8H16M8 12H16M8 16H12" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
             </Svg>
           ),
-        }}
-      />
-
-      {/* O'rtadagi + tugma */}
-      <Tabs.Screen
-        name="create-job"
-        options={{
-          tabBarButton: () => <PlusButton colors={colors} />,
         }}
       />
 
