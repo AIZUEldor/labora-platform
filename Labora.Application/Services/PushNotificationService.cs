@@ -1,6 +1,4 @@
-﻿using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using FirebaseAdmin;
 using FirebaseAdmin.Messaging;
 using Google.Apis.Auth.OAuth2;
@@ -13,21 +11,47 @@ namespace Labora.Application.Services;
 public class PushNotificationService : IPushNotificationService
 {
     private readonly IPushTokenRepository _pushTokenRepository;
+    private static bool _firebaseInitialized = false;
 
     public PushNotificationService(IPushTokenRepository pushTokenRepository)
     {
         _pushTokenRepository = pushTokenRepository;
-
-        if (FirebaseApp.DefaultInstance is null)
-        {
-            FirebaseApp.Create(new AppOptions
-            {
-                Credential = GoogleCredential.FromFile(ServiceAccountPath),
-            });
-        }
+        InitializeFirebase();
     }
 
-     private const string ServiceAccountPath = @"C:\Users\Acer\source\repos\labora-platform\Labora.API\top-app-ac550-firebase-adminsdk-fbsvc-c043110f07.json";
+    private static void InitializeFirebase()
+    {
+        if (_firebaseInitialized || FirebaseApp.DefaultInstance is not null)
+        {
+            _firebaseInitialized = true;
+            return;
+        }
+
+        try
+        {
+            string serviceAccountPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "top-app-ac550-firebase-adminsdk-fbsvc-c043110f07.json"
+            );
+
+            if (!File.Exists(serviceAccountPath))
+            {
+                Console.WriteLine($"Firebase service account file not found: {serviceAccountPath}");
+                return;
+            }
+
+            FirebaseApp.Create(new AppOptions
+            {
+                Credential = GoogleCredential.FromFile(serviceAccountPath),
+            });
+
+            _firebaseInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Firebase initialization skipped: {ex.Message}");
+        }
+    }
 
     public async Task RegisterTokenAsync(Guid userId, string token, string? deviceType)
     {
@@ -42,6 +66,7 @@ public class PushNotificationService : IPushNotificationService
             Token = token,
             DeviceType = deviceType,
         };
+
         await _pushTokenRepository.AddAsync(pushToken);
     }
 
@@ -53,6 +78,7 @@ public class PushNotificationService : IPushNotificationService
     public async Task SendToUserAsync(Guid userId, string title, string body, object? data = null)
     {
         IEnumerable<PushToken> tokens = await _pushTokenRepository.GetByUserIdAsync(userId);
+
         foreach (PushToken token in tokens)
         {
             await SendFcmAsync(token.Token, title, body, data);
@@ -73,17 +99,27 @@ public class PushNotificationService : IPushNotificationService
 
     private static async Task SendFcmAsync(string deviceToken, string title, string body, object? data = null)
     {
+        if (!_firebaseInitialized || FirebaseApp.DefaultInstance is null)
+        {
+            return;
+        }
+
         try
         {
             Dictionary<string, string> dataDict = new();
+
             if (data is not null)
             {
                 string json = JsonSerializer.Serialize(data);
-                Dictionary<string, object>? parsed = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+                Dictionary<string, object>? parsed =
+                    JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+
                 if (parsed is not null)
                 {
                     foreach (KeyValuePair<string, object> kv in parsed)
+                    {
                         dataDict[kv.Key] = kv.Value?.ToString() ?? "";
+                    }
                 }
             }
 
