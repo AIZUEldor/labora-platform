@@ -22,8 +22,7 @@
         "backgroundColor": "#15803d"
       },
       "package": "com.aizue.labora",
-      "predictiveBackGestureEnabled": false,
-      "usesCleartextTraffic": true
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/icon.png"
@@ -49,3 +48,4 @@
     "owner": "aizue"
   }
 }
+
