@@ -41,10 +41,10 @@ return token.data as string;
 
   registerTokenToServer: async (token: string): Promise<void> => {
     const deviceType = Platform.OS === 'ios' ? 'ios' : 'android';
-    await api.post('/pushnotifications/register', { token, deviceType });
+    await api.post('/PushNotifications/register', { token, deviceType });
   },
 
   removeTokenFromServer: async (): Promise<void> => {
-    await api.delete('/pushnotifications/remove');
+    await api.delete('/PushNotifications/remove');
   },
 };

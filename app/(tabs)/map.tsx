@@ -91,6 +91,7 @@ export default function MapScreen() {
       const nearbyJobs = await jobService.getAllActiveJobs(lat, lng);
       setJobs(nearbyJobs);
       // Markerlarni yangilash
+      console.log('JOBS COUNT:', jobs.length);
       const filtered = selectedType === 0 ? nearbyJobs : nearbyJobs.filter(j => j.jobType === selectedType);
       webViewRef.current?.injectJavaScript(buildUpdateMarkersJs(filtered));
     } catch {}
@@ -166,15 +167,15 @@ export default function MapScreen() {
           var m = L.marker([${job.latitude}, ${job.longitude}], { icon: makeIcon(map.getZoom()) }).addTo(map);
           map.on('zoomend', function() { m.setIcon(makeIcon(map.getZoom())); });
           m.bindPopup(
-            '<div style="min-width:190px;font-family:sans-serif;padding:6px;">'
-            + '<b style="font-size:14px;color:#111;display:block;margin-bottom:4px;">' + title + '</b>'
-            + '<span style="color:#16A34A;font-weight:700;font-size:14px;">' + salary + '</span><br/>'
-            + '<span style="color:#555;font-size:12px;">' + city + '</span><br/>'
-            + '<span style="color:#999;font-size:11px;">${dist} ' + away + '</span><br/>'
-            + '<button onclick="window.ReactNativeWebView.postMessage(' + JSON.stringify(id) + ')" '
-            + 'style="margin-top:10px;background:#16A34A;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;width:100%;font-weight:600;">' + viewJob + '</button>'
-            + '</div>'
-          );
+  '<div style="min-width:190px;font-family:sans-serif;padding:6px;">'
+  + '<b style="font-size:14px;color:#111;display:block;margin-bottom:4px;">' + title + '</b>'
+  + '<span style="color:#16A34A;font-weight:700;font-size:14px;">' + salary + '</span><br/>'
+  + '<span style="color:#555;font-size:12px;">' + city + '</span><br/>'
+  + '<span style="color:#999;font-size:11px;">${dist} ' + away + '</span><br/>'
+  + '<button class="view-job-btn" data-id="' + id.replace(/"/g, '') + '" '
+  + 'style="margin-top:10px;background:#16A34A;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;width:100%;font-weight:600;">' + viewJob + '</button>'
+  + '</div>'
+);
           jobMarkers.push(m);
         })();
       `;
@@ -226,6 +227,15 @@ export default function MapScreen() {
 
     ${markersJs}
 
+    document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.view-job-btn');
+
+  if (btn) {
+    var jobId = btn.getAttribute('data-id');
+    window.ReactNativeWebView.postMessage(jobId);
+  }
+});
+
     map.whenReady(function() {
       window.ReactNativeWebView.postMessage('MAP_READY');
     });
@@ -235,10 +245,16 @@ export default function MapScreen() {
   };
 
   const handleWebViewMessage = (event: any) => {
-    const data = event.nativeEvent.data;
-    if (data === 'MAP_READY') { setMapReady(true); return; }
-    if (data) router.push({ pathname: '/job-detail', params: { id: data } });
-  };
+    console.log('MAP MESSAGE:', event.nativeEvent.data);
+  const raw = event.nativeEvent.data;
+  if (raw === 'MAP_READY') { setMapReady(true); return; }
+  try {
+    const id = JSON.parse(raw);
+    if (id) router.push({ pathname: '/job-detail', params: { id: String(id) } });
+  } catch {
+    if (raw) router.push({ pathname: '/job-detail', params: { id: raw } });
+  }
+};
 
   if (loading) {
     return (

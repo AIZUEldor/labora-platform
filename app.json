@@ -17,13 +17,14 @@
       "bundleIdentifier": "com.aizue.labora"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#15803d"
-      },
-      "package": "com.aizue.labora",
-      "predictiveBackGestureEnabled": false
-    },
+  "adaptiveIcon": {
+    "foregroundImage": "./assets/icon.png",
+    "backgroundColor": "#15803d"
+  },
+  "package": "com.aizue.labora",
+  "googleServicesFile": "./google-services.json",
+  "predictiveBackGestureEnabled": false
+},
     "web": {
       "favicon": "./assets/icon.png"
     },

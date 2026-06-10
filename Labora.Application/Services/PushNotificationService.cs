@@ -29,23 +29,23 @@ public class PushNotificationService : IPushNotificationService
 
         try
         {
-            string serviceAccountPath = Path.Combine(
-                AppContext.BaseDirectory,
-                "top-app-ac550-firebase-adminsdk-fbsvc-c043110f07.json"
-            );
+            string? firebaseJson = Environment.GetEnvironmentVariable("FIREBASE_SERVICE_ACCOUNT_JSON");
 
-            if (!File.Exists(serviceAccountPath))
+            if (string.IsNullOrWhiteSpace(firebaseJson))
             {
-                Console.WriteLine($"Firebase service account file not found: {serviceAccountPath}");
+                Console.WriteLine("Firebase service account env not found: FIREBASE_SERVICE_ACCOUNT_JSON");
                 return;
             }
 
+            GoogleCredential credential = GoogleCredential.FromJson(firebaseJson);
+
             FirebaseApp.Create(new AppOptions
             {
-                Credential = GoogleCredential.FromFile(serviceAccountPath),
+                Credential = credential,
             });
 
             _firebaseInitialized = true;
+            Console.WriteLine("Firebase initialized successfully from environment variable.");
         }
         catch (Exception ex)
         {

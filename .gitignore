@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 .expo/
 structure.txt
+
+google-services.json
+android/

@@ -35,15 +35,19 @@ export default function RootLayout() {
     if (!token) return;
 
     const registerPush = async (): Promise<void> => {
-      try {
-        const pushToken = await pushNotificationService.registerForPushNotifications();
-        if (pushToken) {
-          await pushNotificationService.registerTokenToServer(pushToken);
-        }
-      } catch {
-        // silent fail
-      }
-    };
+  try {
+    const pushToken = await pushNotificationService.registerForPushNotifications();
+
+    console.log('DEVICE PUSH TOKEN:', pushToken);
+
+    if (pushToken) {
+      await pushNotificationService.registerTokenToServer(pushToken);
+      console.log('PUSH TOKEN REGISTERED TO SERVER');
+    }
+  } catch (error) {
+    console.log('PUSH REGISTER ERROR:', error);
+  }
+};
 
     registerPush();
 
@@ -69,6 +73,7 @@ export default function RootLayout() {
         <Stack.Screen name="job-detail" />
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="notifications" />
+        <Stack.Screen name="saved-jobs" />
         <Stack.Screen name="review" />
         <Stack.Screen name="search" />
         <Stack.Screen name="worker-post-detail" />

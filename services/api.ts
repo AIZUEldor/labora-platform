@@ -12,16 +12,25 @@ const api: AxiosInstance = axios.create({
   'Content-Type': 'application/json',
   'ngrok-skip-browser-warning': 'true',
 },
-  timeout: 10000,
+  timeout: 30000,
 });
 
 // Request interceptor — token qo'shish
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    console.log(
+      'API REQUEST:',
+      config.baseURL,
+      config.url,
+      config.method
+    );
+
     const token = await SecureStore.getItemAsync('access_token');
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -31,6 +40,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error) => {
+    console.log(
+      'API ERROR:',
+      error?.config?.baseURL,
+      error?.config?.url,
+      error?.message,
+      error?.response?.status,
+      error?.response?.data
+    );
     if (error.response?.status === 401) {
       await SecureStore.deleteItemAsync('access_token');
       await SecureStore.deleteItemAsync('user_role');
