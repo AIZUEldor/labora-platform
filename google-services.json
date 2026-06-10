@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "278074402117",
+    "project_id": "top-app-ac550",
+    "storage_bucket": "top-app-ac550.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:278074402117:android:73e9fcf95b9e669bf2ca2c",
+        "android_client_info": {
+          "package_name": "com.aizue.labora"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZeyafbQXdOIWA7cbp50xd7Un6AxSKVGc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
