@@ -174,4 +174,23 @@ help: {
   faq4q: 'Where can I check my application status?',
   faq4a: 'All your applications and their statuses are shown in the "My Applications" section.',
 },
+
+map: {
+  searchPlaceholder: 'Поиск города, района...',   
+  title: 'Nearby Jobs',
+  found: 'jobs found',
+  locating: 'Locating...',
+  permissionDenied: 'Location permission denied',
+  retry: 'Retry',
+  youAreHere: 'You are here',
+  viewJob: 'View',
+  away: 'km away',
+  all: 'All',
+  daily: 'Daily',
+  seasonal: 'Seasonal',
+  monthly: 'Monthly',
+  partTime: 'Part-time',
+  fullTime: 'Full-time',
+  remote: 'Remote',
+},
 };

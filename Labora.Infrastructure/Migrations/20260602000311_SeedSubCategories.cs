@@ -10,6 +10,12 @@ namespace Labora.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+
+            migrationBuilder.InsertData(
+    table: "Categories",
+    columns: new[] { "Id", "Name", "Description", "IconUrl", "JobType", "ParentCategoryId", "CreatedAt", "UpdatedAt", "IsDeleted" },
+    values: new object[] { new Guid("81c83065-de38-4b79-b2cc-e5db3912b82c"), "IT", "Axborot texnologiyalari", null, 0, null, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), null, false }
+);
             migrationBuilder.InsertData(
                 table: "Categories",
                 columns: new[] { "Id", "Name", "Description", "IconUrl", "JobType", "ParentCategoryId", "CreatedAt", "UpdatedAt", "IsDeleted" },

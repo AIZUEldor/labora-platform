@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Top",
+    "name": "TOP",
     "slug": "labora-mobile",
     "version": "1.0.0",
     "scheme": "labora",
@@ -22,7 +22,8 @@
         "backgroundColor": "#15803d"
       },
       "package": "com.aizue.labora",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "usesCleartextTraffic": true
     },
     "web": {
       "favicon": "./assets/icon.png"
@@ -37,13 +38,7 @@
           "color": "#15803d"
         }
       ],
-      "@react-native-community/datetimepicker",
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "TOP ilova yaqin atrofdagi ishlarni ko'rsatish uchun joylashuvingizdan foydalanadi."
-        }
-      ]
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "router": {},

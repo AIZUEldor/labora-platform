@@ -12,4 +12,5 @@ public interface IJobService
     Task<JobResponseDto> UpdateAsync(Guid id, JobRequestDto request, Guid employerId);
     Task DeleteAsync(Guid id, Guid employerId);
     Task<IEnumerable<NearbyJobResponseDto>> GetNearbyJobsAsync(double latitude, double longitude, double radiusKm);
+    Task<IEnumerable<NearbyJobResponseDto>> GetAllActiveJobsAsync(double latitude, double longitude);
 }

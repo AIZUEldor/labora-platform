@@ -1,10 +1,12 @@
 import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'http://172.20.10.2:5020/api';
-export const MEDIA_URL = 'http://172.20.10.2:5020';
+const BASE_URL = 'https://muster-angular-carving.ngrok-free.dev/api';
+export const MEDIA_URL = 'https://muster-angular-carving.ngrok-free.dev';
 
 const api: AxiosInstance = axios.create({
+
+
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',

@@ -1,5 +1,17 @@
 import api from './api';
 import { NotificationType } from '../types';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { Platform } from 'react-native';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 export interface NotificationResponse {
   id: string;
@@ -18,6 +30,28 @@ export interface UserPreferenceRequest {
 }
 
 export const notificationService = {
+  registerPushToken: async (): Promise<void> => {
+    if (!Device.isDevice) return;
+
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') return;
+
+    const tokenData = await Notifications.getDevicePushTokenAsync();
+    const token = tokenData.data;
+
+    await api.post('/PushToken', {
+      token,
+      platform: Platform.OS,
+    });
+  },
+
   getMyNotifications: async (): Promise<NotificationResponse[]> => {
     const response = await api.get('/notifications');
     return response.data;

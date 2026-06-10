@@ -35,11 +35,8 @@ export const pushNotificationService = {
       });
     }
 
-    const token = await Notifications.getExpoPushTokenAsync({
-      projectId: 'ff70999b-baec-4479-8c2b-b9f21fae78d6', // eas.json dan olinadi
-    });
-
-    return token.data;
+    const token = await Notifications.getDevicePushTokenAsync();
+return token.data as string;
   },
 
   registerTokenToServer: async (token: string): Promise<void> => {

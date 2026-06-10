@@ -53,6 +53,15 @@ public class JobController : ControllerBase
         return Ok(jobs);
     }
 
+    [HttpGet("all-active")]
+    public async Task<IActionResult> GetAllActive(
+    [FromQuery] double latitude = 0,
+    [FromQuery] double longitude = 0)
+    {
+        IEnumerable<NearbyJobResponseDto> jobs = await _jobService.GetAllActiveJobsAsync(latitude, longitude);
+        return Ok(jobs);
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {

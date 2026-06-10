@@ -21,6 +21,13 @@ export const jobService = {
     return response.data;
   },
 
+  getAllActiveJobs: async (latitude: number = 0, longitude: number = 0): Promise<NearbyJob[]> => {
+    const response = await api.get<NearbyJob[]>('/Job/all-active', {
+      params: { latitude, longitude },
+    });
+    return response.data;
+  },
+
   searchJobs: async (keyword: string, page: number = 1): Promise<JobListResponse> => {
     const response = await api.get<JobListResponse>('/Job', {
       params: { keyword, pageNumber: page, pageSize: 10 },
@@ -59,5 +66,12 @@ export const jobService = {
   getMyJobs: async (): Promise<Job[]> => {
     const response = await api.get<Job[]>('/Job/my-jobs');
     return response.data;
+  },
+
+  getAllJobs: async (): Promise<Job[]> => {
+    const response = await api.get<JobListResponse>('/Job', {
+      params: { pageNumber: 1, pageSize: 1000 },
+    });
+    return response.data.items;
   },
 };

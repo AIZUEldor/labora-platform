@@ -176,5 +176,24 @@ help: {
   faq4a: '"Arizalarim" bo\'limida barcha arizalaringiz holati ko\'rsatiladi.',
 },
 
+map: {
+  searchPlaceholder: 'Shahar, tuman qidiring...',
+  title: 'Yaqin atrofdagi ishlar',
+  found: 'ta ish topildi',
+  locating: 'Joylashuv aniqlanmoqda...',
+  permissionDenied: 'Joylashuv ruxsati berilmadi',
+  retry: 'Qayta urinish',
+  youAreHere: 'Siz shu yerdasiz',
+  viewJob: "Ko'rish",
+  away: 'km uzoqlikda',
+  all: 'Barchasi',
+  daily: 'Kunlik',
+  seasonal: 'Mavsumiy',
+  monthly: 'Oylik',
+  partTime: 'Yarim stavka',
+  fullTime: "To'liq stavka",
+  remote: 'Masofaviy',
+},
+
 
 };

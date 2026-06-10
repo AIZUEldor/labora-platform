@@ -29,4 +29,6 @@ public interface IJobRepository : IGenericRepository<Job>
     double? latitude,
     double? longitude,
     IEnumerable<UserPreference> preferences);
+
+    Task<IEnumerable<Job>> GetAllActiveWithLocationAsync();
 }

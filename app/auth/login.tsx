@@ -42,8 +42,7 @@ export default function LoginScreen() {
       await login(response.token, response.role, response.firstName, response.lastName);
       router.replace('/(tabs)');
     } catch (error: any) {
-      const message = error.response?.data?.message || t.common.somethingWentWrong;
-      Alert.alert('Xato', message);
+      Alert.alert('Xato', JSON.stringify(error));
     } finally {
       setIsLoading(false);
     }

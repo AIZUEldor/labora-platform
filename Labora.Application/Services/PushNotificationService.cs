@@ -1,4 +1,9 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using FirebaseAdmin;
+using FirebaseAdmin.Messaging;
+using Google.Apis.Auth.OAuth2;
 using Labora.Application.Interfaces;
 using Labora.Domain.Entities;
 using Labora.Domain.Interfaces;
@@ -8,35 +13,35 @@ namespace Labora.Application.Services;
 public class PushNotificationService : IPushNotificationService
 {
     private readonly IPushTokenRepository _pushTokenRepository;
-    private readonly HttpClient _httpClient;
 
-    private const string ExpoApiUrl = "https://exp.host/--/api/v2/push/send";
-
-    public PushNotificationService(
-        IPushTokenRepository pushTokenRepository,
-        IHttpClientFactory httpClientFactory)
+    public PushNotificationService(IPushTokenRepository pushTokenRepository)
     {
         _pushTokenRepository = pushTokenRepository;
-        _httpClient = httpClientFactory.CreateClient("ExpoPush");
+
+        if (FirebaseApp.DefaultInstance is null)
+        {
+            FirebaseApp.Create(new AppOptions
+            {
+                Credential = GoogleCredential.FromFile(ServiceAccountPath),
+            });
+        }
     }
+
+     private const string ServiceAccountPath = @"C:\Users\Acer\source\repos\labora-platform\Labora.API\top-app-ac550-firebase-adminsdk-fbsvc-c043110f07.json";
 
     public async Task RegisterTokenAsync(Guid userId, string token, string? deviceType)
     {
-        // Eski token bormi tekshir
         PushToken? existing = await _pushTokenRepository.GetByTokenAsync(token);
         if (existing is not null) return;
 
-        // Foydalanuvchining eski tokenlarini o'chir
         await _pushTokenRepository.DeleteByUserIdAsync(userId);
 
-        // Yangi token saqlash
         PushToken pushToken = new()
         {
             UserId = userId,
             Token = token,
             DeviceType = deviceType,
         };
-
         await _pushTokenRepository.AddAsync(pushToken);
     }
 
@@ -48,20 +53,10 @@ public class PushNotificationService : IPushNotificationService
     public async Task SendToUserAsync(Guid userId, string title, string body, object? data = null)
     {
         IEnumerable<PushToken> tokens = await _pushTokenRepository.GetByUserIdAsync(userId);
-
-        List<object> messages = tokens.Select(t => (object)new
+        foreach (PushToken token in tokens)
         {
-            to = t.Token,
-            title,
-            body,
-            data = data ?? new { },
-            sound = "default",
-            badge = 1,
-        }).ToList();
-
-        if (!messages.Any()) return;
-
-        await SendBatchAsync(messages);
+            await SendFcmAsync(token.Token, title, body, data);
+        }
     }
 
     public async Task SendToUsersAsync(
@@ -70,38 +65,48 @@ public class PushNotificationService : IPushNotificationService
         string body,
         object? data = null)
     {
-        List<object> messages = new();
-
         foreach (Guid userId in userIds)
         {
-            IEnumerable<PushToken> tokens = await _pushTokenRepository.GetByUserIdAsync(userId);
-            messages.AddRange(tokens.Select(t => (object)new
-            {
-                to = t.Token,
-                title,
-                body,
-                data = data ?? new { },
-                sound = "default",
-                badge = 1,
-            }));
+            await SendToUserAsync(userId, title, body, data);
         }
-
-        if (!messages.Any()) return;
-
-        await SendBatchAsync(messages);
     }
 
-    private async Task SendBatchAsync(List<object> messages)
+    private static async Task SendFcmAsync(string deviceToken, string title, string body, object? data = null)
     {
         try
         {
-            // Expo 100 ta limit — batch larga bo'lish
-            int batchSize = 100;
-            for (int i = 0; i < messages.Count; i += batchSize)
+            Dictionary<string, string> dataDict = new();
+            if (data is not null)
             {
-                List<object> batch = messages.Skip(i).Take(batchSize).ToList();
-                await _httpClient.PostAsJsonAsync(ExpoApiUrl, batch);
+                string json = JsonSerializer.Serialize(data);
+                Dictionary<string, object>? parsed = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+                if (parsed is not null)
+                {
+                    foreach (KeyValuePair<string, object> kv in parsed)
+                        dataDict[kv.Key] = kv.Value?.ToString() ?? "";
+                }
             }
+
+            Message message = new()
+            {
+                Token = deviceToken,
+                Notification = new FirebaseAdmin.Messaging.Notification
+                {
+                    Title = title,
+                    Body = body,
+                },
+                Android = new AndroidConfig
+                {
+                    Notification = new AndroidNotification
+                    {
+                        Sound = "default",
+                        ClickAction = "FLUTTER_NOTIFICATION_CLICK",
+                    },
+                },
+                Data = dataDict,
+            };
+
+            await FirebaseMessaging.DefaultInstance.SendAsync(message);
         }
         catch
         {

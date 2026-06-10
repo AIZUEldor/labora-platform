@@ -176,6 +176,17 @@ public class JobRepository : GenericRepository<Job>, IJobRepository
         return jobs;
     }
 
+    public async Task<IEnumerable<Job>> GetAllActiveWithLocationAsync()
+    {
+        return await _context.Jobs
+            .Where(j => !j.IsDeleted &&
+                        j.Status == Domain.Enums.JobStatus.Active &&
+                        j.Latitude != 0 &&
+                        j.Longitude != 0)
+            .OrderByDescending(j => j.CreatedAt)
+            .ToListAsync();
+    }
+
     private static double CalculateDistance(
         double lat1, double lon1,
         double lat2, double lon2)

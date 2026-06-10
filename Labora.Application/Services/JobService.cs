@@ -10,11 +10,19 @@ namespace Labora.Application.Services;
 public class JobService : IJobService
 {
     private readonly IJobRepository _jobRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly IPushNotificationService _pushNotificationService;
     private readonly IMapper _mapper;
 
-    public JobService(IJobRepository jobRepository, IMapper mapper)
+    public JobService(
+        IJobRepository jobRepository,
+        IUserRepository userRepository,
+        IPushNotificationService pushNotificationService,
+        IMapper mapper)
     {
         _jobRepository = jobRepository;
+        _userRepository = userRepository;
+        _pushNotificationService = pushNotificationService;
         _mapper = mapper;
     }
 
@@ -27,7 +35,42 @@ public class JobService : IJobService
             : null;
 
         Job createdJob = await _jobRepository.AddAsync(job);
+
+        _ = NotifyNearbyWorkersAsync(createdJob);
+
         return _mapper.Map<JobResponseDto>(createdJob);
+    }
+
+    private async Task NotifyNearbyWorkersAsync(Job job)
+    {
+        try
+        {
+            if (job.Latitude == 0 && job.Longitude == 0) return;
+
+            IEnumerable<User> workers = await _userRepository.GetWorkerUsersAsync();
+
+            List<Guid> nearbyWorkerIds = workers
+                .Where(w =>
+                    w.Latitude.HasValue &&
+                    w.Longitude.HasValue &&
+                    CalculateDistance(job.Latitude, job.Longitude,
+                        w.Latitude.Value, w.Longitude.Value) <= 5.0)
+                .Select(w => w.Id)
+                .ToList();
+
+            if (!nearbyWorkerIds.Any()) return;
+
+            await _pushNotificationService.SendToUsersAsync(
+                nearbyWorkerIds,
+                "Yangi ish e'loni",
+                $"{job.Title} — {job.Salary:N0} so'm",
+                new { referenceId = job.Id.ToString() }
+            );
+        }
+        catch
+        {
+            // Push xatoligi job yaratishni to'xtatmasin
+        }
     }
 
     public async Task<JobResponseDto> GetByIdAsync(Guid id)
@@ -106,6 +149,29 @@ public class JobService : IJobService
         double radiusKm)
     {
         IEnumerable<Job> jobs = await _jobRepository.GetNearbyJobsAsync(latitude, longitude, radiusKm);
+
+        return jobs.Select(job => new NearbyJobResponseDto
+        {
+            Id = job.Id,
+            Title = job.Title,
+            Description = job.Description,
+            Salary = job.Salary,
+            JobType = job.JobType,
+            Status = job.Status,
+            CategoryName = job.CategoryName,
+            Latitude = job.Latitude,
+            Longitude = job.Longitude,
+            City = job.City,
+            Country = job.Country,
+            EmployerId = job.EmployerId,
+            CreatedAt = job.CreatedAt,
+            DistanceKm = CalculateDistance(latitude, longitude, job.Latitude, job.Longitude)
+        });
+    }
+
+    public async Task<IEnumerable<NearbyJobResponseDto>> GetAllActiveJobsAsync(double latitude, double longitude)
+    {
+        IEnumerable<Job> jobs = await _jobRepository.GetAllActiveWithLocationAsync();
 
         return jobs.Select(job => new NearbyJobResponseDto
         {

@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ScrollView, ActivityIndicator, Alert, Modal, FlatList,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../store/themeStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
+import { useMapPickerStore } from '../../stores/useMapPickerStore';
 import { jobService } from '../../services/jobService';
 import { categoryService } from '../../services/categoryService';
 import { Category } from '../../types';
@@ -30,6 +31,15 @@ function ChevronIcon({ size = 20, color = '#000' }: { size?: number; color?: str
   );
 }
 
+function MapPinIcon({ size = 18, color = '#000' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" stroke={color} strokeWidth={1.8} />
+    </Svg>
+  );
+}
+
 const JOB_TYPES = [
   { value: 1, labelUz: 'Kunlik',    labelRu: 'Ежедневная',  labelEn: 'Daily' },
   { value: 2, labelUz: 'Mavsumiy',  labelRu: 'Сезонная',    labelEn: 'Seasonal' },
@@ -48,6 +58,7 @@ function getJobTypeLabel(value: number, language: string): string {
 export default function PostJobScreen() {
   const { colors } = useThemeStore();
   const { language } = useLanguageStore();
+  const { pickedLat, pickedLng, pickedAddress, clear: clearPicked } = useMapPickerStore();
 
   const [title,           setTitle]           = useState('');
   const [description,     setDescription]     = useState('');
@@ -56,6 +67,9 @@ export default function PostJobScreen() {
   const [country,         setCountry]         = useState("O'zbekiston");
   const [experienceYears, setExperienceYears] = useState('');
   const [jobType,         setJobType]         = useState(5);
+  const [latitude,        setLatitude]        = useState<number | null>(null);
+  const [longitude,       setLongitude]       = useState<number | null>(null);
+  const [jobAddress,      setJobAddress]      = useState<string>('');
 
   const [categories,          setCategories]          = useState<Category[]>([]);
   const [selectedCategory,    setSelectedCategory]    = useState<Category | null>(null);
@@ -68,7 +82,21 @@ export default function PostJobScreen() {
   const [loading,           setLoading]           = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
-  useEffect(() => { loadCategories(); }, []);
+  useEffect(() => {
+    loadCategories();
+    return () => clearPicked(); // ekrandan chiqganda tozalanadi
+  }, []);
+
+  // Map picker dan qaytganda koordinatalarni olamiz
+  useFocusEffect(
+    useCallback(() => {
+      if (pickedLat !== null && pickedLng !== null) {
+        setLatitude(pickedLat);
+        setLongitude(pickedLng);
+        setJobAddress(pickedAddress);
+      }
+    }, [pickedLat, pickedLng])
+  );
 
   const loadCategories = async () => {
     try {
@@ -95,27 +123,39 @@ export default function PostJobScreen() {
     }
   };
 
+  const handleOpenMapPicker = () => {
+    if (latitude !== null && longitude !== null) {
+      router.push({ pathname: '/map-picker', params: { initLat: latitude.toString(), initLng: longitude.toString() } });
+    } else {
+      router.push('/map-picker');
+    }
+  };
+
   const handleSubmit = async () => {
     if (!title.trim())     { Alert.alert('Xato', "Ish nomi kiritilmagan"); return; }
     if (!description.trim()) { Alert.alert('Xato', 'Tavsif kiritilmagan'); return; }
     if (!salary)           { Alert.alert('Xato', 'Maosh kiritilmagan'); return; }
     if (!city.trim())      { Alert.alert('Xato', 'Shahar kiritilmagan'); return; }
     if (!selectedCategory) { Alert.alert('Xato', 'Kategoriya tanlanmagan'); return; }
+    if (latitude === null) { Alert.alert('Xato', label('Joylashuvni xaritada belgilang', 'Укажите местоположение на карте', 'Please mark location on map')); return; }
 
+    setLoading(true);
     try {
       await jobService.createJob({
-  title:           title.trim(),
-  description:     description.trim(),
-  salary:          parseFloat(salary),
-  jobType,
-  categoryId:      selectedCategory.id === 'other' ? undefined : selectedCategory.id,
-  categoryName:    selectedCategory.name,
-  subCategoryId:   selectedSubCategory?.id,
-  subCategoryName: selectedSubCategory?.name,
-  city:            city.trim(),
-  country:         country.trim(),
-  experienceYears: experienceYears ? parseInt(experienceYears) : undefined,
-});
+        title:           title.trim(),
+        description:     description.trim(),
+        salary:          parseFloat(salary),
+        jobType,
+        categoryId:      selectedCategory.id === 'other' ? undefined : selectedCategory.id,
+        categoryName:    selectedCategory.name,
+        subCategoryId:   selectedSubCategory?.id,
+        subCategoryName: selectedSubCategory?.name,
+        city:            city.trim(),
+        country:         country.trim(),
+        latitude:        latitude ?? undefined,
+        longitude:       longitude ?? undefined,
+        experienceYears: experienceYears ? parseInt(experienceYears) : undefined,
+      });
       Alert.alert(
         language === 'uz' ? 'Muvaffaqiyat' : language === 'ru' ? 'Успех' : 'Success',
         language === 'uz' ? "Ish e'loni joylashtirildi!" : language === 'ru' ? 'Вакансия размещена!' : 'Job posted!',
@@ -210,7 +250,7 @@ export default function PostJobScreen() {
         </Text>
         <TextInput
           style={[styles.input, styles.textArea, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-          placeholder={label('Ish haqida batafsil, talab qilinadigan ko\'nikmalar...', 'Подробнее о работе, требуемые навыки...', 'Job details, required skills...')}
+          placeholder={label("Ish haqida batafsil...", 'Подробнее о работе...', 'Job details...')}
           placeholderTextColor={colors.textTertiary}
           value={description}
           onChangeText={setDescription}
@@ -334,6 +374,31 @@ export default function PostJobScreen() {
           keyboardType="numeric"
         />
 
+        {/* Joylashuv — xaritada belgilash */}
+        <Text style={[styles.label, { color: colors.textSecondary }]}>
+          {label('Ish joylashuvi', 'Местоположение', 'Job Location')}
+          <Text style={{ color: colors.primary }}> *</Text>
+        </Text>
+        <TouchableOpacity
+          style={[
+            styles.locationBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: latitude !== null ? colors.primary : colors.border,
+            },
+          ]}
+          onPress={handleOpenMapPicker}
+          activeOpacity={0.7}
+        >
+          <MapPinIcon size={18} color={latitude !== null ? colors.primary : colors.textTertiary} />
+          <Text style={[styles.locationBtnText, { color: latitude !== null ? colors.primary : colors.textTertiary }]}>
+            {latitude !== null
+              ? (jobAddress || `${latitude.toFixed(4)}, ${longitude!.toFixed(4)}`)
+              : label('Xaritada belgilang', 'Указать на карте', 'Mark on map')}
+          </Text>
+          <ChevronIcon size={18} color={latitude !== null ? colors.primary : colors.textSecondary} />
+        </TouchableOpacity>
+
         {/* Submit */}
         <TouchableOpacity
           style={[styles.submitBtn, { opacity: loading ? 0.7 : 1 }]}
@@ -398,6 +463,8 @@ const styles = StyleSheet.create({
   textArea:        { height: 120, paddingTop: 12 },
   selector:        { borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.md, paddingVertical: 14, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   selectorText:    { fontSize: FontSize.md },
+  locationBtn:     { borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.md, paddingVertical: 14, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  locationBtnText: { flex: 1, fontSize: FontSize.md },
   submitBtn:       { marginTop: Spacing.xl, borderRadius: BorderRadius.xl, overflow: 'hidden' },
   submitGradient:  { paddingVertical: 16, alignItems: 'center' },
   submitText:      { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.bold },
@@ -409,3 +476,4 @@ const styles = StyleSheet.create({
   modalCancel:     { marginTop: Spacing.md, borderRadius: BorderRadius.lg, paddingVertical: 14, alignItems: 'center' },
   modalCancelText: { fontSize: FontSize.md, fontWeight: FontWeight.medium },
 });
+     
