@@ -38,12 +38,22 @@ export default function LoginScreen() {
     }
     setIsLoading(true);
     try {
-      const response = await authService.login({ phoneNumber: phoneNumber.trim(), password });
-      await login(response.token, response.role, response.firstName, response.lastName);
-      router.replace('/(tabs)');
+      const response = await authService.login({
+  phoneNumber: phoneNumber.trim(),
+  password,
+});
+
+await login(response.token, response.role, response.firstName, response.lastName);
+router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Xato', JSON.stringify(error));
-    } finally {
+  const message =
+    error?.response?.data?.message ||
+    error?.response?.data?.title ||
+    error?.message ||
+    'Noma’lum xatolik';
+
+  Alert.alert('Xato', message);
+} finally {
       setIsLoading(false);
     }
   };
@@ -66,7 +76,7 @@ export default function LoginScreen() {
         <View style={styles.logoContainer}>
           <Text style={styles.logoText}>L</Text>
         </View>
-        <Text style={styles.appName}>Labora</Text>
+        <Text style={styles.appName}>TOP</Text>
         <Text style={styles.appTagline}>Ishingizni toping, hayotingizni o'zgartiring</Text>
       </LinearGradient>
 

@@ -1,16 +1,17 @@
 import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'https://muster-angular-carving.ngrok-free.dev/api';
-export const MEDIA_URL = 'https://muster-angular-carving.ngrok-free.dev';
+const BASE_URL = 'https://labora-api.onrender.com/api';
+export const MEDIA_URL = 'https://labora-api.onrender.com';
 
 const api: AxiosInstance = axios.create({
 
 
   baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
-  },
+  'Content-Type': 'application/json',
+  'ngrok-skip-browser-warning': 'true',
+},
   timeout: 10000,
 });
 
