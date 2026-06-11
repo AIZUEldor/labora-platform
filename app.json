@@ -13,15 +13,17 @@
       "backgroundColor": "#15803d"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.aizue.labora"
-    },
+  "supportsTablet": true,
+  "bundleIdentifier": "com.aizue.labora",
+  "buildNumber": "1"
+},
     "android": {
   "adaptiveIcon": {
     "foregroundImage": "./assets/icon.png",
     "backgroundColor": "#15803d"
   },
   "package": "com.aizue.labora",
+  "versionCode": 1,
   "googleServicesFile": "./google-services.json",
   "predictiveBackGestureEnabled": false
 },
