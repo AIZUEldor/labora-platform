@@ -26,7 +26,7 @@ import { ProfileSkeleton } from '../../components/SkeletonLoader';
 import { MEDIA_URL } from '../../services/api';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 import { LanguagePicker } from '../../components/LanguagePicker';
-
+import { useFocusEffect } from 'expo-router';
 
 function MenuIcon({ name, color }: { name: string; color: string }) {
   const props = { size: 22, color };
@@ -103,7 +103,11 @@ export default function ProfileScreen() {
     }
   }, [isEmployer]);
 
-  useEffect(() => { load(); }, []);
+ useFocusEffect(
+  React.useCallback(() => {
+    load();
+  }, [load])
+);
 
   const onRefresh = () => { setRefreshing(true); load(); };
 

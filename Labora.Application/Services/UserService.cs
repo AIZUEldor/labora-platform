@@ -142,6 +142,7 @@ public class UserService : IUserService
             throw new InvalidOperationException($"Id={userId} bo'lgan foydalanuvchi topilmadi.");
 
         user.IsDeleted = true;
+        user.PhoneNumber = $"deleted_{userId}";
         user.UpdatedAt = DateTime.UtcNow;
 
         await _userRepository.UpdateAsync(user);

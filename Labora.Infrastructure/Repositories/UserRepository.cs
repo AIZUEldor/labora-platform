@@ -23,7 +23,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
     public async Task<bool> PhoneNumberExistsAsync(string phoneNumber)
     {
         return await _context.Users
-            .AnyAsync(u => u.PhoneNumber == phoneNumber && !u.IsDeleted);
+            .AnyAsync(u => u.PhoneNumber == phoneNumber);
     }
 
     public async Task<IEnumerable<User>> GetWorkerUsersAsync()
