@@ -16,7 +16,7 @@ import {
   LockIcon, HelpIcon, LogoutIcon, SunIcon,
   MoonIcon, ChevronRightIcon, CameraIcon,
   ApplicationsIcon, BriefcaseIcon,
-  InstagramIcon, TelegramIcon,
+  InstagramIcon, TelegramIcon,TrashIcon,
 } from '../../components/icons';
 import { userService } from '../../services/userService';
 import { jobApplicationService } from '../../services/jobApplicationService';
@@ -51,23 +51,23 @@ export default function ProfileScreen() {
   const isEmployer = Number(role) === UserRole.Employer;
 
   const WORKER_MENU = [
-  { icon: 'edit',         label: t.profile.editProfile,   route: '/edit-profile' },
-  { icon: 'applications', label: t.applications.title,    route: '/(tabs)/applications' },
-  { icon: 'heart',        label: t.profile.savedJobs,     route: '/saved-jobs' },
-  { icon: 'star',         label: t.profile.reviews,       route: '/my-reviews' },
-  { icon: 'bell',         label: t.notifications.title,   route: '/notifications' },
-  { icon: 'lock',         label: t.profile.changePassword, route: '/change-password' },
-  { icon: 'help', label: t.profile.help, route: '/help' },
-];
+    { icon: 'edit',         label: t.profile.editProfile,   route: '/edit-profile' },
+    { icon: 'applications', label: t.applications.title,    route: '/(tabs)/applications' },
+    { icon: 'heart',        label: t.profile.savedJobs,     route: '/saved-jobs' },
+    { icon: 'star',         label: t.profile.reviews,       route: '/my-reviews' },
+    { icon: 'bell',         label: t.notifications.title,   route: '/notifications' },
+    { icon: 'lock',         label: t.profile.changePassword, route: '/change-password' },
+    { icon: 'help',         label: t.profile.help,          route: '/help' },
+  ];
 
   const EMPLOYER_MENU = [
-  { icon: 'edit',      label: t.profile.editProfile,    route: '/edit-profile' },
-  { icon: 'briefcase', label: t.employer.myJobs,        route: '/(tabs)/applications' },
-  { icon: 'star',      label: t.profile.reviews,        route: '/my-reviews' },
-  { icon: 'bell',      label: t.notifications.title,    route: '/notifications' },
-  { icon: 'lock',      label: t.profile.changePassword, route: '/change-password' },
-  { icon: 'help', label: t.profile.help, route: '/help' },
-];
+    { icon: 'edit',      label: t.profile.editProfile,    route: '/edit-profile' },
+    { icon: 'briefcase', label: t.employer.myJobs,        route: '/(tabs)/applications' },
+    { icon: 'star',      label: t.profile.reviews,        route: '/my-reviews' },
+    { icon: 'bell',      label: t.notifications.title,    route: '/notifications' },
+    { icon: 'lock',      label: t.profile.changePassword, route: '/change-password' },
+    { icon: 'help',      label: t.profile.help,           route: '/help' },
+  ];
 
   const [profile,         setProfile]         = useState<UserProfile | null>(null);
   const [statCount,       setStatCount]       = useState(0);
@@ -110,6 +110,35 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     await logout();
     router.replace('/auth/login');
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      t.profile.deleteAccountTitle,
+      t.profile.deleteAccountMessage,
+      [
+        {
+          text: t.profile.cancel,
+          style: 'cancel',
+        },
+        {
+          text: t.profile.deleteAccountConfirm,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await userService.deleteAccount();
+              await logout();
+              router.replace('/auth/login');
+            } catch (error: any) {
+              Alert.alert(
+                t.common.error,
+                error?.message ?? t.profile.deleteAccountError
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleUploadCv = async () => {
@@ -346,36 +375,44 @@ export default function ProfileScreen() {
         </View>
 
         {/* Ijtimoiy tarmoqlar */}
-<View style={[styles.socialCard, { backgroundColor: colors.card, ...Shadow.sm }]}>
-  <Text style={[styles.socialTitle, { color: colors.textSecondary }]}>
-    Bizni kuzating
-  </Text>
-  <View style={styles.socialRow}>
-    <TouchableOpacity
-      style={[styles.socialBtn, { backgroundColor: '#E1306C18' }]}
-      onPress={() => Linking.openURL('https://www.instagram.com/top_ilovasi?igsh=Mnh0MW5wMGNqYzFh')}
-      activeOpacity={0.8}
-    >
-      <InstagramIcon size={22} color="#E1306C" />
-      <Text style={[styles.socialLabel, { color: '#E1306C' }]}>Instagram</Text>
-    </TouchableOpacity>
+        <View style={[styles.socialCard, { backgroundColor: colors.card, ...Shadow.sm }]}>
+          <Text style={[styles.socialTitle, { color: colors.textSecondary }]}>
+            Bizni kuzating
+          </Text>
+          <View style={styles.socialRow}>
+            <TouchableOpacity
+              style={[styles.socialBtn, { backgroundColor: '#E1306C18' }]}
+              onPress={() => Linking.openURL('https://www.instagram.com/top_ilovasi?igsh=Mnh0MW5wMGNqYzFh')}
+              activeOpacity={0.8}
+            >
+              <InstagramIcon size={22} color="#E1306C" />
+              <Text style={[styles.socialLabel, { color: '#E1306C' }]}>Instagram</Text>
+            </TouchableOpacity>
 
-    <TouchableOpacity
-      style={[styles.socialBtn, { backgroundColor: '#0088cc18' }]}
-      onPress={() => Linking.openURL('https://t.me/topilovasi')}
-      activeOpacity={0.8}
-    >
-      <TelegramIcon size={22} color="#0088cc" />
-      <Text style={[styles.socialLabel, { color: '#0088cc' }]}>Telegram</Text>
-    </TouchableOpacity>
-  </View>
-</View>
+            <TouchableOpacity
+              style={[styles.socialBtn, { backgroundColor: '#0088cc18' }]}
+              onPress={() => Linking.openURL('https://t.me/topilovasi')}
+              activeOpacity={0.8}
+            >
+              <TelegramIcon size={22} color="#0088cc" />
+              <Text style={[styles.socialLabel, { color: '#0088cc' }]}>Telegram</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Logout */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
-          <LogoutIcon size={22} color="#DC2626" />
-          <Text style={styles.logoutText}>{t.profile.logout}</Text>
-        </TouchableOpacity>
+<TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
+  <LogoutIcon size={22} color="#DC2626" />
+  <Text style={styles.logoutText}>{t.profile.logout}</Text>
+</TouchableOpacity>
+
+        {/* Delete Account */}
+<TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount} activeOpacity={0.85}>
+  <TrashIcon size={22} color="#991B1B" />
+  <Text style={styles.deleteText}>{t.profile.deleteAccount}</Text>
+</TouchableOpacity>
+
+        
 
         <View style={{ height: Spacing.xxxl }} />
       </ScrollView>
@@ -455,40 +492,58 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   menuLabel:    { flex: 1, fontSize: FontSize.md, fontWeight: FontWeight.medium },
+  socialCard: {
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+  },
+  socialTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    marginBottom: Spacing.md,
+    textAlign: 'center',
+  },
+  socialRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  socialBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+  },
+  socialLabel: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semiBold,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  deleteText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semiBold,
+    color: '#991B1B',
+  },
   logoutButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
     borderRadius: BorderRadius.xl, padding: Spacing.lg,
     gap: Spacing.sm, backgroundColor: '#FEE2E2',
   },
-  socialCard: {
-  marginHorizontal: Spacing.xl,
-  marginTop: Spacing.lg,
-  borderRadius: BorderRadius.xl,
-  padding: Spacing.lg,
-},
-socialTitle: {
-  fontSize: FontSize.sm,
-  fontWeight: FontWeight.medium,
-  marginBottom: Spacing.md,
-  textAlign: 'center',
-},
-socialRow: {
-  flexDirection: 'row',
-  gap: Spacing.md,
-},
-socialBtn: {
-  flex: 1,
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: Spacing.sm,
-  paddingVertical: Spacing.md,
-  borderRadius: BorderRadius.lg,
-},
-socialLabel: {
-  fontSize: FontSize.md,
-  fontWeight: FontWeight.semiBold,
-},
   logoutText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: '#DC2626' },
 });

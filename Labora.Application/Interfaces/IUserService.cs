@@ -11,4 +11,5 @@ public interface IUserService
     Task<string> UploadAvatarAsync(Guid userId, IFormFile file);
     Task ChangePasswordAsync(Guid userId, ChangePasswordRequestDto request);
     Task ForgotPasswordAsync(ForgotPasswordRequestDto request);
+    Task DeleteAccountAsync(Guid userId);
 }

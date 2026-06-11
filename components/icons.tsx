@@ -535,3 +535,12 @@ export function InstagramIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: 
     </Svg>
   );
 }
+
+export function TrashIcon({ size = 24, color = '#000', strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 6H5H21" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M8 6V4C8 3.45 8.45 3 9 3H15C15.55 3 16 3.45 16 4V6M19 6L18.1 19.1C18.04 19.62 17.6 20 17.08 20H6.92C6.4 20 5.96 19.62 5.9 19.1L5 6H19Z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}

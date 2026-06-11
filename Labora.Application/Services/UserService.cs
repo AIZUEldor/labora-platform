@@ -133,4 +133,17 @@ public class UserService : IUserService
         user.PasswordHash = Convert.ToBase64String(newSalt) + ":" + Convert.ToBase64String(newHash);
         await _userRepository.UpdateAsync(user);
     }
+
+    public async Task DeleteAccountAsync(Guid userId)
+    {
+        User? user = await _userRepository.GetByIdAsync(userId);
+
+        if (user is null)
+            throw new InvalidOperationException($"Id={userId} bo'lgan foydalanuvchi topilmadi.");
+
+        user.IsDeleted = true;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _userRepository.UpdateAsync(user);
+    }
 }

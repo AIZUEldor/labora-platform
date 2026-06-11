@@ -57,6 +57,15 @@ public class UserController : ControllerBase
         return Ok(new { message = "Parol muvaffaqiyatli o'zgartirildi." });
     }
 
+    [HttpDelete("delete-account")]
+    public async Task<IActionResult> DeleteAccount()
+    {
+        Guid userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        await _userService.DeleteAccountAsync(userId);
+
+        return Ok(new { message = "Hisob muvaffaqiyatli o'chirildi." });
+    }
+
     [HttpPost("forgot-password")]
     [AllowAnonymous]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)

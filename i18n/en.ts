@@ -103,6 +103,14 @@ lightMode: 'Light mode',
     help: 'Help',
     balance: 'Balance',
     verified: 'Verified',
+
+    deleteAccount: 'Delete account',
+deleteAccountTitle: 'Delete account',
+deleteAccountMessage:
+  'If you delete your account, your profile and data will be hidden. This action cannot be undone.',
+deleteAccountConfirm: 'Yes, delete',
+cancel: 'Cancel',
+deleteAccountError: 'Failed to delete account',
   },
   notifications: {
     title: 'Notifications',

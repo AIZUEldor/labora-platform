@@ -103,6 +103,14 @@ lightMode: 'Светлый режим',
     help: 'Помощь',
     balance: 'Баланс',
     verified: 'Подтверждён',
+
+    deleteAccount: 'Удалить аккаунт',
+deleteAccountTitle: 'Удаление аккаунта',
+deleteAccountMessage:
+  'Если вы удалите аккаунт, ваш профиль и данные будут скрыты. Это действие нельзя отменить.',
+deleteAccountConfirm: 'Да, удалить',
+cancel: 'Отмена',
+deleteAccountError: 'Не удалось удалить аккаунт',
   },
   notifications: {
     title: 'Уведомления',

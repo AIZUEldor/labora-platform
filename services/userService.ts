@@ -41,4 +41,9 @@ export const userService = {
     });
     return response.data.url;
   },
+
+  // Account o'chirish
+deleteAccount: async (): Promise<void> => {
+  await api.delete('/User/delete-account');
+},
 };
