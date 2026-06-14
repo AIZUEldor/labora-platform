@@ -1,32 +1,35 @@
 {
   "expo": {
-    "name": "TOP",
+    "name": "ALP",
     "slug": "labora-mobile",
     "version": "1.0.0",
-    "scheme": "labora",
+    "scheme": "alp",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#15803d"
-    },
+  "image": "./assets/splash.png",
+  "resizeMode": "contain",
+  "backgroundColor": "#15803d"
+},
     "ios": {
-  "supportsTablet": true,
-  "bundleIdentifier": "com.aizue.labora",
-  "buildNumber": "1"
-},
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aizue.labora",
+      "buildNumber": "2",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
     "android": {
-  "adaptiveIcon": {
-    "foregroundImage": "./assets/icon.png",
-    "backgroundColor": "#15803d"
-  },
-  "package": "com.aizue.labora",
-  "versionCode": 1,
-  "googleServicesFile": "./google-services.json",
-  "predictiveBackGestureEnabled": false
-},
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#15803d"
+      },
+      "package": "com.aizue.labora",
+      "versionCode": 2,
+      "googleServicesFile": "./google-services.json",
+      "predictiveBackGestureEnabled": false
+    },
     "web": {
       "favicon": "./assets/icon.png"
     },
@@ -51,4 +54,3 @@
     "owner": "aizue"
   }
 }
-

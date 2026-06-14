@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -79,9 +80,12 @@ export default function RegisterScreen() {
         style={styles.gradientHeader}
       >
         <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>L</Text>
-        </View>
-        <Text style={styles.appName}>Labora</Text>
+  <Image
+    source={require('../../assets/icon.png')}
+    style={styles.logoImage}
+  />
+</View>
+<Text style={styles.appName}>ALP</Text>
         <Text style={styles.appTagline}>Hisob yarating va ishni boshlang</Text>
       </LinearGradient>
 
@@ -259,11 +263,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.4)',
   },
-  logoText: {
-    fontSize: 30,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-  },
+  logoImage: {
+  width: 56,
+  height: 56,
+  borderRadius: 16,
+},
   appName: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extraBold,

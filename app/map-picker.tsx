@@ -96,7 +96,7 @@ export default function MapPickerScreen() {
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=${language}`,
-        { headers: { 'User-Agent': 'TOP-app/1.0' } }
+        { headers: { 'User-Agent': 'ALP-app/1.0' } }
       );
       const data = await res.json();
       if (data.display_name) {
@@ -119,7 +119,7 @@ export default function MapPickerScreen() {
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&countrycodes=uz&accept-language=${language}`,
-          { headers: { 'User-Agent': 'TOP-app/1.0' } }
+          { headers: { 'User-Agent':'ALP-app/1.0'  } }
         );
         const data: SearchResult[] = await res.json();
         setSearchResults(data);

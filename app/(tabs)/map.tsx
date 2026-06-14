@@ -106,7 +106,7 @@ export default function MapScreen() {
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&accept-language=${language}`,
-          { headers: { 'User-Agent': 'TOP-app/1.0' } }
+          { headers: { 'User-Agent': 'ALP-app/1.0' } }
         );
         const data: SearchResult[] = await res.json();
         setSearchResults(data);

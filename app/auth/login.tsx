@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -74,9 +75,13 @@ router.replace('/(tabs)');
         style={styles.gradientHeader}
       >
         <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>L</Text>
-        </View>
-        <Text style={styles.appName}>TOP</Text>
+  <Image
+    source={require('../../assets/icon.png')}
+    style={styles.logoImage}
+    resizeMode="contain"
+  />
+</View>
+        <Text style={styles.appName}>ALP</Text>
         <Text style={styles.appTagline}>Ishingizni toping, hayotingizni o'zgartiring</Text>
       </LinearGradient>
 
@@ -189,6 +194,10 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Colors.white,
   },
+  logoImage: {
+  width: 72,
+  height: 72,
+},
   appName: {
     fontSize: FontSize.xxxl,
     fontWeight: FontWeight.extraBold,
