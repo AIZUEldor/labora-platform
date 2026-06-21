@@ -47,4 +47,19 @@ public class AuthController : ControllerBase
         AuthResponseDto response = await _authService.LoginAsync(request);
         return Ok(response);
     }
+
+    [HttpPost("debug-hash")]
+    public IActionResult DebugHash([FromBody] string password)
+    {
+        byte[] salt = System.Security.Cryptography.RandomNumberGenerator.GetBytes(16);
+        byte[] hash = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
+            System.Text.Encoding.UTF8.GetBytes(password),
+            salt,
+            100000,
+            System.Security.Cryptography.HashAlgorithmName.SHA256,
+            32);
+
+        string result = Convert.ToBase64String(salt) + ":" + Convert.ToBase64String(hash);
+        return Ok(new { hash = result });
+    }
 }
