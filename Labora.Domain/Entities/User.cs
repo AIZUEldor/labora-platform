@@ -18,6 +18,7 @@ public class User : BaseEntity
     public string? Country { get; set; }
     public decimal Balance { get; set; } = 0;
     public bool IsVerified { get; set; } = false;
+    public bool IsBlocked { get; set; } = false;
     public string? CvUrl { get; set; }
 
     // Navigation properties
