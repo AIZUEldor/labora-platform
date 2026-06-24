@@ -15,6 +15,7 @@ import { workerPostService } from '../../services/workerPostService';
 import { JobApplication, ApplicationStatus, UserRole, Job, WorkerPost } from '../../types';
 import { ApplicationListSkeleton } from '../../components/SkeletonLoader';
 import { useLanguageStore } from '../../stores/useLanguageStore';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const STATUS_COLOR: Record<number, { bg: string; text: string }> = {
   [ApplicationStatus.Pending]:   { bg: '#FEF9C3', text: '#854D0E' },
@@ -170,11 +171,11 @@ function WorkerApplicationsList({ colors }: { colors: any }) {
   };
 
   const FILTERS = [
-    { key: 'all',      label: t.home.seeAll },
-    { key: 'pending',  label: t.applications.pending },
-    { key: 'accepted', label: t.applications.accepted },
-    { key: 'rejected', label: t.applications.rejected },
-    { key: 'completed',label: t.applications.completed },
+    { key: 'all',       label: t.home.seeAll },
+    { key: 'pending',   label: t.applications.pending },
+    { key: 'accepted',  label: t.applications.accepted },
+    { key: 'rejected',  label: t.applications.rejected },
+    { key: 'completed', label: t.applications.completed },
   ];
 
   const STATUS_KEY: Record<number, string> = {
@@ -474,12 +475,44 @@ function WorkerView({ colors }: { colors: any }) {
   );
 }
 
+// ── Guest View ────────────────────────────────────────────────────────────────
+function GuestView({ colors, isDark }: { colors: any; isDark: boolean }) {
+  const { t } = useLanguageStore();
+  return (
+    <View style={styles.guestContainer}>
+      <View style={[styles.guestIconBox, { backgroundColor: colors.primaryLight }]}>
+        <BriefcaseIcon size={40} color={colors.primary} />
+      </View>
+      <Text style={[styles.guestTitle, { color: colors.textPrimary }]}>
+        {t.profile.loginRequired}
+      </Text>
+      <Text style={[styles.guestSubtitle, { color: colors.textSecondary }]}>
+        {t.applications.noApplications}
+      </Text>
+      <TouchableOpacity
+        style={styles.loginBtn}
+        onPress={() => router.push('/auth/login')}
+        activeOpacity={0.85}
+      >
+        <LinearGradient
+          colors={['#15803D', '#16A34A']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          style={styles.loginBtnGradient}
+        >
+          <Text style={styles.loginBtnText}>{t.auth.login}</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ApplicationsScreen() {
-  const { colors } = useThemeStore();
-  const { t }      = useLanguageStore();
-  const role       = useAuthStore((state: AuthState) => state.role);
-  const isEmployer = Number(role) === UserRole.Employer;
+  const { colors, isDark } = useThemeStore();
+  const { t }              = useLanguageStore();
+  const role               = useAuthStore((state: AuthState) => state.role);
+  const token              = useAuthStore((state: AuthState) => state.token);
+  const isEmployer         = Number(role) === UserRole.Employer;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -488,9 +521,12 @@ export default function ApplicationsScreen() {
           {isEmployer ? t.employer.myJobs : t.applications.title}
         </Text>
       </View>
-      {isEmployer
-        ? <EmployerJobsView colors={colors} />
-        : <WorkerView colors={colors} />
+
+      {!token
+        ? <GuestView colors={colors} isDark={isDark} />
+        : isEmployer
+          ? <EmployerJobsView colors={colors} />
+          : <WorkerView colors={colors} />
       }
     </View>
   );
@@ -537,4 +573,18 @@ const styles = StyleSheet.create({
   stateText:       { fontSize: FontSize.sm, textAlign: 'center' },
   retryBtn:        { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg, marginTop: 4 },
   retryText:       { color: '#fff', fontWeight: FontWeight.semiBold, fontSize: FontSize.sm },
+  // Guest styles
+  guestContainer: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: Spacing.xl, gap: Spacing.lg,
+  },
+  guestIconBox: {
+    width: 80, height: 80, borderRadius: BorderRadius.full,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  guestTitle:    { fontSize: FontSize.xl, fontWeight: FontWeight.bold, textAlign: 'center' },
+  guestSubtitle: { fontSize: FontSize.md, textAlign: 'center', lineHeight: 22 },
+  loginBtn:      { width: '100%', borderRadius: BorderRadius.xl, overflow: 'hidden', marginTop: Spacing.sm },
+  loginBtnGradient: { height: 52, alignItems: 'center', justifyContent: 'center' },
+  loginBtnText:  { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: '#FFFFFF' },
 });

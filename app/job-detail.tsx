@@ -53,6 +53,7 @@ export default function JobDetailScreen() {
   const { t } = useLanguageStore();
   const { id } = useLocalSearchParams<{ id: string }>();
   const role       = useAuthStore((state: AuthState) => state.role);
+  const token      = useAuthStore((state: AuthState) => state.token);
   const isEmployer = Number(role) === UserRole.Employer;
 
   const DEFAULT_REQUIREMENTS = [
@@ -84,8 +85,8 @@ export default function JobDetailScreen() {
   const [address,  setAddress]  = useState('');
   const [deadline, setDeadline] = useState('');
 
-  const [isSaved, setIsSaved] = useState(false);
-const [savingJob, setSavingJob] = useState(false);
+  const [isSaved,   setIsSaved]   = useState(false);
+  const [savingJob, setSavingJob] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -93,8 +94,10 @@ const [savingJob, setSavingJob] = useState(false);
         setLoading(true);
         const data = await jobService.getJobById(id);
         setJob(data);
-        const saved = await savedJobService.isJobSaved(id);
-setIsSaved(saved);
+        if (token) {
+          const saved = await savedJobService.isJobSaved(id);
+          setIsSaved(saved);
+        }
       } catch (e: any) {
         setError(e?.message ?? t.common.somethingWentWrong);
       } finally {
@@ -122,20 +125,32 @@ setIsSaved(saved);
   };
 
   const handleToggleSave = async (): Promise<void> => {
-  try {
-    setSavingJob(true);
-    if (isSaved) {
-      await savedJobService.unsaveJob(id);
-      setIsSaved(false);
-    } else {
-      await savedJobService.saveJob(id);
-      setIsSaved(true);
+    if (!token) {
+      Alert.alert(
+        'Login Required',
+        'Please sign in to save jobs.',
+        [
+          { text: 'Login', onPress: () => router.push('/auth/login') },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+      return;
     }
-  } catch {}
-  finally {
-    setSavingJob(false);
-  }
-};
+
+    try {
+      setSavingJob(true);
+      if (isSaved) {
+        await savedJobService.unsaveJob(id);
+        setIsSaved(false);
+      } else {
+        await savedJobService.saveJob(id);
+        setIsSaved(true);
+      }
+    } catch {}
+    finally {
+      setSavingJob(false);
+    }
+  };
 
   const handleApply = async () => {
     let fullCoverLetter = '';
@@ -207,11 +222,11 @@ setIsSaved(saved);
             <BackIcon size={22} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerButton} onPress={handleToggleSave} disabled={savingJob}>
-  {savingJob
-    ? <ActivityIndicator size="small" color="#FFFFFF" />
-    : <HeartIcon size={22} color={isSaved ? '#ef4444' : '#FFFFFF'} />
-  }
-</TouchableOpacity>
+            {savingJob
+              ? <ActivityIndicator size="small" color="#FFFFFF" />
+              : <HeartIcon size={22} color={isSaved ? '#ef4444' : '#FFFFFF'} />
+            }
+          </TouchableOpacity>
         </View>
         <View style={styles.companyLogoLarge}>
           <Text style={styles.companyLogoText}>
@@ -298,7 +313,20 @@ setIsSaved(saved);
         <TouchableOpacity
           style={styles.applyButtonWrapper}
           activeOpacity={0.85}
-          onPress={() => setModalVisible(true)}
+          onPress={() => {
+            if (!token) {
+              Alert.alert(
+                'Login Required',
+                'Please sign in to apply for jobs.',
+                [
+                  { text: 'Login', onPress: () => router.push('/auth/login') },
+                  { text: 'Cancel', style: 'cancel' },
+                ]
+              );
+              return;
+            }
+            setModalVisible(true);
+          }}
         >
           <LinearGradient
             colors={['#15803D', '#16A34A']}
@@ -313,123 +341,123 @@ setIsSaved(saved);
       </View>
 
       <Modal visible={modalVisible} transparent animationType="slide">
-  <View style={styles.modalOverlay}>
-    <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-      {/* Header */}
-      <View style={[styles.modalTopBar, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-          {isEmployer ? 'Ishchi topish' : 'Ariza yuborish'}
-        </Text>
-        <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }}>
-          <Text style={{ fontSize: 22, color: colors.textSecondary }}>✕</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
-        {job.title} — {job.employerName}
-      </Text>
-
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {isEmployer ? (
-          <>
-            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Byudjet (so'm)</Text>
-            <TextInput
-              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="Masalan: 5 000 000"
-              placeholderTextColor={colors.textTertiary}
-              value={budget}
-              onChangeText={setBudget}
-              keyboardType="numeric"
-            />
-            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
-              Manzil <Text style={{ color: '#EF4444' }}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="Masalan: Toshkent, Chilonzor"
-              placeholderTextColor={colors.textTertiary}
-              value={address}
-              onChangeText={setAddress}
-            />
-            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Muddat</Text>
-            <TextInput
-              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="Masalan: 2 hafta"
-              placeholderTextColor={colors.textTertiary}
-              value={deadline}
-              onChangeText={setDeadline}
-            />
-          </>
-        ) : (
-          <>
-            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
-              O'zingiz haqida <Text style={{ color: '#EF4444' }}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border, minHeight: 100 }]}
-              placeholder="Tajribangiz, ko'nikmalaringiz haqida yozing..."
-              placeholderTextColor={colors.textTertiary}
-              value={coverLetter}
-              onChangeText={setCoverLetter}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Tajriba</Text>
-            <TextInput
-              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="Masalan: 2 yil"
-              placeholderTextColor={colors.textTertiary}
-              value={experience}
-              onChangeText={setExperience}
-            />
-            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Telefon</Text>
-            <TextInput
-              style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="+998 xx xxx xx xx"
-              placeholderTextColor={colors.textTertiary}
-              value={workerPhone}
-              onChangeText={setWorkerPhone}
-              keyboardType="phone-pad"
-            />
-            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>CV yuklash</Text>
-            <TouchableOpacity
-              style={[styles.cvPickerBtn, { backgroundColor: colors.background, borderColor: cvUri ? colors.primary : colors.border }]}
-              onPress={handlePickCv}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.cvPickerText, { color: cvUri ? colors.primary : colors.textTertiary }]}>
-                {cvUri ? cvName : 'PDF yoki Word fayl tanlang'}
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            {/* Header */}
+            <View style={[styles.modalTopBar, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+                {isEmployer ? 'Ishchi topish' : 'Ariza yuborish'}
               </Text>
-            </TouchableOpacity>
-          </>
-        )}
+              <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }}>
+                <Text style={{ fontSize: 22, color: colors.textSecondary }}>✕</Text>
+              </TouchableOpacity>
+            </View>
 
-        <View style={styles.modalButtons}>
-          <TouchableOpacity
-            style={[styles.modalBtn, { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1 }]}
-            onPress={() => { setModalVisible(false); resetForm(); }}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>Bekor qilish</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modalBtn, { backgroundColor: '#16A34A' }]}
-            onPress={handleApply}
-            activeOpacity={0.85}
-            disabled={applying}
-          >
-            {applying
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={[styles.modalBtnText, { color: '#fff' }]}>Yuborish</Text>
-            }
-          </TouchableOpacity>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+              {job.title} — {job.employerName}
+            </Text>
+
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {isEmployer ? (
+                <>
+                  <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Byudjet (so'm)</Text>
+                  <TextInput
+                    style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                    placeholder="Masalan: 5 000 000"
+                    placeholderTextColor={colors.textTertiary}
+                    value={budget}
+                    onChangeText={setBudget}
+                    keyboardType="numeric"
+                  />
+                  <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                    Manzil <Text style={{ color: '#EF4444' }}>*</Text>
+                  </Text>
+                  <TextInput
+                    style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                    placeholder="Masalan: Toshkent, Chilonzor"
+                    placeholderTextColor={colors.textTertiary}
+                    value={address}
+                    onChangeText={setAddress}
+                  />
+                  <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Muddat</Text>
+                  <TextInput
+                    style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                    placeholder="Masalan: 2 hafta"
+                    placeholderTextColor={colors.textTertiary}
+                    value={deadline}
+                    onChangeText={setDeadline}
+                  />
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                    O'zingiz haqida <Text style={{ color: '#EF4444' }}>*</Text>
+                  </Text>
+                  <TextInput
+                    style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border, minHeight: 100 }]}
+                    placeholder="Tajribangiz, ko'nikmalaringiz haqida yozing..."
+                    placeholderTextColor={colors.textTertiary}
+                    value={coverLetter}
+                    onChangeText={setCoverLetter}
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                  />
+                  <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Tajriba</Text>
+                  <TextInput
+                    style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                    placeholder="Masalan: 2 yil"
+                    placeholderTextColor={colors.textTertiary}
+                    value={experience}
+                    onChangeText={setExperience}
+                  />
+                  <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Telefon</Text>
+                  <TextInput
+                    style={[styles.coverInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                    placeholder="+998 xx xxx xx xx"
+                    placeholderTextColor={colors.textTertiary}
+                    value={workerPhone}
+                    onChangeText={setWorkerPhone}
+                    keyboardType="phone-pad"
+                  />
+                  <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>CV yuklash</Text>
+                  <TouchableOpacity
+                    style={[styles.cvPickerBtn, { backgroundColor: colors.background, borderColor: cvUri ? colors.primary : colors.border }]}
+                    onPress={handlePickCv}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.cvPickerText, { color: cvUri ? colors.primary : colors.textTertiary }]}>
+                      {cvUri ? cvName : 'PDF yoki Word fayl tanlang'}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalBtn, { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1 }]}
+                  onPress={() => { setModalVisible(false); resetForm(); }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>Bekor qilish</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalBtn, { backgroundColor: '#16A34A' }]}
+                  onPress={handleApply}
+                  activeOpacity={0.85}
+                  disabled={applying}
+                >
+                  {applying
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text style={[styles.modalBtnText, { color: '#fff' }]}>Yuborish</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+              <View style={{ height: 24 }} />
+            </ScrollView>
+          </View>
         </View>
-        <View style={{ height: 24 }} />
-      </ScrollView>
-    </View>
-  </View>
-</Modal>
+      </Modal>
     </View>
   );
 }
@@ -507,9 +535,9 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
   },
   modalContent: {
-  borderTopLeftRadius: 24, borderTopRightRadius: 24,
-  padding: Spacing.xl,
-},
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: Spacing.xl,
+  },
   modalTitle:    { fontSize: FontSize.xl, fontWeight: FontWeight.bold },
   modalSubtitle: { fontSize: FontSize.sm, marginBottom: Spacing.sm },
   coverInput: {
@@ -526,7 +554,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderRadius: BorderRadius.lg, borderStyle: 'dashed',
     padding: Spacing.md, minHeight: 52, alignItems: 'center', justifyContent: 'center',
   },
-
   cvPickerText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
   modalTopBar: {
     flexDirection: 'row', justifyContent: 'space-between',

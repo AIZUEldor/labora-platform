@@ -22,14 +22,10 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading) {
-      if (token) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/auth/login');
-      }
-    }
-  }, [token, isLoading]);
+  if (!isLoading) {
+    router.replace('/(tabs)');
+  }
+}, [isLoading]);
 
   useEffect(() => {
     if (!token) return;

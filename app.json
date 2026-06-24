@@ -15,10 +15,14 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.aizue.labora",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+  "NSPhotoLibraryUsageDescription": "ALP Jobs uses your photo library so you can upload a profile photo, CV/resume, or job-related documents when editing your profile or applying for a job.",
+  "NSLocationWhenInUseUsageDescription": "ALP Jobs uses your location to show job vacancies near you on the map, for example jobs close to your current area.",
+  "NSLocationAlwaysAndWhenInUseUsageDescription": "ALP Jobs uses your location to show job vacancies near you on the map, for example jobs close to your current area.",
+  "ITSAppUsesNonExemptEncryption": false
+}
+
     },
     "android": {
       "adaptiveIcon": {

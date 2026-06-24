@@ -8,6 +8,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthStore, AuthState } from '../../store/authStore';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 import Svg, { Path } from 'react-native-svg';
 import { jobService } from '../../services/jobService';
 import { categoryService } from '../../services/categoryService';
@@ -29,49 +31,105 @@ const JOB_TYPE_LABEL: Record<string, string> = {
 
 export default function CreateJobScreen() {
   const { colors, isDark } = useThemeStore();
+  const { t }              = useLanguageStore();
+  const token              = useAuthStore((state: AuthState) => state.token);
 
   const [title,       setTitle]       = useState('');
   const [description, setDescription] = useState('');
   const [salary,      setSalary]      = useState('');
-  const [location,    setLocation]    = useState('');
+  const [city,        setCity]        = useState('');
+  const [country,     setCountry]     = useState('');
   const [categoryId,  setCategoryId]  = useState('');
+  const [categoryName,setCategoryName]= useState('');
   const [jobType,     setJobType]     = useState('FullTime');
   const [categories,  setCategories]  = useState<Category[]>([]);
   const [loading,     setLoading]     = useState(false);
   const [catLoading,  setCatLoading]  = useState(true);
 
   useEffect(() => {
+    if (!token) return;
     const load = async () => {
       try {
         const cats = await categoryService.getCategories();
         setCategories(cats);
-        if (cats.length > 0) setCategoryId(cats[0].id);
+        if (cats.length > 0) {
+          setCategoryId(cats[0].id);
+          setCategoryName(cats[0].name);
+        }
       } finally {
         setCatLoading(false);
       }
     };
     load();
-  }, []);
+  }, [token]);
+
+  // ── Guest mode ──────────────────────────────────────────────
+  if (!token) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <LinearGradient
+          colors={isDark ? ['#14532D', '#15803D'] : ['#15803D', '#22C55E']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={styles.gradientHeader}
+        >
+          <View style={styles.headerTop}>
+            <View style={{ width: 40 }} />
+            <Text style={styles.headerTitle}>{t.employer.postJob}</Text>
+            <View style={{ width: 40 }} />
+          </View>
+        </LinearGradient>
+
+        <View style={styles.guestContainer}>
+          <Text style={[styles.guestTitle, { color: colors.textPrimary }]}>
+            {t.profile.loginRequired}
+          </Text>
+          <Text style={[styles.guestSubtitle, { color: colors.textSecondary }]}>
+            {t.profile.loginToSeeProfile}
+          </Text>
+          <TouchableOpacity
+            style={styles.loginBtn}
+            onPress={() => router.push('/auth/login')}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['#15803D', '#16A34A']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.loginBtnGradient}
+            >
+              <Text style={styles.loginBtnText}>{t.auth.login}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+  // ────────────────────────────────────────────────────────────
 
   const handleCreate = async () => {
-    if (!title.trim() || !description.trim() || !location.trim()) {
-      Alert.alert('Xatolik', "Barcha majburiy maydonlarni to'ldiring");
+    if (!title.trim() || !description.trim() || !city.trim()) {
+      Alert.alert(t.common.error, "Barcha majburiy maydonlarni to'ldiring");
       return;
     }
     try {
       setLoading(true);
       await jobService.createJob({
-        title:       title.trim(),
-        description: description.trim(),
-        salary:      salary ? Number(salary) : 0,
-        location:    location.trim(),
+        title:        title.trim(),
+        description:  description.trim(),
+        salary:       salary ? Number(salary) : 0,
+        jobType:      JOB_TYPES.indexOf(jobType),
         categoryId,
+        categoryName,
+        city:         city.trim(),
+        country:      country.trim() || 'Uzbekistan',
       });
-      Alert.alert('Muvaffaqiyat', "Ish e'loni joylashtirildi!", [
-        { text: 'OK', onPress: () => { setTitle(''); setDescription(''); setSalary(''); setLocation(''); } },
+      Alert.alert(t.common.success, "Ish e'loni joylashtirildi!", [
+        { text: t.common.ok, onPress: () => {
+          setTitle(''); setDescription(''); setSalary('');
+          setCity(''); setCountry('');
+        }},
       ]);
     } catch (e: any) {
-      Alert.alert('Xatolik', e?.message ?? 'Xatolik yuz berdi');
+      Alert.alert(t.common.error, e?.message ?? t.common.somethingWentWrong);
     } finally {
       setLoading(false);
     }
@@ -135,15 +193,27 @@ export default function CreateJobScreen() {
           />
         </View>
 
-        {/* Location */}
+        {/* City */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Joylashuv *</Text>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>Shahar *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
             placeholder="Masalan: Toshkent"
             placeholderTextColor={colors.textTertiary}
-            value={location}
-            onChangeText={setLocation}
+            value={city}
+            onChangeText={setCity}
+          />
+        </View>
+
+        {/* Country */}
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>Mamlakat</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
+            placeholder="Masalan: Uzbekistan"
+            placeholderTextColor={colors.textTertiary}
+            value={country}
+            onChangeText={setCountry}
           />
         </View>
 
@@ -185,7 +255,7 @@ export default function CreateJobScreen() {
                 return (
                   <TouchableOpacity
                     key={cat.id}
-                    onPress={() => setCategoryId(cat.id)}
+                    onPress={() => { setCategoryId(cat.id); setCategoryName(cat.name); }}
                     style={[
                       styles.chip,
                       { borderColor: colors.border, backgroundColor: colors.card },
@@ -263,4 +333,14 @@ const styles = StyleSheet.create({
   submitWrapper: { borderRadius: BorderRadius.lg, overflow: 'hidden', ...Shadow.md },
   submitButton:  { height: 54, alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius.lg },
   submitText:    { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#fff' },
+  // Guest styles
+  guestContainer: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: Spacing.xl, gap: Spacing.lg,
+  },
+  guestTitle:       { fontSize: FontSize.xl, fontWeight: FontWeight.bold, textAlign: 'center' },
+  guestSubtitle:    { fontSize: FontSize.md, textAlign: 'center', lineHeight: 22 },
+  loginBtn:         { width: '100%', borderRadius: BorderRadius.xl, overflow: 'hidden', marginTop: Spacing.sm },
+  loginBtnGradient: { height: 52, alignItems: 'center', justifyContent: 'center' },
+  loginBtnText:     { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: '#FFFFFF' },
 });

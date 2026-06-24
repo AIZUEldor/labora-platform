@@ -16,7 +16,7 @@ import {
   LockIcon, HelpIcon, LogoutIcon, SunIcon,
   MoonIcon, ChevronRightIcon, CameraIcon,
   ApplicationsIcon, BriefcaseIcon,
-  InstagramIcon, TelegramIcon,TrashIcon,
+  InstagramIcon, TelegramIcon, TrashIcon,
 } from '../../components/icons';
 import { userService } from '../../services/userService';
 import { jobApplicationService } from '../../services/jobApplicationService';
@@ -48,16 +48,17 @@ export default function ProfileScreen() {
   const { t } = useLanguageStore();
   const logout     = useAuthStore((state: AuthState) => state.logout);
   const role       = useAuthStore((state: AuthState) => state.role);
+  const token      = useAuthStore((state: AuthState) => state.token);
   const isEmployer = Number(role) === UserRole.Employer;
 
   const WORKER_MENU = [
-    { icon: 'edit',         label: t.profile.editProfile,   route: '/edit-profile' },
-    { icon: 'applications', label: t.applications.title,    route: '/(tabs)/applications' },
-    { icon: 'heart',        label: t.profile.savedJobs,     route: '/saved-jobs' },
-    { icon: 'star',         label: t.profile.reviews,       route: '/my-reviews' },
-    { icon: 'bell',         label: t.notifications.title,   route: '/notifications' },
+    { icon: 'edit',         label: t.profile.editProfile,    route: '/edit-profile' },
+    { icon: 'applications', label: t.applications.title,     route: '/(tabs)/applications' },
+    { icon: 'heart',        label: t.profile.savedJobs,      route: '/saved-jobs' },
+    { icon: 'star',         label: t.profile.reviews,        route: '/my-reviews' },
+    { icon: 'bell',         label: t.notifications.title,    route: '/notifications' },
     { icon: 'lock',         label: t.profile.changePassword, route: '/change-password' },
-    { icon: 'help',         label: t.profile.help,          route: '/help' },
+    { icon: 'help',         label: t.profile.help,           route: '/help' },
   ];
 
   const EMPLOYER_MENU = [
@@ -78,6 +79,11 @@ export default function ProfileScreen() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const load = useCallback(async () => {
+    if (!token) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     try {
       if (isEmployer) {
         const [prof, jobs] = await Promise.all([
@@ -101,13 +107,13 @@ export default function ProfileScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isEmployer]);
+  }, [isEmployer, token]);
 
- useFocusEffect(
-  React.useCallback(() => {
-    load();
-  }, [load])
-);
+  useFocusEffect(
+    React.useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
@@ -121,10 +127,7 @@ export default function ProfileScreen() {
       t.profile.deleteAccountTitle,
       t.profile.deleteAccountMessage,
       [
-        {
-          text: t.profile.cancel,
-          style: 'cancel',
-        },
+        { text: t.profile.cancel, style: 'cancel' },
         {
           text: t.profile.deleteAccountConfirm,
           style: 'destructive',
@@ -134,10 +137,7 @@ export default function ProfileScreen() {
               await logout();
               router.replace('/auth/login');
             } catch (error: any) {
-              Alert.alert(
-                t.common.error,
-                error?.message ?? t.profile.deleteAccountError
-              );
+              Alert.alert(t.common.error, error?.message ?? t.profile.deleteAccountError);
             }
           },
         },
@@ -202,6 +202,82 @@ export default function ProfileScreen() {
       </View>
     );
   }
+
+  // ── Guest mode ──────────────────────────────────────────────
+  if (!token) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <LinearGradient
+          colors={isDark ? ['#14532D', '#15803D'] : ['#15803D', '#22C55E']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={styles.gradientHeader}
+        >
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>?</Text>
+          </View>
+          <Text style={styles.userName}>{t.profile.guest}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleText}>{t.profile.guestRole}</Text>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.guestContainer}>
+          <Text style={[styles.guestTitle, { color: colors.textPrimary }]}>
+            {t.profile.loginRequired}
+          </Text>
+          <Text style={[styles.guestSubtitle, { color: colors.textSecondary }]}>
+            {t.profile.loginToSeeProfile}
+          </Text>
+          <TouchableOpacity
+            style={styles.loginBtn}
+            onPress={() => router.push('/auth/login')}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['#15803D', '#16A34A']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.loginBtnGradient}
+            >
+              <Text style={styles.loginBtnText}>{t.auth.login}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.registerBtn, { borderColor: colors.primary }]}
+            onPress={() => router.push('/auth/register')}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.registerBtnText, { color: colors.primary }]}>
+              {t.auth.register}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Theme + Language still available for guests */}
+        <View style={[styles.themeCard, { backgroundColor: colors.card, ...Shadow.sm }]}>
+          <View style={styles.themeLeft}>
+            {isDark
+              ? <MoonIcon size={22} color={colors.primary} />
+              : <SunIcon  size={22} color={colors.primary} />
+            }
+            <Text style={[styles.themeLabel, { color: colors.textPrimary }]}>
+              {isDark ? t.profile.darkMode : t.profile.lightMode}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.toggleButton, { backgroundColor: isDark ? colors.primary : colors.border }]}
+            onPress={toggleTheme} activeOpacity={0.8}
+          >
+            <View style={[styles.toggleCircle, { transform: [{ translateX: isDark ? 20 : 2 }] }]} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.themeCard, { backgroundColor: colors.card, ...Shadow.sm }]}>
+          <LanguagePicker />
+        </View>
+      </View>
+    );
+  }
+  // ────────────────────────────────────────────────────────────
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -392,7 +468,6 @@ export default function ProfileScreen() {
               <InstagramIcon size={22} color="#E1306C" />
               <Text style={[styles.socialLabel, { color: '#E1306C' }]}>Instagram</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={[styles.socialBtn, { backgroundColor: '#0088cc18' }]}
               onPress={() => Linking.openURL('https://t.me/topilovasi')}
@@ -405,18 +480,16 @@ export default function ProfileScreen() {
         </View>
 
         {/* Logout */}
-<TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
-  <LogoutIcon size={22} color="#DC2626" />
-  <Text style={styles.logoutText}>{t.profile.logout}</Text>
-</TouchableOpacity>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
+          <LogoutIcon size={22} color="#DC2626" />
+          <Text style={styles.logoutText}>{t.profile.logout}</Text>
+        </TouchableOpacity>
 
         {/* Delete Account */}
-<TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount} activeOpacity={0.85}>
-  <TrashIcon size={22} color="#991B1B" />
-  <Text style={styles.deleteText}>{t.profile.deleteAccount}</Text>
-</TouchableOpacity>
-
-        
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount} activeOpacity={0.85}>
+          <TrashIcon size={22} color="#991B1B" />
+          <Text style={styles.deleteText}>{t.profile.deleteAccount}</Text>
+        </TouchableOpacity>
 
         <View style={{ height: Spacing.xxxl }} />
       </ScrollView>
@@ -462,6 +535,22 @@ const styles = StyleSheet.create({
   statValue:   { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: '#FFFFFF' },
   statLabel:   { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.8)', fontWeight: FontWeight.medium },
   statDivider: { width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.3)' },
+  // Guest styles
+  guestContainer: {
+    alignItems: 'center', paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xxxl, gap: Spacing.md,
+  },
+  guestTitle:    { fontSize: FontSize.xl, fontWeight: FontWeight.bold, textAlign: 'center' },
+  guestSubtitle: { fontSize: FontSize.md, textAlign: 'center', lineHeight: 22 },
+  loginBtn:      { width: '100%', borderRadius: BorderRadius.xl, overflow: 'hidden', marginTop: Spacing.md },
+  loginBtnGradient: { height: 52, alignItems: 'center', justifyContent: 'center' },
+  loginBtnText:  { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: '#FFFFFF' },
+  registerBtn: {
+    width: '100%', height: 52, borderRadius: BorderRadius.xl,
+    borderWidth: 1.5, alignItems: 'center', justifyContent: 'center',
+  },
+  registerBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.semiBold },
+  // Rest
   cvBtn: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
@@ -495,54 +584,29 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: BorderRadius.md,
     alignItems: 'center', justifyContent: 'center',
   },
-  menuLabel:    { flex: 1, fontSize: FontSize.md, fontWeight: FontWeight.medium },
+  menuLabel:  { flex: 1, fontSize: FontSize.md, fontWeight: FontWeight.medium },
   socialCard: {
-    marginHorizontal: Spacing.xl,
-    marginTop: Spacing.lg,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+    marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
+    borderRadius: BorderRadius.xl, padding: Spacing.lg,
   },
   socialTitle: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    marginBottom: Spacing.md,
-    textAlign: 'center',
+    fontSize: FontSize.sm, fontWeight: FontWeight.medium,
+    marginBottom: Spacing.md, textAlign: 'center',
   },
-  socialRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
+  socialRow:   { flexDirection: 'row', gap: Spacing.md },
   socialBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.lg,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.sm, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg,
   },
-  socialLabel: {
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.semiBold,
-  },
+  socialLabel: { fontSize: FontSize.md, fontWeight: FontWeight.semiBold },
   deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: Spacing.xl,
-    marginTop: Spacing.lg,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    gap: Spacing.sm,
-    backgroundColor: '#FEE2E2',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
+    borderRadius: BorderRadius.xl, padding: Spacing.lg,
+    gap: Spacing.sm, backgroundColor: '#FEE2E2',
+    borderWidth: 1, borderColor: '#FCA5A5',
   },
-  deleteText: {
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.semiBold,
-    color: '#991B1B',
-  },
+  deleteText: { fontSize: FontSize.md, fontWeight: FontWeight.semiBold, color: '#991B1B' },
   logoutButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
