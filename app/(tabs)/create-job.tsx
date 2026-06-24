@@ -12,6 +12,7 @@ import Svg, { Path } from 'react-native-svg';
 import { jobService } from '../../services/jobService';
 import { categoryService } from '../../services/categoryService';
 import { Category } from '../../types';
+import { useAuthStore, AuthState } from '../../store/authStore';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
   return (
@@ -29,7 +30,8 @@ const JOB_TYPE_LABEL: Record<string, string> = {
 
 export default function CreateJobScreen() {
   const { colors, isDark } = useThemeStore();
-
+  
+  const token = useAuthStore((state: AuthState) => state.token);
   const [title,       setTitle]       = useState('');
   const [description, setDescription] = useState('');
   const [salary,      setSalary]      = useState('');
@@ -42,6 +44,7 @@ export default function CreateJobScreen() {
 
   useEffect(() => {
     const load = async () => {
+
       try {
         const cats = await categoryService.getCategories();
         setCategories(cats);
@@ -61,12 +64,14 @@ export default function CreateJobScreen() {
     try {
       setLoading(true);
       await jobService.createJob({
-        title:       title.trim(),
-        description: description.trim(),
-        salary:      salary ? Number(salary) : 0,
-        location:    location.trim(),
-        categoryId,
-      });
+  title: title.trim(),
+  description: description.trim(),
+  salary: salary ? Number(salary) : 0,
+  jobType: 0,
+  categoryId,
+  city: location.trim(),
+  country: 'Uzbekistan',
+});
       Alert.alert('Muvaffaqiyat', "Ish e'loni joylashtirildi!", [
         { text: 'OK', onPress: () => { setTitle(''); setDescription(''); setSalary(''); setLocation(''); } },
       ]);
@@ -76,6 +81,32 @@ export default function CreateJobScreen() {
       setLoading(false);
     }
   };
+
+  if (!token) {
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl }}>
+        <Text style={{ fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: colors.textPrimary, marginBottom: Spacing.sm }}>
+          Login Required
+        </Text>
+
+        <Text style={{ fontSize: FontSize.md, color: colors.textSecondary, textAlign: 'center', marginBottom: Spacing.xl }}>
+          Please login to post a job vacancy.
+        </Text>
+
+        <TouchableOpacity
+          style={{ backgroundColor: colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg }}
+          onPress={() => router.push('/auth/login')}
+          activeOpacity={0.85}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: FontSize.md, fontWeight: FontWeight.bold }}>
+            Login
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

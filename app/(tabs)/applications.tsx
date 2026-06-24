@@ -288,10 +288,52 @@ function WorkerApplicationsView({ colors }: { colors: any }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ApplicationsScreen() {
+  const token = useAuthStore((state: AuthState) => state.token);
   const { colors } = useThemeStore();
   const { t } = useLanguageStore();
   const role       = useAuthStore((state: AuthState) => state.role);
   const isEmployer = Number(role) === UserRole.Employer;
+  
+  if (!token) {
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.centerBox}>
+        <Text
+          style={[
+            styles.headerTitle,
+            { color: colors.textPrimary, textAlign: 'center' }
+          ]}
+        >
+          Login Required
+        </Text>
+
+        <Text
+          style={[
+            styles.stateText,
+            {
+              color: colors.textSecondary,
+              marginHorizontal: 30,
+            }
+          ]}
+        >
+          Login to view your applications and manage your jobs.
+        </Text>
+
+        <TouchableOpacity
+          style={[
+            styles.retryBtn,
+            { backgroundColor: colors.primary }
+          ]}
+          onPress={() => router.push('/auth/login')}
+        >
+          <Text style={styles.retryText}>
+            Login
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

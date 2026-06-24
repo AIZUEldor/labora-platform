@@ -158,29 +158,42 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
 
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, ...Shadow.sm }]}>
-        <View>
-          <Text style={[styles.greeting, { color: colors.textSecondary }]}>
-            {t.home.greeting}, {firstName || t.common.noData}!
-          </Text>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-            {t.home.findJob}
-          </Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={[styles.iconButton, { backgroundColor: colors.primaryLight }]}
-            onPress={toggleTheme} activeOpacity={0.8}
-          >
-            {isDark
-              ? <SunIcon size={20} color={colors.primary} />
-              : <MoonIcon size={20} color={colors.primary} />}
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.primaryLight }]}>
-            <BellIcon size={20} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-      </View>
+<View style={[styles.header, { backgroundColor: colors.surface, ...Shadow.sm }]}>
+  <View>
+    <Text style={[styles.greeting, { color: colors.textSecondary }]}>
+      {firstName ? `${t.home.greeting}, ${firstName}!` : t.home.greeting}
+    </Text>
+    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+      {t.home.findJob}
+    </Text>
+  </View>
+  <View style={styles.headerRight}>
+    {!firstName && (
+      <TouchableOpacity
+        style={[styles.iconButton, { backgroundColor: colors.primaryLight }]}
+        onPress={() => router.push('/auth/login')}
+        activeOpacity={0.8}
+      >
+        <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>
+          Kirish
+        </Text>
+      </TouchableOpacity>
+    )}
+    <TouchableOpacity
+      style={[styles.iconButton, { backgroundColor: colors.primaryLight }]}
+      onPress={toggleTheme} activeOpacity={0.8}
+    >
+      {isDark
+        ? <SunIcon size={20} color={colors.primary} />
+        : <MoonIcon size={20} color={colors.primary} />}
+    </TouchableOpacity>
+    {firstName && (
+      <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.primaryLight }]}>
+        <BellIcon size={20} color={colors.primary} />
+      </TouchableOpacity>
+    )}
+  </View>
+</View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}

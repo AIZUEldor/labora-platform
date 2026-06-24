@@ -52,6 +52,7 @@ export default function JobDetailScreen() {
   const { t } = useLanguageStore();
   const { id } = useLocalSearchParams<{ id: string }>();
   const role       = useAuthStore((state: AuthState) => state.role);
+  const token      = useAuthStore((state: AuthState) => state.token);
   const isEmployer = Number(role) === UserRole.Employer;
 
   const DEFAULT_REQUIREMENTS = [
@@ -114,6 +115,25 @@ export default function JobDetailScreen() {
     setCvUri(result.assets[0].uri);
     setCvName(result.assets[0].name);
   };
+
+  if (!token) {
+  Alert.alert(
+    'Login Required',
+    'Please login to apply for this job.',
+    [
+      {
+        text: 'Login',
+        onPress: () => router.push('/auth/login'),
+      },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]
+  );
+
+  return;
+}
 
   const handleApply = async () => {
     let fullCoverLetter = '';
@@ -184,7 +204,15 @@ export default function JobDetailScreen() {
           <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
             <BackIcon size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => {
+              if (!token) {
+                router.push('/auth/login');
+                return;
+              }
+            }}
+          >
             <HeartIcon size={22} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -273,7 +301,13 @@ export default function JobDetailScreen() {
         <TouchableOpacity
           style={styles.applyButtonWrapper}
           activeOpacity={0.85}
-          onPress={() => setModalVisible(true)}
+          onPress={() => {
+            if (!token) {
+              router.push('/auth/login');
+              return;
+            }
+            setModalVisible(true);
+          }}
         >
           <LinearGradient
             colors={['#15803D', '#16A34A']}

@@ -44,6 +44,7 @@ export default function ProfileScreen() {
   const { colors, isDark, toggleTheme } = useThemeStore();
   const { t } = useLanguageStore();
   const logout     = useAuthStore((state: AuthState) => state.logout);
+  const token      = useAuthStore((state: AuthState) => state.token);
   const role       = useAuthStore((state: AuthState) => state.role);
   const isEmployer = Number(role) === UserRole.Employer;
 
@@ -75,7 +76,13 @@ export default function ProfileScreen() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const load = useCallback(async () => {
-    try {
+  if (!token) {
+    setLoading(false);
+    setRefreshing(false);
+    return;
+  }
+
+  try {
       if (isEmployer) {
         const [prof, jobs] = await Promise.all([
           userService.getProfile(),
@@ -98,7 +105,7 @@ export default function ProfileScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isEmployer]);
+  }, [isEmployer, token]);
 
   useEffect(() => { load(); }, []);
 
@@ -168,6 +175,32 @@ export default function ProfileScreen() {
       </View>
     );
   }
+
+  if (!token) {
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl }}>
+        <Text style={{ fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: colors.textPrimary, marginBottom: Spacing.sm }}>
+          Profilga kirish
+        </Text>
+
+        <Text style={{ fontSize: FontSize.md, color: colors.textSecondary, textAlign: 'center', marginBottom: Spacing.xl }}>
+          Profil, arizalar, CV yuklash va ishga ariza topshirish uchun login qiling.
+        </Text>
+
+        <TouchableOpacity
+          style={{ backgroundColor: colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg }}
+          onPress={() => router.push('/auth/login')}
+          activeOpacity={0.85}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: FontSize.md, fontWeight: FontWeight.bold }}>
+            Login qilish
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

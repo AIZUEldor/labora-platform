@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Labora",
+    "name": "ALP Jobs",
     "slug": "labora-mobile",
     "version": "1.0.0",
-    "scheme": "labora",
+    "scheme": "alp",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -14,7 +14,13 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aizue.labora"
+      "bundleIdentifier": "com.aizue.labora",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "ALP Jobs uses your photo library so you can upload a profile photo, CV/resume, or job-related documents.",
+        "NSLocationWhenInUseUsageDescription": "ALP Jobs uses your location to show nearby job vacancies and help you find jobs around your area.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "ALP Jobs uses your location to show nearby job vacancies and help you find jobs around your area.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {

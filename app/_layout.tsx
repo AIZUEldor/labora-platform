@@ -18,40 +18,37 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!isLoading) {
-      if (token) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/auth/login');
-      }
+      // Guest mode: har doim tabs ga yo'naltiramiz
+      // Login qilgan bo'lsa ham, qilmagan bo'lsa ham
+      router.replace('/(tabs)');
     }
-  }, [token, isLoading]);
+  }, [isLoading]);
 
   useEffect(() => {
-  if (!token) return;
+    if (!token) return;
 
-  const registerPush = async (): Promise<void> => {
-    try {
-      const pushToken = await pushNotificationService.registerForPushNotifications();
-      if (pushToken) {
-        await pushNotificationService.registerTokenToServer(pushToken);
+    const registerPush = async (): Promise<void> => {
+      try {
+        const pushToken = await pushNotificationService.registerForPushNotifications();
+        if (pushToken) {
+          await pushNotificationService.registerTokenToServer(pushToken);
+        }
+      } catch {
+        // silent fail
       }
-    } catch {
-      // silent fail
-    }
-  };
+    };
 
-  registerPush();
+    registerPush();
 
-  // Bildirishnomaga bosganda navigate qilish
-  const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-    const data = response.notification.request.content.data as any;
-    if (data?.referenceId) {
-      router.push(`/job-detail?id=${data.referenceId}`);
-    }
-  });
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data as any;
+      if (data?.referenceId) {
+        router.push(`/job-detail?id=${data.referenceId}`);
+      }
+    });
 
-  return () => subscription.remove();
-}, [token]);
+    return () => subscription.remove();
+  }, [token]);
 
   return (
     <>
