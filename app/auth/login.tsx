@@ -45,18 +45,17 @@ export default function LoginScreen() {
 });
 
 await login(response.token, response.role, response.firstName, response.lastName);
-router.replace('/(tabs)');
+router.back();
     } catch (error: any) {
   const message =
     error?.response?.data?.message ||
     error?.response?.data?.title ||
     error?.message ||
-    'Noma’lum xatolik';
+    "Noma'lum xatolik";
 
   Alert.alert('Xato', message);
-} finally {
-      setIsLoading(false);
-    }
+  setIsLoading(false);
+}
   };
 
   return (

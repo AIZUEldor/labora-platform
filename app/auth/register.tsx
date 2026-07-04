@@ -56,14 +56,13 @@ export default function RegisterScreen() {
         role,
       });
       await login(response.token, response.role, response.firstName, response.lastName);
-      router.replace('/(tabs)');
+      router.back();
     } catch (error: any) {
       const data = error.response?.data;
       const message = Array.isArray(data)
         ? data.join('\n')
         : data?.message ?? error.message ?? t.common.somethingWentWrong;
       Alert.alert('Xato', message);
-    } finally {
       setIsLoading(false);
     }
   };
