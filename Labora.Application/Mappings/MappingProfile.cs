@@ -2,6 +2,7 @@
 using Labora.Application.DTOs.Applications;
 using Labora.Application.DTOs.Categories;
 using Labora.Application.DTOs.Jobs;
+using Labora.Application.DTOs.Payments;
 using Labora.Application.DTOs.Reviews;
 using Labora.Application.DTOs.Transactions;
 using Labora.Application.DTOs.Users;
@@ -54,6 +55,10 @@ public class MappingProfile : Profile
         // Transaction mappings
         CreateMap<Transaction, TransactionResponseDto>();
         CreateMap<TransactionRequestDto, Transaction>();
+
+        // PaymentOrder mappings
+        CreateMap<PaymentOrder, PaymentOrderResponseDto>();
+        CreateMap<CreateTopUpRequestDto, PaymentOrder>();
 
         // Review mappings
         CreateMap<Review, ReviewResponseDto>()
