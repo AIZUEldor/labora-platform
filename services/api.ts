@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { useAuthStore } from '../store/authStore';
 
 const BASE_URL = 'https://labora-api.onrender.com/api';
 export const MEDIA_URL = 'https://labora-api.onrender.com';
@@ -49,8 +50,7 @@ api.interceptors.response.use(
       error?.response?.data
     );
     if (error.response?.status === 401) {
-      await SecureStore.deleteItemAsync('access_token');
-      await SecureStore.deleteItemAsync('user_role');
+      await useAuthStore.getState().logout();
     }
     const message = error.response?.data?.message
       || error.response?.data

@@ -56,7 +56,7 @@ export default function RegisterScreen() {
         role,
       });
       await login(response.token, response.role, response.firstName, response.lastName);
-      router.back();
+      router.replace('/(tabs)');
     } catch (error: any) {
       const data = error.response?.data;
       const message = Array.isArray(data)

@@ -19,6 +19,7 @@ public class TransactionController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] TransactionRequestDto request)
     {
         Guid userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

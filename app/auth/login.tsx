@@ -45,7 +45,7 @@ export default function LoginScreen() {
 });
 
 await login(response.token, response.role, response.firstName, response.lastName);
-router.back();
+router.replace('/(tabs)');
     } catch (error: any) {
   const message =
     error?.response?.data?.message ||
