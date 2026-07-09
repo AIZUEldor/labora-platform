@@ -15,6 +15,7 @@ public class LaboaDbContext : DbContext
     public DbSet<JobApplication> JobApplications { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<PaymentOrder> PaymentOrders { get; set; }
     public DbSet<Review> Reviews { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<UserPreference> UserPreferences { get; set; }
@@ -103,6 +104,18 @@ public class LaboaDbContext : DbContext
             entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
             entity.HasOne(e => e.User)
                 .WithMany(u => u.Transactions)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // PaymentOrder
+        modelBuilder.Entity<PaymentOrder>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.ProviderOrderId).HasMaxLength(100);
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.PaymentOrders)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

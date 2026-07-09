@@ -25,6 +25,7 @@ public class User : BaseEntity
     public ICollection<Job> Jobs { get; set; } = new List<Job>();
     public ICollection<JobApplication> JobApplications { get; set; } = new List<JobApplication>();
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+    public ICollection<PaymentOrder> PaymentOrders { get; set; } = new List<PaymentOrder>();
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     public ICollection<UserPreference> Preferences { get; set; } = new List<UserPreference>();
     public ICollection<PushToken> PushTokens { get; set; } = new List<PushToken>();
