@@ -23,6 +23,7 @@ public class LaboaDbContext : DbContext
     public DbSet<WorkerPost> WorkerPosts => Set<WorkerPost>();
     public DbSet<WorkerPortfolioImage> WorkerPortfolioImages => Set<WorkerPortfolioImage>();
     public DbSet<SavedJob> SavedJobs { get; set; }
+    public DbSet<OtpVerification> OtpVerifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -189,6 +190,42 @@ public class LaboaDbContext : DbContext
                 .HasForeignKey(e => e.JobId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => new { e.UserId, e.JobId }).IsUnique();
+        });
+
+        // OtpVerification
+        modelBuilder.Entity<OtpVerification>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PhoneNumber).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.CodeHash).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.OperationTokenHash).HasMaxLength(100);
+            entity.Property(e => e.RegistrationPayload).HasColumnType("jsonb");
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Verification lookup: Start/Verify/Resend resolve the active row for a phone+purpose
+            entity.HasIndex(e => new { e.PhoneNumber, e.Purpose, e.Status })
+                .HasDatabaseName("IX_OtpVerifications_Phone_Purpose_Status");
+
+            // Operation-token lookup: ForgotPassword Complete resolves by token hash only
+            entity.HasIndex(e => e.OperationTokenHash)
+                .IsUnique()
+                .HasFilter("\"OperationTokenHash\" IS NOT NULL")
+                .HasDatabaseName("IX_OtpVerifications_OperationTokenHash");
+
+            // Only one active (non-terminal) flow per phone+purpose at a time
+            // OtpStatus: Issuing = 1, Pending = 2, Verified = 3
+            entity.HasIndex(e => new { e.PhoneNumber, e.Purpose })
+                .IsUnique()
+                .HasFilter("\"Status\" IN (1, 2, 3)")
+                .HasDatabaseName("IX_OtpVerifications_ActiveFlow");
+
+            // PostgreSQL system column xmin as the optimistic concurrency token
+            // (official Npgsql pattern: a uint property mapped via IsRowVersion()).
+            entity.Property(e => e.Version).IsRowVersion();
         });
     }
 }
