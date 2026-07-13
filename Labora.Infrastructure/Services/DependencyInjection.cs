@@ -1,4 +1,5 @@
-﻿using Labora.Domain.Interfaces;
+﻿using Labora.Application.Interfaces;
+using Labora.Domain.Interfaces;
 using Labora.Infrastructure.Data;
 using Labora.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,8 @@ public static class DependencyInjection
         services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
+        services.AddScoped<IOtpRepository, OtpRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
 }
