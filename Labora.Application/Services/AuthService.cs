@@ -6,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace Labora.Application.Services;
@@ -15,11 +14,13 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IConfiguration _configuration;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public AuthService(IUserRepository userRepository, IConfiguration configuration)
+    public AuthService(IUserRepository userRepository, IConfiguration configuration, IPasswordHasher passwordHasher)
     {
         _userRepository = userRepository;
         _configuration = configuration;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request)
@@ -36,7 +37,7 @@ public class AuthService : IAuthService
             LastName = request.LastName,
             Age = request.Age,
             PhoneNumber = request.PhoneNumber,
-            PasswordHash = HashPassword(request.Password),
+            PasswordHash = _passwordHasher.Hash(request.Password),
             Role = request.Role
         };
 
@@ -64,7 +65,7 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("Telefon raqam yoki parol noto'g'ri.");
         }
 
-        bool isPasswordValid = VerifyPassword(request.Password, user.PasswordHash);
+        bool isPasswordValid = _passwordHasher.Verify(request.Password, user.PasswordHash);
         if (!isPasswordValid)
         {
             throw new InvalidOperationException("Telefon raqam yoki parol noto'g'ri.");
@@ -106,39 +107,5 @@ public class AuthService : IAuthService
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    private string HashPassword(string password)
-    {
-        byte[] salt = RandomNumberGenerator.GetBytes(16);
-        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
-            Encoding.UTF8.GetBytes(password),
-            salt,
-            100000,
-            HashAlgorithmName.SHA256,
-            32);
-
-        return Convert.ToBase64String(salt) + ":" + Convert.ToBase64String(hash);
-    }
-
-    private bool VerifyPassword(string password, string passwordHash)
-    {
-        string[] parts = passwordHash.Split(':');
-        if (parts.Length != 2)
-        {
-            return false;
-        }
-
-        byte[] salt = Convert.FromBase64String(parts[0]);
-        byte[] expectedHash = Convert.FromBase64String(parts[1]);
-
-        byte[] actualHash = Rfc2898DeriveBytes.Pbkdf2(
-            Encoding.UTF8.GetBytes(password),
-            salt,
-            100000,
-            HashAlgorithmName.SHA256,
-            32);
-
-        return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
     }
 }

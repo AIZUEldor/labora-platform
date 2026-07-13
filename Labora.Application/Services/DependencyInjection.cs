@@ -11,6 +11,7 @@ public static class DependencyInjection
     {
         services.AddAutoMapper(typeof(MappingProfile));
 
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJobService, JobService>();
         services.AddScoped<IJobApplicationService, JobApplicationService>();

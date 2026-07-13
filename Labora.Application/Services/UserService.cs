@@ -11,11 +11,13 @@ public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
     private readonly IMapper _mapper;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public UserService(IUserRepository userRepository, IMapper mapper)
+    public UserService(IUserRepository userRepository, IMapper mapper, IPasswordHasher passwordHasher)
     {
         _userRepository = userRepository;
         _mapper = mapper;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<UserProfileResponseDto> GetProfileAsync(Guid userId)
@@ -86,33 +88,11 @@ public class UserService : IUserService
         if (user is null)
             throw new InvalidOperationException($"Id={userId} bo'lgan foydalanuvchi topilmadi.");
 
-        string[] parts = user.PasswordHash.Split(':');
-        if (parts.Length != 2)
-            throw new InvalidOperationException("Parol formati noto'g'ri.");
-
-        byte[] salt = Convert.FromBase64String(parts[0]);
-        byte[] expectedHash = Convert.FromBase64String(parts[1]);
-
-        byte[] actualHash = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
-            System.Text.Encoding.UTF8.GetBytes(request.CurrentPassword),
-            salt,
-            100000,
-            System.Security.Cryptography.HashAlgorithmName.SHA256,
-            32);
-
-        bool isValid = System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+        bool isValid = _passwordHasher.Verify(request.CurrentPassword, user.PasswordHash);
         if (!isValid)
             throw new InvalidOperationException("Joriy parol noto'g'ri.");
 
-        byte[] newSalt = System.Security.Cryptography.RandomNumberGenerator.GetBytes(16);
-        byte[] newHash = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
-            System.Text.Encoding.UTF8.GetBytes(request.NewPassword),
-            newSalt,
-            100000,
-            System.Security.Cryptography.HashAlgorithmName.SHA256,
-            32);
-
-        user.PasswordHash = Convert.ToBase64String(newSalt) + ":" + Convert.ToBase64String(newHash);
+        user.PasswordHash = _passwordHasher.Hash(request.NewPassword);
         await _userRepository.UpdateAsync(user);
     }
 
@@ -122,15 +102,7 @@ public class UserService : IUserService
         if (user is null)
             throw new InvalidOperationException("Bu telefon raqam ro'yxatdan o'tmagan.");
 
-        byte[] newSalt = System.Security.Cryptography.RandomNumberGenerator.GetBytes(16);
-        byte[] newHash = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
-            System.Text.Encoding.UTF8.GetBytes(request.NewPassword),
-            newSalt,
-            100000,
-            System.Security.Cryptography.HashAlgorithmName.SHA256,
-            32);
-
-        user.PasswordHash = Convert.ToBase64String(newSalt) + ":" + Convert.ToBase64String(newHash);
+        user.PasswordHash = _passwordHasher.Hash(request.NewPassword);
         await _userRepository.UpdateAsync(user);
     }
 
