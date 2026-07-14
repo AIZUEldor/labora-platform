@@ -55,7 +55,7 @@ builder.Services.AddSwaggerGen(swaggerGenOptions =>
 });
 
 // Application
-builder.Services.AddApplication();
+builder.Services.AddApplication(builder.Configuration);
 
 // FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<Labora.Application.Validators.Auth.RegisterRequestDtoValidator>();
