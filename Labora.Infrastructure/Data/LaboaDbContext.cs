@@ -24,6 +24,8 @@ public class LaboaDbContext : DbContext
     public DbSet<WorkerPortfolioImage> WorkerPortfolioImages => Set<WorkerPortfolioImage>();
     public DbSet<SavedJob> SavedJobs { get; set; }
     public DbSet<OtpVerification> OtpVerifications { get; set; }
+    public DbSet<OtpAbuseEvent> OtpAbuseEvents { get; set; }
+    public DbSet<OtpBlock> OtpBlocks { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -222,6 +224,39 @@ public class LaboaDbContext : DbContext
                 .IsUnique()
                 .HasFilter("\"Status\" IN (1, 2, 3)")
                 .HasDatabaseName("IX_OtpVerifications_ActiveFlow");
+
+            // PostgreSQL system column xmin as the optimistic concurrency token
+            // (official Npgsql pattern: a uint property mapped via IsRowVersion()).
+            entity.Property(e => e.Version).IsRowVersion();
+        });
+
+        // OtpAbuseEvent
+        modelBuilder.Entity<OtpAbuseEvent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PhoneNumber).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.IpHash).HasMaxLength(100);
+            entity.Property(e => e.DeviceHash).HasMaxLength(100);
+
+            entity.HasIndex(e => new { e.PhoneNumber, e.EventType, e.CreatedAt })
+                .HasDatabaseName("IX_OtpAbuseEvents_Phone_EventType_CreatedAt");
+
+            entity.HasIndex(e => new { e.IpHash, e.EventType, e.CreatedAt })
+                .HasDatabaseName("IX_OtpAbuseEvents_IpHash_EventType_CreatedAt");
+
+            entity.HasIndex(e => new { e.DeviceHash, e.EventType, e.CreatedAt })
+                .HasDatabaseName("IX_OtpAbuseEvents_DeviceHash_EventType_CreatedAt");
+        });
+
+        // OtpBlock
+        modelBuilder.Entity<OtpBlock>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ScopeKey).IsRequired().HasMaxLength(100);
+
+            entity.HasIndex(e => new { e.BlockType, e.ScopeKey })
+                .IsUnique()
+                .HasDatabaseName("IX_OtpBlocks_BlockType_ScopeKey");
 
             // PostgreSQL system column xmin as the optimistic concurrency token
             // (official Npgsql pattern: a uint property mapped via IsRowVersion()).
