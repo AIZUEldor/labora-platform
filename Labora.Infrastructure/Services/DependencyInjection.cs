@@ -25,6 +25,8 @@ public static class DependencyInjection
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IOtpRepository, OtpRepository>();
+        services.AddScoped<IOtpAbuseEventRepository, OtpAbuseEventRepository>();
+        services.AddScoped<IOtpBlockRepository, OtpBlockRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
