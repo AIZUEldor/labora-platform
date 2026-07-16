@@ -1,6 +1,7 @@
 using Labora.Application.Services;
 using Labora.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FluentValidation;
@@ -9,6 +10,8 @@ using Labora.Infrastructure.Repositories;
 using Labora.Domain.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddCors(options =>
 {
@@ -106,6 +109,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 var app = builder.Build();
+
+// Render terminates TLS and proxies to this container over a single hop.
+// ForwardLimit = 1 with cleared KnownNetworks/KnownProxies trusts only the
+// immediate (and only) proxy hop, so a client cannot spoof RemoteIpAddress
+// by prepending forged entries to X-Forwarded-For.
+// TODO: verify against Render's current proxy topology before relying on this
+// for abuse-protection decisions (see deployment questions in task report).
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    ForwardLimit = 1,
+};
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 app.UseCors("AllowAdminPanel");
 

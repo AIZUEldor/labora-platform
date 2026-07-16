@@ -18,8 +18,30 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<IdentifierHashOptions>()
+            .Bind(configuration.GetSection(IdentifierHashOptions.SectionName))
+            .Validate(options =>
+            {
+                if (string.IsNullOrWhiteSpace(options.Pepper))
+                {
+                    return false;
+                }
+
+                try
+                {
+                    return Convert.FromBase64String(options.Pepper).Length == 32;
+                }
+                catch (FormatException)
+                {
+                    return false;
+                }
+            }, "OtpIdentity:Pepper must be a base64-encoded 32-byte (256-bit) value, distinct from Otp:Pepper.")
+            .ValidateOnStart();
+
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IOtpSecurityService, OtpSecurityService>();
+        services.AddScoped<IIdentifierHasher, IdentifierHasher>();
+        services.AddScoped<IOtpRequestContextProvider, OtpRequestContextProvider>();
         services.AddScoped<IPhoneNumberNormalizer, UzbekistanPhoneNumberNormalizer>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJobService, JobService>();
