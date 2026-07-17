@@ -39,6 +39,12 @@ public class OtpBlockRepository : GenericRepository<OtpBlock>, IOtpBlockReposito
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
+            // Detach the failed entity: a rolled-back transaction does not undo EF Core's in-memory
+            // tracking, so without this it would remain tracked as Added and be swept into whichever
+            // SaveChangesAsync a caller-level retry issues next on this same DbContext - either
+            // failing that unrelated attempt for the wrong reason or silently inserting this
+            // abandoned row alongside it.
+            DetachFailedEntity(entity);
             throw new OtpBlockConflictException(
                 "An OTP block already exists for this block type and scope.", ex);
         }
@@ -52,14 +58,21 @@ public class OtpBlockRepository : GenericRepository<OtpBlock>, IOtpBlockReposito
         }
         catch (DbUpdateConcurrencyException ex)
         {
+            DetachFailedEntity(entity);
             throw new OtpBlockConcurrencyException(
                 "The OTP block row was modified concurrently.", ex);
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
+            DetachFailedEntity(entity);
             throw new OtpBlockConflictException(
                 "A conflicting OTP block already exists for this block type and scope.", ex);
         }
+    }
+
+    private void DetachFailedEntity(OtpBlock entity)
+    {
+        _context.Entry(entity).State = EntityState.Detached;
     }
 
     private static bool IsUniqueViolation(DbUpdateException ex)

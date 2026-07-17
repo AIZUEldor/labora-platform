@@ -32,11 +32,11 @@ public class OtpAbuseGuard : IOtpAbuseGuard
 
     public async Task EnsureNotBlockedAsync(string phoneNumber, OtpRequestContext requestContext)
     {
-        BlockVerdict? activeBlock = await FindActiveBlockAsync(phoneNumber, requestContext, DateTime.UtcNow);
+        OtpBlockVerdict? activeBlock = await FindActiveBlockAsync(phoneNumber, requestContext, DateTime.UtcNow);
 
         if (activeBlock is not null)
         {
-            throw new OtpBlockedException(activeBlock.Value.BlockType, activeBlock.Value.BlockReason, activeBlock.Value.ExpiresAtUtc);
+            throw new OtpBlockedException(activeBlock.BlockType, activeBlock.BlockReason, activeBlock.ExpiresAtUtc);
         }
     }
 
@@ -46,60 +46,10 @@ public class OtpAbuseGuard : IOtpAbuseGuard
         Guid? verificationId,
         OtpRequestContext requestContext)
     {
-        return RunWithRetryAsync(() => EvaluateAndRecordStartAttemptAsync(phoneNumber, purpose, verificationId, requestContext));
+        return RunWithRetryAsync(() => EvaluateStartAttemptInCurrentTransactionAsync(phoneNumber, purpose, verificationId, requestContext));
     }
 
-    public Task RecordSmsSentAsync(
-        string phoneNumber,
-        OtpPurpose purpose,
-        Guid? verificationId,
-        OtpRequestContext requestContext)
-    {
-        // Deliberately not wrapped in its own ExecuteInTransactionAsync call: EF Core cannot open a
-        // second transaction on a DbContext that already has one in progress, so a self-contained
-        // transaction here would make it impossible for a future caller to combine this insert with
-        // the Issuing -> Pending status transition in one atomic Transaction B. A single AddAsync
-        // enlists in whatever ambient transaction the caller has already started (or auto-commits
-        // standalone if there is none), and there is no unique constraint or row-version on
-        // OtpAbuseEvent for this insert to conflict on, so no retry is needed either.
-        return _otpAbuseEventRepository.AddAsync(new OtpAbuseEvent
-        {
-            EventType = OtpAbuseEventType.SmsSent,
-            PhoneNumber = phoneNumber,
-            IpHash = requestContext.IpHash,
-            DeviceHash = requestContext.DeviceHash,
-            Purpose = purpose,
-            VerificationId = verificationId,
-        });
-    }
-
-    private async Task RunWithRetryAsync(Func<Task<BlockVerdict?>> transactionalOperation)
-    {
-        for (int attempt = 1; attempt <= MaxConcurrencyRetries; attempt++)
-        {
-            try
-            {
-                BlockVerdict? violation = await _unitOfWork.ExecuteInTransactionAsync(transactionalOperation);
-
-                if (violation is not null)
-                {
-                    throw new OtpBlockedException(violation.Value.BlockType, violation.Value.BlockReason, violation.Value.ExpiresAtUtc);
-                }
-
-                return;
-            }
-            catch (Exception ex) when (attempt < MaxConcurrencyRetries && IsRetryableBlockConflict(ex))
-            {
-                // A concurrent writer touched the same OtpBlock scope inside this transaction attempt.
-                // Postgres aborts the whole transaction after any failed statement, and UnitOfWork has
-                // already rolled it back, so the only correct recovery is to retry the entire
-                // evaluate+record+apply sequence from scratch in a brand-new transaction with fresh
-                // reads - continuing inside the now-unusable transaction is not an option.
-            }
-        }
-    }
-
-    private async Task<BlockVerdict?> EvaluateAndRecordStartAttemptAsync(
+    public async Task<OtpBlockVerdict?> EvaluateStartAttemptInCurrentTransactionAsync(
         string phoneNumber, OtpPurpose purpose, Guid? verificationId, OtpRequestContext requestContext)
     {
         DateTime nowUtc = DateTime.UtcNow;
@@ -108,7 +58,7 @@ public class OtpAbuseGuard : IOtpAbuseGuard
         // EnsureNotBlockedAsync is only an early, possibly-stale optimization for the caller;
         // this re-check inside the transaction is the actual correctness boundary. If any scope
         // is already actively blocked, stop here - do not insert the event or evaluate thresholds.
-        BlockVerdict? activeBlock = await FindActiveBlockAsync(phoneNumber, requestContext, nowUtc);
+        OtpBlockVerdict? activeBlock = await FindActiveBlockAsync(phoneNumber, requestContext, nowUtc);
         if (activeBlock is not null)
         {
             return activeBlock;
@@ -138,7 +88,7 @@ public class OtpAbuseGuard : IOtpAbuseGuard
             VerificationId = verificationId,
         });
 
-        BlockVerdict? violation = null;
+        OtpBlockVerdict? violation = null;
 
         if (phoneRateExceeded)
         {
@@ -161,7 +111,57 @@ public class OtpAbuseGuard : IOtpAbuseGuard
         return violation;
     }
 
-    private async Task<BlockVerdict?> FindActiveBlockAsync(string phoneNumber, OtpRequestContext requestContext, DateTime nowUtc)
+    public Task RecordSmsSentAsync(
+        string phoneNumber,
+        OtpPurpose purpose,
+        Guid? verificationId,
+        OtpRequestContext requestContext)
+    {
+        // Deliberately not wrapped in its own ExecuteInTransactionAsync call: EF Core cannot open a
+        // second transaction on a DbContext that already has one in progress, so a self-contained
+        // transaction here would make it impossible for a future caller to combine this insert with
+        // the Issuing -> Pending status transition in one atomic Transaction B. A single AddAsync
+        // enlists in whatever ambient transaction the caller has already started (or auto-commits
+        // standalone if there is none), and there is no unique constraint or row-version on
+        // OtpAbuseEvent for this insert to conflict on, so no retry is needed either.
+        return _otpAbuseEventRepository.AddAsync(new OtpAbuseEvent
+        {
+            EventType = OtpAbuseEventType.SmsSent,
+            PhoneNumber = phoneNumber,
+            IpHash = requestContext.IpHash,
+            DeviceHash = requestContext.DeviceHash,
+            Purpose = purpose,
+            VerificationId = verificationId,
+        });
+    }
+
+    private async Task RunWithRetryAsync(Func<Task<OtpBlockVerdict?>> transactionalOperation)
+    {
+        for (int attempt = 1; attempt <= MaxConcurrencyRetries; attempt++)
+        {
+            try
+            {
+                OtpBlockVerdict? violation = await _unitOfWork.ExecuteInTransactionAsync(transactionalOperation);
+
+                if (violation is not null)
+                {
+                    throw new OtpBlockedException(violation.BlockType, violation.BlockReason, violation.ExpiresAtUtc);
+                }
+
+                return;
+            }
+            catch (Exception ex) when (attempt < MaxConcurrencyRetries && IsRetryableBlockConflict(ex))
+            {
+                // A concurrent writer touched the same OtpBlock scope inside this transaction attempt.
+                // Postgres aborts the whole transaction after any failed statement, and UnitOfWork has
+                // already rolled it back, so the only correct recovery is to retry the entire
+                // evaluate+record+apply sequence from scratch in a brand-new transaction with fresh
+                // reads - continuing inside the now-unusable transaction is not an option.
+            }
+        }
+    }
+
+    private async Task<OtpBlockVerdict?> FindActiveBlockAsync(string phoneNumber, OtpRequestContext requestContext, DateTime nowUtc)
     {
         OtpBlock? phoneBlock = await _otpBlockRepository.GetActiveAsync(OtpBlockType.Phone, phoneNumber, nowUtc);
         if (phoneBlock is not null)
@@ -267,10 +267,4 @@ public class OtpAbuseGuard : IOtpAbuseGuard
 
     private static bool IsRetryableBlockConflict(Exception ex) =>
         ex is OtpBlockConflictException or OtpBlockConcurrencyException;
-
-    private readonly record struct BlockVerdict(OtpBlockType BlockType, OtpBlockReason BlockReason, DateTime ExpiresAtUtc)
-    {
-        public static implicit operator BlockVerdict((OtpBlockType BlockType, OtpBlockReason BlockReason, DateTime ExpiresAt) tuple) =>
-            new(tuple.BlockType, tuple.BlockReason, tuple.ExpiresAt);
-    }
 }

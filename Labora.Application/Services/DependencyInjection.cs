@@ -43,6 +43,10 @@ public static class DependencyInjection
         services.AddScoped<IIdentifierHasher, IdentifierHasher>();
         services.AddScoped<IOtpRequestContextProvider, OtpRequestContextProvider>();
         services.AddScoped<IOtpAbuseGuard, OtpAbuseGuard>();
+        // IOtpService is intentionally not registered yet: OtpService's constructor requires
+        // ISmsSender, which has no implementation in this solution. Registering IOtpService without
+        // it makes ASP.NET Core's ValidateOnBuild (on by default in Development) crash the app at
+        // startup. Register both together once a real ISmsSender lands.
         services.AddScoped<IPhoneNumberNormalizer, UzbekistanPhoneNumberNormalizer>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJobService, JobService>();

@@ -19,7 +19,11 @@ public class OtpRepository : GenericRepository<OtpVerification>, IOtpRepository
 
     public async Task<OtpVerification?> GetLatestByPhoneAndPurposeAsync(string phoneNumber, OtpPurpose purpose)
     {
+        // AsNoTracking: callers on a retry path (OtpService.ResolveAndIssueWithRetryAsync) must see
+        // the current DB state on every attempt, not a stale instance returned from EF Core's
+        // identity map for a row already tracked from a failed prior attempt in the same DbContext.
         return await _context.OtpVerifications
+            .AsNoTracking()
             .Where(o => o.PhoneNumber == phoneNumber && o.Purpose == purpose && !o.IsDeleted)
             .OrderByDescending(o => o.CreatedAt)
             .FirstOrDefaultAsync();
@@ -29,6 +33,13 @@ public class OtpRepository : GenericRepository<OtpVerification>, IOtpRepository
     {
         return await _context.OtpVerifications
             .FirstOrDefaultAsync(o => o.OperationTokenHash == operationTokenHash && !o.IsDeleted);
+    }
+
+    public async Task<OtpVerification?> GetByIdForUpdateAsync(Guid id)
+    {
+        return await _context.OtpVerifications
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted);
     }
 
     public async Task<int> GetSendCountSinceAsync(string phoneNumber, OtpPurpose purpose, DateTime sinceUtc)
@@ -50,6 +61,12 @@ public class OtpRepository : GenericRepository<OtpVerification>, IOtpRepository
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
+            // Detach the failed entity: a rolled-back transaction does not undo EF Core's in-memory
+            // tracking, so without this it would remain tracked as Added and be swept into whichever
+            // SaveChangesAsync a caller-level retry issues next on this same DbContext - either
+            // failing that unrelated attempt for the wrong reason or silently inserting this
+            // abandoned row alongside it.
+            DetachFailedEntity(entity);
             throw new OtpConflictException(
                 "An active OTP verification already exists for this phone number and purpose.", ex);
         }
@@ -63,14 +80,21 @@ public class OtpRepository : GenericRepository<OtpVerification>, IOtpRepository
         }
         catch (DbUpdateConcurrencyException ex)
         {
+            DetachFailedEntity(entity);
             throw new OtpConcurrencyException(
                 "The OTP verification row was modified concurrently.", ex);
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
+            DetachFailedEntity(entity);
             throw new OtpConflictException(
                 "A conflicting OTP verification already exists for this phone number and purpose.", ex);
         }
+    }
+
+    private void DetachFailedEntity(OtpVerification entity)
+    {
+        _context.Entry(entity).State = EntityState.Detached;
     }
 
     private static bool IsUniqueViolation(DbUpdateException ex)
