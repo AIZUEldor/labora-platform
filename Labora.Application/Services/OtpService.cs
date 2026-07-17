@@ -75,11 +75,27 @@ public class OtpService : IOtpService
         };
     }
 
+    /// <summary>
+    /// Produces a StartOtpResponseDto indistinguishable in shape from a real StartOtpAsync result,
+    /// without persisting any row or sending any SMS - used by callers (e.g. forgot-password) that
+    /// must not reveal via response shape whether phoneNumber belongs to a real account. phoneNumber
+    /// and purpose are accepted only to match StartOtpAsync's signature; no real OTP flow exists for
+    /// this VerificationId, so a Resend/Verify/Consume against it will simply behave as "not found."
+    /// This is intentionally a response-shape decoy only - it does not attempt to mask the timing
+    /// difference against a real Start (which performs real DB writes and an outbound SMS call).
+    /// </summary>
     public Task<StartOtpResponseDto> PrepareDecoyStartAsync(
         string phoneNumber,
         OtpPurpose purpose)
     {
-        throw new NotImplementedException();
+        OtpOptions options = _otpOptions.Value;
+
+        return Task.FromResult(new StartOtpResponseDto
+        {
+            VerificationId = Guid.NewGuid(),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(options.CodeExpiryMinutes),
+            MaxAttempts = options.MaxAttempts
+        });
     }
 
     public async Task<ResendOtpResponseDto> ResendOtpAsync(Guid verificationId)
