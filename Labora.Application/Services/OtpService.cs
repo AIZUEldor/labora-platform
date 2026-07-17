@@ -14,6 +14,7 @@ public class OtpService : IOtpService
 {
     private const int MaxWriteConflictRetries = 3;
     private const int MaxVerifyConcurrencyRetries = 3;
+    private const int MaxConsumeConcurrencyRetries = 3;
 
     private readonly IOtpRepository _otpRepository;
     private readonly IOtpSecurityService _otpSecurityService;
@@ -120,11 +121,31 @@ public class OtpService : IOtpService
         throw new InvalidOperationException("Unreachable: OTP verify retry loop exited without returning or throwing.");
     }
 
-    public Task<OtpConsumeResultDto> ConsumeOtpAsync(
+    public async Task<OtpConsumeResultDto> ConsumeOtpAsync(
         Guid verificationId,
+        OtpPurpose expectedPurpose,
         string? operationToken = null)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrWhiteSpace(operationToken))
+        {
+            throw new OtpInvalidOperationTokenException("An operation token is required to consume this OTP verification.");
+        }
+
+        for (int attempt = 1; attempt <= MaxConsumeConcurrencyRetries; attempt++)
+        {
+            try
+            {
+                return await TryConsumeAsync(verificationId, expectedPurpose, operationToken);
+            }
+            catch (OtpConcurrencyException) when (attempt < MaxConsumeConcurrencyRetries)
+            {
+                // A concurrent consumer touched this row between our read and write; the transaction
+                // was rolled back, so retry the whole check-and-consume sequence from scratch in a
+                // brand-new transaction with a fresh read rather than acting on stale data.
+            }
+        }
+
+        throw new InvalidOperationException("Unreachable: OTP consume retry loop exited without returning or throwing.");
     }
 
     /// <summary>
@@ -377,6 +398,63 @@ public class OtpService : IOtpService
             OperationToken = operationToken,
             OperationTokenExpiresAt = verification.OperationTokenExpiresAt
         };
+    }
+
+    /// <summary>
+    /// Check-and-consume, fully atomic: the operation-token validation and the Verified -> Consumed
+    /// transition happen inside one transaction, so a concurrent consumer either sees the row before
+    /// this commits (and races on the xmin check, retried by the caller) or after (and correctly finds
+    /// it already Consumed with its token hash cleared) - there is no window where two callers can both
+    /// observe a valid, still-Verified row.
+    /// </summary>
+    private async Task<OtpConsumeResultDto> TryConsumeAsync(Guid verificationId, OtpPurpose expectedPurpose, string operationToken)
+    {
+        return await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        {
+            OtpVerification? verification = await _otpRepository.GetByIdForUpdateAsync(verificationId);
+
+            // Row not found, purpose mismatch, and token-hash mismatch are all deliberately
+            // indistinguishable from each other here - a caller must not be able to learn which
+            // specific reason caused the rejection.
+            if (verification is null
+                || verification.Purpose != expectedPurpose
+                || string.IsNullOrEmpty(verification.OperationTokenHash)
+                || !_otpSecurityService.VerifyOperationToken(verificationId, operationToken, verification.OperationTokenHash))
+            {
+                throw new OtpInvalidOperationTokenException("The operation token is invalid.");
+            }
+
+            DateTime nowUtc = DateTime.UtcNow;
+
+            if (verification.OperationTokenExpiresAt is null || verification.OperationTokenExpiresAt <= nowUtc)
+            {
+                throw new OtpExpiredException("The operation token has expired.");
+            }
+
+            if (verification.Status != OtpStatus.Verified)
+            {
+                throw new OtpConflictException(
+                    verification.Status == OtpStatus.Consumed
+                        ? "This operation token has already been consumed."
+                        : "This OTP verification is not in a consumable state.");
+            }
+
+            verification.Status = OtpStatus.Consumed;
+            verification.ConsumedAt = nowUtc;
+            verification.OperationTokenHash = null;
+            verification.OperationTokenExpiresAt = null;
+
+            OtpVerification updated = await _otpRepository.UpdateAsync(verification);
+
+            return new OtpConsumeResultDto
+            {
+                VerificationId = updated.Id,
+                Purpose = updated.Purpose,
+                PhoneNumber = updated.PhoneNumber,
+                UserId = updated.UserId,
+                RegistrationPayload = updated.RegistrationPayload
+            };
+        });
     }
 
     private static bool IsActiveFlow(OtpVerification verification) =>
