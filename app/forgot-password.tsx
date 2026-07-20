@@ -14,46 +14,34 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../store/themeStore';
 import { ThemeColors, LightColors } from '../constants/colors';
-import { ArrowLeftIcon, LockIcon, CheckIcon, EyeIcon, EyeOffIcon, PhoneIcon } from '../components/icons';
-import api from '../services/api';
+import { ArrowLeftIcon, LockIcon, CheckIcon, PhoneIcon } from '../components/icons';
+import { authService } from '../services/authService';
+import { useLanguageStore } from '../stores/useLanguageStore';
 
 export default function ForgotPasswordScreen(): React.JSX.Element {
   const router = useRouter();
   const { theme } = useThemeStore();
   const colors = ThemeColors[theme];
+  const { t } = useLanguageStore();
 
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (): Promise<void> => {
-    if (!phoneNumber || !newPassword || !confirmPassword) {
-      Alert.alert('Xatolik', "Barcha maydonlarni to'ldiring.");
-      return;
-    }
-    if (newPassword.length < 6) {
-      Alert.alert('Xatolik', "Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Xatolik', "Yangi parol va tasdiqlash paroli mos kelmaydi.");
+    if (loading) return;
+    if (!phoneNumber.trim()) {
+      Alert.alert(t.common.error, t.forgotPassword.fillAllFields);
       return;
     }
 
     try {
       setLoading(true);
-      await api.post('/User/forgot-password', {
-        phoneNumber,
-        newPassword,
+      const response = await authService.forgotPasswordStart({
+        phoneNumber: phoneNumber.trim(),
       });
-      Alert.alert('Muvaffaqiyat', "Parol muvaffaqiyatli yangilandi.", [
-        { text: 'OK', onPress: () => router.replace('/auth/login') },
-      ]);
-    } catch {
-      Alert.alert('Xatolik', "Bu telefon raqam ro'yxatdan o'tmagan.");
+      router.push(`/forgot-password-verify?verificationId=${response.verificationId}`);
+    } catch (error: any) {
+      Alert.alert(t.common.error, error?.message || t.forgotPassword.genericError);
     } finally {
       setLoading(false);
     }
@@ -72,7 +60,7 @@ export default function ForgotPasswordScreen(): React.JSX.Element {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
           <ArrowLeftIcon size={22} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Parolni tiklash</Text>
+        <Text style={styles.headerTitle}>{t.forgotPassword.title}</Text>
         <View style={{ width: 40 }} />
       </LinearGradient>
 
@@ -86,16 +74,14 @@ export default function ForgotPasswordScreen(): React.JSX.Element {
           <View style={styles.iconWrapper}>
             <LockIcon size={40} color={colors.primary} />
           </View>
-          <Text style={styles.iconTitle}>Parolni tiklash</Text>
-          <Text style={styles.iconSubtitle}>
-            Telefon raqamingizni kiriting va yangi parol o'rnating
-          </Text>
+          <Text style={styles.iconTitle}>{t.forgotPassword.title}</Text>
+          <Text style={styles.iconSubtitle}>{t.forgotPassword.subtitle}</Text>
         </View>
 
         <View style={styles.formSection}>
           {/* Telefon raqam */}
           <View style={styles.field}>
-            <Text style={styles.label}>Telefon raqam</Text>
+            <Text style={styles.label}>{t.forgotPassword.phoneLabel}</Text>
             <View style={styles.inputWrapper}>
               <View style={styles.phonePrefix}>
                 <PhoneIcon size={18} color={colors.textSecondary} />
@@ -104,55 +90,12 @@ export default function ForgotPasswordScreen(): React.JSX.Element {
                 style={styles.input}
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
-                placeholder="+998 90 123 45 67"
+                placeholder={t.forgotPassword.phonePlaceholder}
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="phone-pad"
                 autoCapitalize="none"
+                editable={!loading}
               />
-            </View>
-          </View>
-
-          {/* Yangi parol */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Yangi parol</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="Kamida 6 ta belgi"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry={!showNew}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity style={styles.eyeButton} onPress={() => setShowNew(p => !p)}>
-                {showNew
-                  ? <EyeOffIcon size={20} color={colors.textSecondary} />
-                  : <EyeIcon size={20} color={colors.textSecondary} />
-                }
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Tasdiqlash */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Yangi parolni tasdiqlang</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Parolni qayta kiriting"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry={!showConfirm}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirm(p => !p)}>
-                {showConfirm
-                  ? <EyeOffIcon size={20} color={colors.textSecondary} />
-                  : <EyeIcon size={20} color={colors.textSecondary} />
-                }
-              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -174,7 +117,7 @@ export default function ForgotPasswordScreen(): React.JSX.Element {
             ) : (
               <>
                 <CheckIcon size={18} color="#ffffff" />
-                <Text style={styles.primaryButtonText}>Parolni tiklash</Text>
+                <Text style={styles.primaryButtonText}>{t.forgotPassword.sendCodeButton}</Text>
               </>
             )}
           </LinearGradient>
@@ -272,11 +215,6 @@ function createStyles(colors: typeof LightColors, theme: 'light' | 'dark') {
       paddingHorizontal: 14,
       fontSize: 15,
       color: colors.textPrimary,
-    },
-    eyeButton: {
-      paddingHorizontal: 14,
-      height: 48,
-      justifyContent: 'center',
     },
     primaryButton: {
       marginHorizontal: 16,

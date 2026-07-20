@@ -58,6 +58,32 @@ export interface VerifyOtpResponse {
   operationTokenExpiresAt?: string;
 }
 
+// ==================== FORGOT PASSWORD ====================
+// Start/Resend/Verify reuse StartOtpResponse/ResendOtpResponse/VerifyOtpResponse above -
+// only the request shapes and the Complete response differ from Change Phone.
+export interface ForgotPasswordStartRequest {
+  phoneNumber: string;
+}
+
+export interface ForgotPasswordResendRequest {
+  verificationId: string;
+}
+
+export interface ForgotPasswordVerifyRequest {
+  verificationId: string;
+  code: string;
+}
+
+export interface ForgotPasswordCompleteRequest {
+  verificationId: string;
+  operationToken: string;
+  newPassword: string;
+}
+
+export interface ForgotPasswordCompleteResponse {
+  success: boolean;
+}
+
 // ==================== ENUMS ====================
 export enum UserRole {
   Worker = 1,
