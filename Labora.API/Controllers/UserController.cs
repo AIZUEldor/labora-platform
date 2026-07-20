@@ -66,11 +66,21 @@ public class UserController : ControllerBase
         return Ok(new { message = "Hisob muvaffaqiyatli o'chirildi." });
     }
 
+    /// <summary>
+    /// Disabled: this endpoint used to reset a password from an unverified phone number with no proof
+    /// of ownership. It no longer calls IUserService.ForgotPasswordAsync at all - the vulnerable code
+    /// path is unreachable from here - and never looks anything up by phone, so this response reveals
+    /// nothing about whether request.PhoneNumber belongs to an account. Use the OTP-protected flow at
+    /// AuthController's /api/auth/forgot-password/start instead.
+    /// </summary>
     [HttpPost("forgot-password")]
     [AllowAnonymous]
-    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
+    public IActionResult ForgotPassword([FromBody] ForgotPasswordRequestDto request)
     {
-        await _userService.ForgotPasswordAsync(request);
-        return Ok(new { message = "Parol muvaffaqiyatli yangilandi." });
+        return StatusCode(StatusCodes.Status410Gone, new
+        {
+            statusCode = StatusCodes.Status410Gone,
+            message = "Bu endpoint endi ishlamaydi. Parolni tiklash uchun OTP orqali parolni tiklash oqimidan (/api/auth/forgot-password/start) foydalaning."
+        });
     }
 }
