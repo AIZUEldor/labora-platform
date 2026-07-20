@@ -21,6 +21,43 @@ export interface AuthResponse {
   lastName: string;
 }
 
+// ==================== CHANGE PHONE ====================
+export interface ChangePhoneStartRequest {
+  newPhoneNumber: string;
+  currentPassword: string;
+}
+
+export interface ChangePhoneResendRequest {
+  verificationId: string;
+}
+
+export interface ChangePhoneVerifyRequest {
+  verificationId: string;
+  code: string;
+}
+
+export interface ChangePhoneCompleteRequest {
+  verificationId: string;
+  operationToken: string;
+}
+
+export interface StartOtpResponse {
+  verificationId: string;
+  expiresAt: string;
+  maxAttempts: number;
+}
+
+export interface ResendOtpResponse {
+  verificationId: string;
+  expiresAt: string;
+}
+
+export interface VerifyOtpResponse {
+  isVerified: boolean;
+  operationToken?: string;
+  operationTokenExpiresAt?: string;
+}
+
 // ==================== ENUMS ====================
 export enum UserRole {
   Worker = 1,

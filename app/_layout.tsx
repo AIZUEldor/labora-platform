@@ -75,6 +75,8 @@ export default function RootLayout() {
         <Stack.Screen name="worker-post-detail" />
         <Stack.Screen name="application-detail" />
         <Stack.Screen name="change-password" />
+        <Stack.Screen name="change-phone" />
+        <Stack.Screen name="change-phone-verify" />
         <Stack.Screen name="forgot-password" />
       </Stack>
     </>

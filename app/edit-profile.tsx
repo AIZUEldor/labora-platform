@@ -39,7 +39,6 @@ interface FormData {
 interface FormErrors {
   firstName?: string;
   lastName?: string;
-  phoneNumber?: string;
   age?: string;
 }
 
@@ -93,9 +92,6 @@ export default function EditProfileScreen(): React.JSX.Element {
     else if (form.firstName.trim().length < 2) newErrors.firstName = t.auth.firstName;
     if (!form.lastName.trim())            newErrors.lastName    = t.auth.lastName;
     else if (form.lastName.trim().length < 2)  newErrors.lastName  = t.auth.lastName;
-    if (!form.phoneNumber.trim())         newErrors.phoneNumber = t.auth.phone;
-    else if (!/^\+?[0-9]{9,13}$/.test(form.phoneNumber.replace(/\s/g, '')))
-      newErrors.phoneNumber = t.auth.phonePlaceholder;
     if (form.age) {
       const ageNum = parseInt(form.age, 10);
       if (isNaN(ageNum) || ageNum < 16 || ageNum > 80)
@@ -112,7 +108,6 @@ export default function EditProfileScreen(): React.JSX.Element {
       await userService.updateProfile({
         firstName:   form.firstName.trim(),
         lastName:    form.lastName.trim(),
-        phoneNumber: form.phoneNumber.trim(),
         age:         form.age ? parseInt(form.age, 10) : undefined,
         city:        form.city.trim()    || undefined,
         country:     form.country.trim() || undefined,
@@ -295,16 +290,15 @@ export default function EditProfileScreen(): React.JSX.Element {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>{t.auth.phone} <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={[styles.input, errors.phoneNumber ? styles.inputError : null]}
-              value={form.phoneNumber}
-              onChangeText={v => handleChange('phoneNumber', v)}
-              placeholder={t.auth.phonePlaceholder}
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="phone-pad"
-            />
-            {errors.phoneNumber ? <Text style={styles.errorText}>{errors.phoneNumber}</Text> : null}
+            <Text style={styles.label}>{t.auth.phone}</Text>
+            <TouchableOpacity
+              style={styles.readOnlyField}
+              onPress={() => router.push('/change-phone')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.readOnlyValue}>{form.phoneNumber}</Text>
+              <Text style={styles.changeLink}>{t.common.edit}</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Joylashuv */}
@@ -425,6 +419,13 @@ function createStyles(colors: typeof LightColors, theme: 'light' | 'dark') {
     },
     inputError:         { borderColor: '#ef4444', backgroundColor: theme === 'dark' ? '#1c0a0a' : '#fff5f5' },
     errorText:          { fontSize: 12, color: '#ef4444', marginTop: 4, marginLeft: 2 },
+    readOnlyField: {
+      height: 48, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border,
+      backgroundColor: theme === 'dark' ? '#111827' : '#f9fafb',
+      paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    },
+    readOnlyValue:      { fontSize: 15, color: colors.textPrimary },
+    changeLink:         { fontSize: 13, fontWeight: '600', color: colors.primary },
     primaryButton:      { marginHorizontal: 16, marginTop: 28, borderRadius: 14, overflow: 'hidden' },
     primaryButtonDisabled: { opacity: 0.7 },
     primaryButtonGradient: { height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },

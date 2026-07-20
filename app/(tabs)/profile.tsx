@@ -15,7 +15,7 @@ import {
   EditIcon, HeartIcon, StarIcon, BellIcon,
   LockIcon, HelpIcon, LogoutIcon, SunIcon,
   MoonIcon, ChevronRightIcon, CameraIcon,
-  ApplicationsIcon, BriefcaseIcon,
+  ApplicationsIcon, BriefcaseIcon, PhoneIcon,
   InstagramIcon, TelegramIcon, TrashIcon,
 } from '../../components/icons';
 import { userService } from '../../services/userService';
@@ -38,6 +38,7 @@ function MenuIcon({ name, color }: { name: string; color: string }) {
     case 'star':         return <StarIcon         {...props} />;
     case 'bell':         return <BellIcon         {...props} />;
     case 'lock':         return <LockIcon         {...props} />;
+    case 'phone':        return <PhoneIcon        {...props} />;
     case 'help':         return <HelpIcon         {...props} />;
     default:             return null;
   }
@@ -58,6 +59,7 @@ export default function ProfileScreen() {
     { icon: 'star',         label: t.profile.reviews,        route: '/my-reviews' },
     { icon: 'bell',         label: t.notifications.title,    route: '/notifications' },
     { icon: 'lock',         label: t.profile.changePassword, route: '/change-password' },
+    { icon: 'phone',        label: t.profile.changePhone,    route: '/change-phone' },
     { icon: 'help',         label: t.profile.help,           route: '/help' },
   ];
 
@@ -67,6 +69,7 @@ export default function ProfileScreen() {
     { icon: 'star',      label: t.profile.reviews,        route: '/my-reviews' },
     { icon: 'bell',      label: t.notifications.title,    route: '/notifications' },
     { icon: 'lock',      label: t.profile.changePassword, route: '/change-password' },
+    { icon: 'phone',     label: t.profile.changePhone,    route: '/change-phone' },
     { icon: 'help',      label: t.profile.help,           route: '/help' },
   ];
 

@@ -10,6 +10,7 @@ export interface AuthState {
   login: (token: string, role: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => Promise<void>;
   loadToken: () => Promise<void>;
+  updateToken: (token: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -41,5 +42,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     const firstName = await SecureStore.getItemAsync('first_name');
     const lastName  = await SecureStore.getItemAsync('last_name');
     set({ token, role, firstName, lastName, isLoading: false });
+  },
+
+  // Change Phone completion returns a fresh JWT (same role/firstName/lastName, updated phone claim) -
+  // persists only the token, leaving role/firstName/lastName in SecureStore and state untouched.
+  updateToken: async (token) => {
+    await SecureStore.setItemAsync('access_token', token);
+    set({ token });
   },
 }));
