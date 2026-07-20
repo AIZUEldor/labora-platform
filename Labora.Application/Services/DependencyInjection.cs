@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<IOtpRequestContextProvider, OtpRequestContextProvider>();
         services.AddScoped<IOtpAbuseGuard, OtpAbuseGuard>();
         services.AddScoped<IOtpService, OtpService>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IPhoneNumberNormalizer, UzbekistanPhoneNumberNormalizer>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJobService, JobService>();

@@ -1,4 +1,8 @@
-﻿using Labora.Application.DTOs.Users;
+﻿using FluentValidation;
+using FluentValidation.Results;
+using Labora.Application.DTOs.Auth;
+using Labora.Application.DTOs.Otp;
+using Labora.Application.DTOs.Users;
 using Labora.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,10 +16,23 @@ namespace Labora.API.Controllers;
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IValidator<ChangePhoneStartRequestDto> _changePhoneStartValidator;
+    private readonly IValidator<ChangePhoneResendRequestDto> _changePhoneResendValidator;
+    private readonly IValidator<ChangePhoneVerifyRequestDto> _changePhoneVerifyValidator;
+    private readonly IValidator<ChangePhoneCompleteRequestDto> _changePhoneCompleteValidator;
 
-    public UserController(IUserService userService)
+    public UserController(
+        IUserService userService,
+        IValidator<ChangePhoneStartRequestDto> changePhoneStartValidator,
+        IValidator<ChangePhoneResendRequestDto> changePhoneResendValidator,
+        IValidator<ChangePhoneVerifyRequestDto> changePhoneVerifyValidator,
+        IValidator<ChangePhoneCompleteRequestDto> changePhoneCompleteValidator)
     {
         _userService = userService;
+        _changePhoneStartValidator = changePhoneStartValidator;
+        _changePhoneResendValidator = changePhoneResendValidator;
+        _changePhoneVerifyValidator = changePhoneVerifyValidator;
+        _changePhoneCompleteValidator = changePhoneCompleteValidator;
     }
 
     [HttpGet("profile")]
@@ -82,5 +99,57 @@ public class UserController : ControllerBase
             statusCode = StatusCodes.Status410Gone,
             message = "Bu endpoint endi ishlamaydi. Parolni tiklash uchun OTP orqali parolni tiklash oqimidan (/api/auth/forgot-password/start) foydalaning."
         });
+    }
+
+    [HttpPost("change-phone/start")]
+    public async Task<IActionResult> ChangePhoneStart([FromBody] ChangePhoneStartRequestDto request)
+    {
+        ValidationResult validationResult = await _changePhoneStartValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        Guid userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        StartOtpResponseDto response = await _userService.ChangePhoneStartAsync(userId, request);
+        return Ok(response);
+    }
+
+    [HttpPost("change-phone/resend")]
+    public async Task<IActionResult> ChangePhoneResend([FromBody] ChangePhoneResendRequestDto request)
+    {
+        ValidationResult validationResult = await _changePhoneResendValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        Guid userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        ResendOtpResponseDto response = await _userService.ChangePhoneResendAsync(userId, request);
+        return Ok(response);
+    }
+
+    [HttpPost("change-phone/verify")]
+    public async Task<IActionResult> ChangePhoneVerify([FromBody] ChangePhoneVerifyRequestDto request)
+    {
+        ValidationResult validationResult = await _changePhoneVerifyValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        Guid userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        VerifyOtpResponseDto response = await _userService.ChangePhoneVerifyAsync(userId, request);
+        return Ok(response);
+    }
+
+    [HttpPost("change-phone/complete")]
+    public async Task<IActionResult> ChangePhoneComplete([FromBody] ChangePhoneCompleteRequestDto request)
+    {
+        ValidationResult validationResult = await _changePhoneCompleteValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        Guid userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        AuthResponseDto response = await _userService.ChangePhoneCompleteAsync(userId, request);
+        return Ok(response);
     }
 }

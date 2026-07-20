@@ -165,6 +165,29 @@ public class OtpService : IOtpService
     }
 
     /// <summary>
+    /// Read-only ownership check, reusing the existing GetByIdForUpdateAsync read - no new repository
+    /// method was needed. Missing verification, wrong Purpose, null UserId, and a UserId that doesn't
+    /// match expectedUserId all throw the exact same KeyNotFoundException/message this service already
+    /// throws elsewhere for "verification not found" (see TryVerifyAsync, ResolveResendTargetAsync), so
+    /// none of the four is distinguishable from the others by a caller.
+    /// </summary>
+    public async Task EnsureVerificationOwnershipAsync(
+        Guid verificationId,
+        OtpPurpose expectedPurpose,
+        Guid expectedUserId)
+    {
+        OtpVerification? verification = await _otpRepository.GetByIdForUpdateAsync(verificationId);
+
+        if (verification is null
+            || verification.Purpose != expectedPurpose
+            || verification.UserId is null
+            || verification.UserId.Value != expectedUserId)
+        {
+            throw new KeyNotFoundException("OTP verification topilmadi.");
+        }
+    }
+
+    /// <summary>
     /// Transaction A, fully atomic: resolves the target row (new or reused), evaluates the abuse
     /// guard's active-block re-check + phone-rate/cross-number thresholds + StartAttempt insert +
     /// block escalation, and - only if not blocked - issues a fresh code and persists the row as

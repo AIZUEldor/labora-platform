@@ -34,4 +34,18 @@ public interface IOtpService
         Guid verificationId,
         OtpPurpose expectedPurpose,
         string? operationToken = null);
+
+    /// <summary>
+    /// Validation only - no status change, no send, no verify-attempt increment, no token creation, no
+    /// database write. Throws the same generic "verification not found" exception KeyNotFoundException
+    /// used elsewhere in this service whenever the verification is missing, has a different Purpose, has
+    /// no UserId, or has a UserId different from expectedUserId - all four cases are indistinguishable to
+    /// the caller. Intended for an authenticated caller (e.g. UserController's Change Phone flow) to
+    /// confirm a VerificationId it did not itself create actually belongs to it before calling
+    /// ResendOtpAsync or VerifyOtpAsync, without exposing OTP persistence details outside this service.
+    /// </summary>
+    Task EnsureVerificationOwnershipAsync(
+        Guid verificationId,
+        OtpPurpose expectedPurpose,
+        Guid expectedUserId);
 }

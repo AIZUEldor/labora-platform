@@ -53,6 +53,20 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         }
     }
 
+    public override async Task<User> UpdateAsync(User entity)
+    {
+        try
+        {
+            return await base.UpdateAsync(entity);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            DetachFailedEntity(entity);
+            throw new InvalidOperationException(
+                "Bu telefon raqam allaqachon ro'yxatdan o'tgan.", ex);
+        }
+    }
+
     private void DetachFailedEntity(User entity)
     {
         _context.Entry(entity).State = EntityState.Detached;

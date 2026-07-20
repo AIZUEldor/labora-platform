@@ -1,4 +1,5 @@
-﻿using Labora.Application.Common.Validation;
+﻿using Labora.Application.Common;
+using Labora.Application.Common.Validation;
 using Labora.Application.DTOs.Auth;
 using Labora.Application.DTOs.Otp;
 using Labora.Application.Interfaces;
@@ -6,11 +7,6 @@ using Labora.Domain.Entities;
 using Labora.Domain.Enums;
 using Labora.Domain.Exceptions;
 using Labora.Domain.Interfaces;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using System.Text.Json;
 
 namespace Labora.Application.Services;
@@ -20,23 +16,23 @@ public class AuthService : IAuthService
     private const int CurrentRegistrationPayloadVersion = 1;
 
     private readonly IUserRepository _userRepository;
-    private readonly IConfiguration _configuration;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IOtpService _otpService;
     private readonly IPhoneNumberNormalizer _phoneNumberNormalizer;
+    private readonly IJwtTokenService _jwtTokenService;
 
     public AuthService(
         IUserRepository userRepository,
-        IConfiguration configuration,
         IPasswordHasher passwordHasher,
         IOtpService otpService,
-        IPhoneNumberNormalizer phoneNumberNormalizer)
+        IPhoneNumberNormalizer phoneNumberNormalizer,
+        IJwtTokenService jwtTokenService)
     {
         _userRepository = userRepository;
-        _configuration = configuration;
         _passwordHasher = passwordHasher;
         _otpService = otpService;
         _phoneNumberNormalizer = phoneNumberNormalizer;
+        _jwtTokenService = jwtTokenService;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request)
@@ -59,7 +55,7 @@ public class AuthService : IAuthService
 
         await _userRepository.AddAsync(newUser);
 
-        string token = GenerateJwtToken(newUser);
+        JwtTokenResult jwtResult = _jwtTokenService.GenerateToken(newUser);
 
         return new AuthResponseDto
         {
@@ -68,8 +64,8 @@ public class AuthService : IAuthService
             LastName = newUser.LastName,
             PhoneNumber = newUser.PhoneNumber,
             Role = newUser.Role,
-            Token = token,
-            TokenExpiration = DateTime.UtcNow.AddDays(7)
+            Token = jwtResult.Token,
+            TokenExpiration = jwtResult.ExpiresAtUtc
         };
     }
 
@@ -77,7 +73,7 @@ public class AuthService : IAuthService
     {
         User user = await VerifyLoginCredentialsAsync(request.PhoneNumber, request.Password);
 
-        string token = GenerateJwtToken(user);
+        JwtTokenResult jwtResult = _jwtTokenService.GenerateToken(user);
 
         return new AuthResponseDto
         {
@@ -86,8 +82,8 @@ public class AuthService : IAuthService
             LastName = user.LastName,
             PhoneNumber = user.PhoneNumber,
             Role = user.Role,
-            Token = token,
-            TokenExpiration = DateTime.UtcNow.AddDays(7)
+            Token = jwtResult.Token,
+            TokenExpiration = jwtResult.ExpiresAtUtc
         };
     }
 
@@ -305,7 +301,7 @@ public class AuthService : IAuthService
 
         await _userRepository.AddAsync(newUser);
 
-        string token = GenerateJwtToken(newUser);
+        JwtTokenResult jwtResult = _jwtTokenService.GenerateToken(newUser);
 
         return new AuthResponseDto
         {
@@ -314,8 +310,8 @@ public class AuthService : IAuthService
             LastName = newUser.LastName,
             PhoneNumber = newUser.PhoneNumber,
             Role = newUser.Role,
-            Token = token,
-            TokenExpiration = DateTime.UtcNow.AddDays(7)
+            Token = jwtResult.Token,
+            TokenExpiration = jwtResult.ExpiresAtUtc
         };
     }
 
@@ -424,7 +420,7 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("Telefon raqam yoki parol noto'g'ri.");
         }
 
-        string token = GenerateJwtToken(user);
+        JwtTokenResult jwtResult = _jwtTokenService.GenerateToken(user);
 
         return new AuthResponseDto
         {
@@ -433,32 +429,8 @@ public class AuthService : IAuthService
             LastName = user.LastName,
             PhoneNumber = user.PhoneNumber,
             Role = user.Role,
-            Token = token,
-            TokenExpiration = DateTime.UtcNow.AddDays(7)
+            Token = jwtResult.Token,
+            TokenExpiration = jwtResult.ExpiresAtUtc
         };
-    }
-
-    private string GenerateJwtToken(User user)
-    {
-        string jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT key not configured.");
-        SymmetricSecurityKey securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-        SigningCredentials credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-        List<Claim> claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.MobilePhone, user.PhoneNumber),
-            new Claim(ClaimTypes.Role, user.Role.ToString())
-        };
-
-        JwtSecurityToken token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
-            claims: claims,
-            expires: DateTime.UtcNow.AddDays(7),
-            signingCredentials: credentials
-        );
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
