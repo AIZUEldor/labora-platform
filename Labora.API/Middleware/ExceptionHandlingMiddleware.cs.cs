@@ -36,6 +36,12 @@ public class ExceptionHandlingMiddleware
         int statusCode = exception switch
         {
             AlreadyReviewedException => (int)HttpStatusCode.Conflict,
+            OtpConflictException => (int)HttpStatusCode.Conflict,
+            OtpExpiredException => (int)HttpStatusCode.BadRequest,
+            OtpInvalidOperationTokenException => (int)HttpStatusCode.BadRequest,
+            OtpMaxAttemptsExceededException => (int)HttpStatusCode.BadRequest,
+            OtpBlockedException => (int)HttpStatusCode.TooManyRequests,
+            OtpSendRateLimitedException => (int)HttpStatusCode.TooManyRequests,
             InvalidOperationException => (int)HttpStatusCode.BadRequest,
             KeyNotFoundException => (int)HttpStatusCode.NotFound,
             UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
