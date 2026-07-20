@@ -44,7 +44,12 @@ public class MappingProfile : Profile
     .ForMember(dest => dest.CvUrl, opt => opt.Ignore())
     .ForMember(dest => dest.Role, opt => opt.Ignore())
     .ForMember(dest => dest.IsVerified, opt => opt.Ignore())
-    .ForMember(dest => dest.CreatedAt, opt => opt.Ignore());
+    .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+    // PhoneNumber is deliberately ignored here: the general profile-update endpoint must never be able
+    // to change the phone number (it currently does so with no OTP/ownership verification and no
+    // uniqueness check). Old clients may still send this field - it is silently dropped, not rejected.
+    // Changing phone number must go through a dedicated OTP-protected flow (not yet implemented).
+    .ForMember(dest => dest.PhoneNumber, opt => opt.Ignore());
 
         // Category mappings
         CreateMap<Category, CategoryResponseDto>()
