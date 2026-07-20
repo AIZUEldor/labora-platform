@@ -27,4 +27,24 @@ public interface IAuthService
     /// client-supplied phone number.
     /// </summary>
     Task<ForgotPasswordCompleteResponseDto> ForgotPasswordCompleteAsync(ForgotPasswordCompleteRequestDto request);
+
+    /// <summary>
+    /// Pre-checks phone uniqueness, hashes the password, and starts an OTP-protected registration by
+    /// handing IOtpService.StartOtpAsync a serialized RegistrationPayloadDto (never the raw request,
+    /// never a plaintext password) as the OtpPurpose.Registration flow's server-trusted payload.
+    /// </summary>
+    Task<StartOtpResponseDto> RegisterStartAsync(RegisterStartRequestDto request);
+
+    Task<ResendOtpResponseDto> RegisterResendAsync(RegisterResendRequestDto request);
+
+    Task<VerifyOtpResponseDto> RegisterVerifyAsync(RegisterVerifyRequestDto request);
+
+    /// <summary>
+    /// Consumes the operation token for OtpPurpose.Registration and, only if that succeeds, creates the
+    /// User exclusively from the RegistrationPayloadDto deserialized out of the consumed verification -
+    /// request carries only VerificationId/OperationToken, so there is no client-supplied registration
+    /// field this method could accidentally trust instead. Fails closed on a missing, malformed, or
+    /// phone-inconsistent payload, and re-checks phone uniqueness after consume before creating the user.
+    /// </summary>
+    Task<AuthResponseDto> RegisterCompleteAsync(RegisterCompleteRequestDto request);
 }

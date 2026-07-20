@@ -18,6 +18,10 @@ public class AuthController : ControllerBase
     private readonly IValidator<ForgotPasswordResendRequestDto> _forgotPasswordResendValidator;
     private readonly IValidator<ForgotPasswordVerifyRequestDto> _forgotPasswordVerifyValidator;
     private readonly IValidator<ForgotPasswordCompleteRequestDto> _forgotPasswordCompleteValidator;
+    private readonly IValidator<RegisterStartRequestDto> _registerStartValidator;
+    private readonly IValidator<RegisterResendRequestDto> _registerResendValidator;
+    private readonly IValidator<RegisterVerifyRequestDto> _registerVerifyValidator;
+    private readonly IValidator<RegisterCompleteRequestDto> _registerCompleteValidator;
 
     public AuthController(
         IAuthService authService,
@@ -26,7 +30,11 @@ public class AuthController : ControllerBase
         IValidator<ForgotPasswordStartRequestDto> forgotPasswordStartValidator,
         IValidator<ForgotPasswordResendRequestDto> forgotPasswordResendValidator,
         IValidator<ForgotPasswordVerifyRequestDto> forgotPasswordVerifyValidator,
-        IValidator<ForgotPasswordCompleteRequestDto> forgotPasswordCompleteValidator)
+        IValidator<ForgotPasswordCompleteRequestDto> forgotPasswordCompleteValidator,
+        IValidator<RegisterStartRequestDto> registerStartValidator,
+        IValidator<RegisterResendRequestDto> registerResendValidator,
+        IValidator<RegisterVerifyRequestDto> registerVerifyValidator,
+        IValidator<RegisterCompleteRequestDto> registerCompleteValidator)
     {
         _authService = authService;
         _registerValidator = registerValidator;
@@ -35,6 +43,10 @@ public class AuthController : ControllerBase
         _forgotPasswordResendValidator = forgotPasswordResendValidator;
         _forgotPasswordVerifyValidator = forgotPasswordVerifyValidator;
         _forgotPasswordCompleteValidator = forgotPasswordCompleteValidator;
+        _registerStartValidator = registerStartValidator;
+        _registerResendValidator = registerResendValidator;
+        _registerVerifyValidator = registerVerifyValidator;
+        _registerCompleteValidator = registerCompleteValidator;
     }
 
     [HttpPost("register")]
@@ -106,6 +118,54 @@ public class AuthController : ControllerBase
             return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
 
         ForgotPasswordCompleteResponseDto response = await _authService.ForgotPasswordCompleteAsync(request);
+        return Ok(response);
+    }
+
+    [HttpPost("register/start")]
+    public async Task<IActionResult> RegisterStart([FromBody] RegisterStartRequestDto request)
+    {
+        ValidationResult validationResult = await _registerStartValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        StartOtpResponseDto response = await _authService.RegisterStartAsync(request);
+        return Ok(response);
+    }
+
+    [HttpPost("register/resend")]
+    public async Task<IActionResult> RegisterResend([FromBody] RegisterResendRequestDto request)
+    {
+        ValidationResult validationResult = await _registerResendValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        ResendOtpResponseDto response = await _authService.RegisterResendAsync(request);
+        return Ok(response);
+    }
+
+    [HttpPost("register/verify")]
+    public async Task<IActionResult> RegisterVerify([FromBody] RegisterVerifyRequestDto request)
+    {
+        ValidationResult validationResult = await _registerVerifyValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        VerifyOtpResponseDto response = await _authService.RegisterVerifyAsync(request);
+        return Ok(response);
+    }
+
+    [HttpPost("register/complete")]
+    public async Task<IActionResult> RegisterComplete([FromBody] RegisterCompleteRequestDto request)
+    {
+        ValidationResult validationResult = await _registerCompleteValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        AuthResponseDto response = await _authService.RegisterCompleteAsync(request);
         return Ok(response);
     }
 }

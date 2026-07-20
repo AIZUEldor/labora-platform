@@ -281,6 +281,15 @@ public class OtpService : IOtpService
                     "An active OTP verification already exists for this phone number and purpose.");
             }
 
+            // A non-null registrationPayload from this call replaces the reused row's stale payload -
+            // opaque passthrough only, no inspection of its contents. A null argument (e.g. every
+            // ForgotPassword start) leaves whatever payload the row already has untouched rather than
+            // clearing it.
+            if (registrationPayload is not null)
+            {
+                existing.RegistrationPayload = registrationPayload;
+            }
+
             return (existing, false);
         }
 

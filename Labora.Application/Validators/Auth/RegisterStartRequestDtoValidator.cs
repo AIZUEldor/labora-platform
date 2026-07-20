@@ -1,12 +1,12 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Labora.Application.Common.Validation;
 using Labora.Application.DTOs.Auth;
 
 namespace Labora.Application.Validators.Auth;
 
-public class RegisterRequestDtoValidator : AbstractValidator<RegisterRequestDto>
+public class RegisterStartRequestDtoValidator : AbstractValidator<RegisterStartRequestDto>
 {
-    public RegisterRequestDtoValidator()
+    public RegisterStartRequestDtoValidator()
     {
         RuleFor(x => x.FirstName)
             .NotEmpty().WithMessage("Ism bo'sh bo'lishi mumkin emas.")

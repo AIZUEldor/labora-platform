@@ -1,4 +1,5 @@
-﻿using Labora.Application.DTOs.Auth;
+﻿using Labora.Application.Common.Validation;
+using Labora.Application.DTOs.Auth;
 using Labora.Application.DTOs.Otp;
 using Labora.Application.Interfaces;
 using Labora.Domain.Entities;
@@ -10,26 +11,32 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 
 namespace Labora.Application.Services;
 
 public class AuthService : IAuthService
 {
+    private const int CurrentRegistrationPayloadVersion = 1;
+
     private readonly IUserRepository _userRepository;
     private readonly IConfiguration _configuration;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IOtpService _otpService;
+    private readonly IPhoneNumberNormalizer _phoneNumberNormalizer;
 
     public AuthService(
         IUserRepository userRepository,
         IConfiguration configuration,
         IPasswordHasher passwordHasher,
-        IOtpService otpService)
+        IOtpService otpService,
+        IPhoneNumberNormalizer phoneNumberNormalizer)
     {
         _userRepository = userRepository;
         _configuration = configuration;
         _passwordHasher = passwordHasher;
         _otpService = otpService;
+        _phoneNumberNormalizer = phoneNumberNormalizer;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request)
@@ -168,6 +175,186 @@ public class AuthService : IAuthService
         await _userRepository.UpdateAsync(user);
 
         return new ForgotPasswordCompleteResponseDto { Success = true };
+    }
+
+    /// <summary>
+    /// Pre-checks phone uniqueness against the normalized phone before ever hashing a password or
+    /// touching IOtpService, so no SMS is sent for a number that is already registered. The password is
+    /// hashed here and only the hash - never the plaintext - is placed into RegistrationPayloadDto,
+    /// which is then serialized and handed to StartOtpAsync as the OtpPurpose.Registration payload;
+    /// nothing about the original RegisterStartRequestDto (including its plaintext Password) is ever
+    /// persisted.
+    /// </summary>
+    public async Task<StartOtpResponseDto> RegisterStartAsync(RegisterStartRequestDto request)
+    {
+        string normalizedPhone = _phoneNumberNormalizer.Normalize(request.PhoneNumber);
+
+        bool phoneExists = await _userRepository.PhoneNumberExistsAsync(normalizedPhone);
+        if (phoneExists)
+        {
+            throw new InvalidOperationException("Bu telefon raqam allaqachon ro'yxatdan o'tgan.");
+        }
+
+        RegistrationPayloadDto payload = new RegistrationPayloadDto
+        {
+            Version = CurrentRegistrationPayloadVersion,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Age = request.Age,
+            PhoneNumber = normalizedPhone,
+            PasswordHash = _passwordHasher.Hash(request.Password),
+            Role = request.Role
+        };
+
+        string serializedPayload = JsonSerializer.Serialize(payload);
+
+        return await _otpService.StartOtpAsync(
+            normalizedPhone,
+            OtpPurpose.Registration,
+            userId: null,
+            registrationPayload: serializedPayload);
+    }
+
+    public async Task<ResendOtpResponseDto> RegisterResendAsync(RegisterResendRequestDto request)
+    {
+        return await _otpService.ResendOtpAsync(request.VerificationId);
+    }
+
+    public async Task<VerifyOtpResponseDto> RegisterVerifyAsync(RegisterVerifyRequestDto request)
+    {
+        return await _otpService.VerifyOtpAsync(request.VerificationId, request.Code);
+    }
+
+    /// <summary>
+    /// The User is created only after ConsumeOtpAsync returns successfully (it throws for any
+    /// invalid/expired/wrong-purpose/already-consumed token) and only from the RegistrationPayloadDto
+    /// deserialized out of the consumed verification's own RegistrationPayload - request never carries
+    /// registration fields, so there is nothing client-supplied this method could accidentally trust
+    /// instead. Every failure mode here (missing payload, malformed payload, payload/consume-result
+    /// phone mismatch) fails closed with a generic exception rather than falling back to any
+    /// client-supplied data.
+    /// </summary>
+    public async Task<AuthResponseDto> RegisterCompleteAsync(RegisterCompleteRequestDto request)
+    {
+        OtpConsumeResultDto consumeResult = await _otpService.ConsumeOtpAsync(
+            request.VerificationId,
+            OtpPurpose.Registration,
+            request.OperationToken);
+
+        if (string.IsNullOrWhiteSpace(consumeResult.RegistrationPayload))
+        {
+            throw new InvalidOperationException("Ro'yxatdan o'tish ma'lumotlari topilmadi.");
+        }
+
+        RegistrationPayloadDto? payload;
+        try
+        {
+            payload = JsonSerializer.Deserialize<RegistrationPayloadDto>(consumeResult.RegistrationPayload);
+        }
+        catch (JsonException)
+        {
+            throw new InvalidOperationException("Ro'yxatdan o'tish ma'lumotlari yaroqsiz.");
+        }
+
+        if (payload is null || !IsRegistrationPayloadValid(payload))
+        {
+            throw new InvalidOperationException("Ro'yxatdan o'tish ma'lumotlari yaroqsiz.");
+        }
+
+        string normalizedPayloadPhone = _phoneNumberNormalizer.Normalize(payload.PhoneNumber);
+        string normalizedConsumedPhone = _phoneNumberNormalizer.Normalize(consumeResult.PhoneNumber);
+
+        if (!string.Equals(normalizedPayloadPhone, normalizedConsumedPhone, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Ro'yxatdan o'tish ma'lumotlari mos kelmadi.");
+        }
+
+        bool phoneExists = await _userRepository.PhoneNumberExistsAsync(normalizedConsumedPhone);
+        if (phoneExists)
+        {
+            throw new InvalidOperationException("Bu telefon raqam allaqachon ro'yxatdan o'tgan.");
+        }
+
+        User newUser = new User
+        {
+            FirstName = payload.FirstName,
+            LastName = payload.LastName,
+            Age = payload.Age,
+            PhoneNumber = normalizedConsumedPhone,
+            PasswordHash = payload.PasswordHash,
+            Role = payload.Role
+        };
+
+        await _userRepository.AddAsync(newUser);
+
+        string token = GenerateJwtToken(newUser);
+
+        return new AuthResponseDto
+        {
+            UserId = newUser.Id,
+            FirstName = newUser.FirstName,
+            LastName = newUser.LastName,
+            PhoneNumber = newUser.PhoneNumber,
+            Role = newUser.Role,
+            Token = token,
+            TokenExpiration = DateTime.UtcNow.AddDays(7)
+        };
+    }
+
+    /// <summary>
+    /// Fails closed on anything a tampered, truncated, or schema-drifted RegistrationPayload could
+    /// produce via System.Text.Json's default lenient deserialization (silently-defaulted missing
+    /// properties, an out-of-range Age, an unsupported Role) - every field actually written onto the
+    /// created User is checked here, not just the two used for the phone-binding comparison. Version
+    /// is checked first and explicitly against the single currently-supported value, so an old-shape
+    /// payload (Version 0, e.g. from a JSON default) is rejected rather than silently accepted. Name
+    /// length, age range, and role checks all defer to RegistrationRules - the same source of truth
+    /// enforced by RegisterRequestDtoValidator/RegisterStartRequestDtoValidator - so this can never
+    /// permit something the request-time validators would have rejected (including UserRole.Admin,
+    /// which RegistrationRules.IsAllowedPublicRole excludes).
+    /// </summary>
+    private static bool IsRegistrationPayloadValid(RegistrationPayloadDto payload)
+    {
+        if (payload.Version != CurrentRegistrationPayloadVersion)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.FirstName)
+            || payload.FirstName.Length < RegistrationRules.MinNameLength
+            || payload.FirstName.Length > RegistrationRules.MaxNameLength)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.LastName)
+            || payload.LastName.Length < RegistrationRules.MinNameLength
+            || payload.LastName.Length > RegistrationRules.MaxNameLength)
+        {
+            return false;
+        }
+
+        if (payload.Age < RegistrationRules.MinAge || payload.Age > RegistrationRules.MaxAge)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.PhoneNumber))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.PasswordHash))
+        {
+            return false;
+        }
+
+        if (!RegistrationRules.IsAllowedPublicRole(payload.Role))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private string GenerateJwtToken(User user)
