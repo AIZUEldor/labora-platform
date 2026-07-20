@@ -75,17 +75,7 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponseDto> LoginAsync(LoginRequestDto request)
     {
-        User? user = await _userRepository.GetByPhoneNumberAsync(request.PhoneNumber);
-        if (user is null)
-        {
-            throw new InvalidOperationException("Telefon raqam yoki parol noto'g'ri.");
-        }
-
-        bool isPasswordValid = _passwordHasher.Verify(request.Password, user.PasswordHash);
-        if (!isPasswordValid)
-        {
-            throw new InvalidOperationException("Telefon raqam yoki parol noto'g'ri.");
-        }
+        User user = await VerifyLoginCredentialsAsync(request.PhoneNumber, request.Password);
 
         string token = GenerateJwtToken(user);
 
@@ -99,6 +89,34 @@ public class AuthService : IAuthService
             Token = token,
             TokenExpiration = DateTime.UtcNow.AddDays(7)
         };
+    }
+
+    /// <summary>
+    /// Shared by LoginAsync and LoginStartAsync - unknown phone, wrong password, and a blocked user all
+    /// throw the exact same exception/message, so none of the three can be distinguished from any other
+    /// by a caller. A blocked user's correct password is deliberately treated identically to a wrong
+    /// password so blocked-account state is never revealed.
+    /// </summary>
+    private async Task<User> VerifyLoginCredentialsAsync(string phoneNumber, string password)
+    {
+        User? user = await _userRepository.GetByPhoneNumberAsync(phoneNumber);
+        if (user is null)
+        {
+            throw new InvalidOperationException("Telefon raqam yoki parol noto'g'ri.");
+        }
+
+        bool isPasswordValid = _passwordHasher.Verify(password, user.PasswordHash);
+        if (!isPasswordValid)
+        {
+            throw new InvalidOperationException("Telefon raqam yoki parol noto'g'ri.");
+        }
+
+        if (user.IsBlocked)
+        {
+            throw new InvalidOperationException("Telefon raqam yoki parol noto'g'ri.");
+        }
+
+        return user;
     }
 
     /// <summary>
@@ -355,6 +373,69 @@ public class AuthService : IAuthService
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Reuses VerifyLoginCredentialsAsync, which already rejects unknown phone, wrong password, and a
+    /// blocked user with the same generic exception, so none of the three is distinguishable here either.
+    /// Only on success is StartOtpAsync called, bound to the verified user's own Id (registrationPayload
+    /// stays null - there is no new data to carry, the user already exists). No JWT is issued here.
+    /// </summary>
+    public async Task<StartOtpResponseDto> LoginStartAsync(LoginRequestDto request)
+    {
+        User user = await VerifyLoginCredentialsAsync(request.PhoneNumber, request.Password);
+
+        return await _otpService.StartOtpAsync(request.PhoneNumber, OtpPurpose.Login, user.Id);
+    }
+
+    public async Task<ResendOtpResponseDto> LoginResendAsync(LoginResendRequestDto request)
+    {
+        return await _otpService.ResendOtpAsync(request.VerificationId);
+    }
+
+    public async Task<VerifyOtpResponseDto> LoginVerifyAsync(LoginVerifyRequestDto request)
+    {
+        return await _otpService.VerifyOtpAsync(request.VerificationId, request.Code);
+    }
+
+    /// <summary>
+    /// The JWT is issued only after ConsumeOtpAsync returns successfully (it throws for any
+    /// invalid/expired/wrong-purpose/already-consumed token), and only for the user identified by the
+    /// consumed verification's own UserId - request never carries a phone number or password, so there
+    /// is nothing client-supplied this method could accidentally trust instead. A missing or
+    /// since-blocked user (e.g. blocked by an admin between Start and Complete) is rejected with the
+    /// same generic error LoginAsync/LoginStartAsync already use.
+    /// </summary>
+    public async Task<AuthResponseDto> LoginCompleteAsync(LoginCompleteRequestDto request)
+    {
+        OtpConsumeResultDto consumeResult = await _otpService.ConsumeOtpAsync(
+            request.VerificationId,
+            OtpPurpose.Login,
+            request.OperationToken);
+
+        if (consumeResult.UserId is null)
+        {
+            throw new InvalidOperationException("Ushbu OTP tasdiqlash bilan hech qanday foydalanuvchi bog'lanmagan.");
+        }
+
+        User? user = await _userRepository.GetByIdAsync(consumeResult.UserId.Value);
+        if (user is null || user.IsBlocked)
+        {
+            throw new InvalidOperationException("Telefon raqam yoki parol noto'g'ri.");
+        }
+
+        string token = GenerateJwtToken(user);
+
+        return new AuthResponseDto
+        {
+            UserId = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            PhoneNumber = user.PhoneNumber,
+            Role = user.Role,
+            Token = token,
+            TokenExpiration = DateTime.UtcNow.AddDays(7)
+        };
     }
 
     private string GenerateJwtToken(User user)

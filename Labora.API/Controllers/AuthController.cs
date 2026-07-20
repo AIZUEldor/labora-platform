@@ -22,6 +22,9 @@ public class AuthController : ControllerBase
     private readonly IValidator<RegisterResendRequestDto> _registerResendValidator;
     private readonly IValidator<RegisterVerifyRequestDto> _registerVerifyValidator;
     private readonly IValidator<RegisterCompleteRequestDto> _registerCompleteValidator;
+    private readonly IValidator<LoginResendRequestDto> _loginResendValidator;
+    private readonly IValidator<LoginVerifyRequestDto> _loginVerifyValidator;
+    private readonly IValidator<LoginCompleteRequestDto> _loginCompleteValidator;
 
     public AuthController(
         IAuthService authService,
@@ -34,7 +37,10 @@ public class AuthController : ControllerBase
         IValidator<RegisterStartRequestDto> registerStartValidator,
         IValidator<RegisterResendRequestDto> registerResendValidator,
         IValidator<RegisterVerifyRequestDto> registerVerifyValidator,
-        IValidator<RegisterCompleteRequestDto> registerCompleteValidator)
+        IValidator<RegisterCompleteRequestDto> registerCompleteValidator,
+        IValidator<LoginResendRequestDto> loginResendValidator,
+        IValidator<LoginVerifyRequestDto> loginVerifyValidator,
+        IValidator<LoginCompleteRequestDto> loginCompleteValidator)
     {
         _authService = authService;
         _registerValidator = registerValidator;
@@ -47,6 +53,9 @@ public class AuthController : ControllerBase
         _registerResendValidator = registerResendValidator;
         _registerVerifyValidator = registerVerifyValidator;
         _registerCompleteValidator = registerCompleteValidator;
+        _loginResendValidator = loginResendValidator;
+        _loginVerifyValidator = loginVerifyValidator;
+        _loginCompleteValidator = loginCompleteValidator;
     }
 
     [HttpPost("register")]
@@ -166,6 +175,54 @@ public class AuthController : ControllerBase
             return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
 
         AuthResponseDto response = await _authService.RegisterCompleteAsync(request);
+        return Ok(response);
+    }
+
+    [HttpPost("login/start")]
+    public async Task<IActionResult> LoginStart([FromBody] LoginRequestDto request)
+    {
+        ValidationResult validationResult = await _loginValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        StartOtpResponseDto response = await _authService.LoginStartAsync(request);
+        return Ok(response);
+    }
+
+    [HttpPost("login/resend")]
+    public async Task<IActionResult> LoginResend([FromBody] LoginResendRequestDto request)
+    {
+        ValidationResult validationResult = await _loginResendValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        ResendOtpResponseDto response = await _authService.LoginResendAsync(request);
+        return Ok(response);
+    }
+
+    [HttpPost("login/verify")]
+    public async Task<IActionResult> LoginVerify([FromBody] LoginVerifyRequestDto request)
+    {
+        ValidationResult validationResult = await _loginVerifyValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        VerifyOtpResponseDto response = await _authService.LoginVerifyAsync(request);
+        return Ok(response);
+    }
+
+    [HttpPost("login/complete")]
+    public async Task<IActionResult> LoginComplete([FromBody] LoginCompleteRequestDto request)
+    {
+        ValidationResult validationResult = await _loginCompleteValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+
+        AuthResponseDto response = await _authService.LoginCompleteAsync(request);
         return Ok(response);
     }
 }

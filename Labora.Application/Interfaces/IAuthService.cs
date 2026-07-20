@@ -47,4 +47,24 @@ public interface IAuthService
     /// phone-inconsistent payload, and re-checks phone uniqueness after consume before creating the user.
     /// </summary>
     Task<AuthResponseDto> RegisterCompleteAsync(RegisterCompleteRequestDto request);
+
+    /// <summary>
+    /// Verifies phone+password exactly as LoginAsync does (unknown phone and wrong password remain
+    /// indistinguishable) and additionally rejects a blocked user with that same generic error, so
+    /// account-blocked state is never revealed. Only on success does it start an OtpPurpose.Login flow
+    /// bound to the verified user's own Id - no JWT is issued here.
+    /// </summary>
+    Task<StartOtpResponseDto> LoginStartAsync(LoginRequestDto request);
+
+    Task<ResendOtpResponseDto> LoginResendAsync(LoginResendRequestDto request);
+
+    Task<VerifyOtpResponseDto> LoginVerifyAsync(LoginVerifyRequestDto request);
+
+    /// <summary>
+    /// Consumes the operation token for OtpPurpose.Login and, only if that succeeds, issues a JWT for
+    /// the user identified by the consumed verification's own UserId - request never carries a phone
+    /// number or password, so there is nothing client-supplied this method could accidentally trust
+    /// instead. Rejects a missing or blocked user with the same generic error LoginAsync already uses.
+    /// </summary>
+    Task<AuthResponseDto> LoginCompleteAsync(LoginCompleteRequestDto request);
 }
