@@ -38,6 +38,23 @@ export interface LoginCompleteRequest {
   operationToken: string;
 }
 
+// ==================== REGISTER OTP ====================
+// Start reuses RegisterRequest above; Resend/Verify/Complete reuse
+// StartOtpResponse/ResendOtpResponse/VerifyOtpResponse/AuthResponse below.
+export interface RegisterResendRequest {
+  verificationId: string;
+}
+
+export interface RegisterVerifyRequest {
+  verificationId: string;
+  code: string;
+}
+
+export interface RegisterCompleteRequest {
+  verificationId: string;
+  operationToken: string;
+}
+
 // ==================== CHANGE PHONE ====================
 export interface ChangePhoneStartRequest {
   newPhoneNumber: string;

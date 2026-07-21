@@ -5,6 +5,9 @@ import {
   LoginVerifyRequest,
   LoginCompleteRequest,
   RegisterRequest,
+  RegisterResendRequest,
+  RegisterVerifyRequest,
+  RegisterCompleteRequest,
   AuthResponse,
   ForgotPasswordStartRequest,
   ForgotPasswordResendRequest,
@@ -24,6 +27,27 @@ export const authService = {
 
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>('/auth/register', data);
+    return response.data;
+  },
+
+  // Ro'yxatdan o'tish — OTP oqimi
+  registerStart: async (data: RegisterRequest): Promise<StartOtpResponse> => {
+    const response = await api.post<StartOtpResponse>('/auth/register/start', data);
+    return response.data;
+  },
+
+  registerResend: async (data: RegisterResendRequest): Promise<ResendOtpResponse> => {
+    const response = await api.post<ResendOtpResponse>('/auth/register/resend', data);
+    return response.data;
+  },
+
+  registerVerify: async (data: RegisterVerifyRequest): Promise<VerifyOtpResponse> => {
+    const response = await api.post<VerifyOtpResponse>('/auth/register/verify', data);
+    return response.data;
+  },
+
+  registerComplete: async (data: RegisterCompleteRequest): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>('/auth/register/complete', data);
     return response.data;
   },
 

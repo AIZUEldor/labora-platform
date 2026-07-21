@@ -15,7 +15,6 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { authService } from '../../services/authService';
-import { useAuthStore, AuthState } from '../../store/authStore';
 import { Colors } from '../../constants/colors';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
@@ -32,10 +31,10 @@ export default function RegisterScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
-  const login = useAuthStore((state: AuthState) => state.login);
   const { t } = useLanguageStore();
 
   const handleRegister = async () => {
+    if (isLoading) return;
     if (!firstName.trim() || !lastName.trim() || !age.trim() || !password.trim() || !phoneNumber.trim()) {
       Alert.alert('Xato', t.common.error);
       return;
@@ -47,7 +46,7 @@ export default function RegisterScreen() {
     }
     setIsLoading(true);
     try {
-      const response = await authService.register({
+      const response = await authService.registerStart({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         age: ageNum,
@@ -55,8 +54,8 @@ export default function RegisterScreen() {
         password,
         role,
       });
-      await login(response.token, response.role, response.firstName, response.lastName);
-      router.replace('/(tabs)');
+      router.push(`/register-verify?verificationId=${response.verificationId}`);
+      setIsLoading(false);
     } catch (error: any) {
       const data = error.response?.data;
       const message = Array.isArray(data)

@@ -215,6 +215,17 @@ export const uz = {
     invalidCode: "Kod noto'g'ri. Qaytadan urinib ko'ring.",
     genericError: "Xatolik yuz berdi. Qaytadan urinib ko'ring.",
   },
+  registerVerify: {
+    verifyTitle: 'Tasdiqlash kodi',
+    verifySubtitle: 'Telefon raqamingizga yuborilgan 6 xonali kodni kiriting',
+    codeLabel: 'Tasdiqlash kodi',
+    codePlaceholder: '000000',
+    confirmButton: 'Tasdiqlash',
+    resendButton: 'Kodni qayta yuborish',
+    resendSuccess: 'Kod qayta yuborildi.',
+    invalidCode: "Kod noto'g'ri. Qaytadan urinib ko'ring.",
+    genericError: "Xatolik yuz berdi. Qaytadan urinib ko'ring.",
+  },
   employer: {
     publish: 'Faol',
     applicants: 'Arizachilar',

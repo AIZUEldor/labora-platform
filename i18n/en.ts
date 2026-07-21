@@ -215,6 +215,17 @@ export const en = {
     invalidCode: 'Invalid code. Please try again.',
     genericError: 'Something went wrong. Please try again.',
   },
+  registerVerify: {
+    verifyTitle: 'Verification code',
+    verifySubtitle: 'Enter the 6-digit code sent to your phone number',
+    codeLabel: 'Verification code',
+    codePlaceholder: '000000',
+    confirmButton: 'Confirm',
+    resendButton: 'Resend code',
+    resendSuccess: 'Code resent.',
+    invalidCode: 'Invalid code. Please try again.',
+    genericError: 'Something went wrong. Please try again.',
+  },
   employer: {
     publish: 'Active',
     applicants: 'Applicants',

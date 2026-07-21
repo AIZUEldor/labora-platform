@@ -80,6 +80,7 @@ export default function RootLayout() {
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="forgot-password-verify" />
         <Stack.Screen name="login-verify" />
+        <Stack.Screen name="register-verify" />
       </Stack>
     </>
   );
