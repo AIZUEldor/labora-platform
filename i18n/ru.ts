@@ -204,6 +204,17 @@ export const ru = {
     successMessage: 'Пароль успешно изменён.',
     genericError: 'Произошла ошибка. Попробуйте снова.',
   },
+  loginVerify: {
+    verifyTitle: 'Код подтверждения',
+    verifySubtitle: 'Введите 6-значный код, отправленный на ваш номер телефона',
+    codeLabel: 'Код подтверждения',
+    codePlaceholder: '000000',
+    confirmButton: 'Подтвердить',
+    resendButton: 'Отправить код повторно',
+    resendSuccess: 'Код отправлен повторно.',
+    invalidCode: 'Неверный код. Попробуйте снова.',
+    genericError: 'Произошла ошибка. Попробуйте снова.',
+  },
   employer: {
     publish: 'Активно',
     applicants: 'Заявки',

@@ -1,6 +1,9 @@
 import api from './api';
 import {
   LoginRequest,
+  LoginResendRequest,
+  LoginVerifyRequest,
+  LoginCompleteRequest,
   RegisterRequest,
   AuthResponse,
   ForgotPasswordStartRequest,
@@ -21,6 +24,27 @@ export const authService = {
 
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>('/auth/register', data);
+    return response.data;
+  },
+
+  // Kirish — OTP oqimi
+  loginStart: async (data: LoginRequest): Promise<StartOtpResponse> => {
+    const response = await api.post<StartOtpResponse>('/auth/login/start', data);
+    return response.data;
+  },
+
+  loginResend: async (data: LoginResendRequest): Promise<ResendOtpResponse> => {
+    const response = await api.post<ResendOtpResponse>('/auth/login/resend', data);
+    return response.data;
+  },
+
+  loginVerify: async (data: LoginVerifyRequest): Promise<VerifyOtpResponse> => {
+    const response = await api.post<VerifyOtpResponse>('/auth/login/verify', data);
+    return response.data;
+  },
+
+  loginComplete: async (data: LoginCompleteRequest): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>('/auth/login/complete', data);
     return response.data;
   },
 

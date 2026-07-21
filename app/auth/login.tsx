@@ -14,7 +14,6 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { authService } from '../../services/authService';
-import { useAuthStore, AuthState } from '../../store/authStore';
 import { Colors } from '../../constants/colors';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius } from '../../constants/spacing';
@@ -29,23 +28,23 @@ export default function LoginScreen() {
   const [phoneFocused, setPhoneFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
 
-  const login = useAuthStore((state: AuthState) => state.login);
   const { t } = useLanguageStore();
 
   const handleLogin = async () => {
+    if (isLoading) return;
     if (!phoneNumber.trim() || !password.trim()) {
       Alert.alert('Xato', t.common.error);
       return;
     }
     setIsLoading(true);
     try {
-      const response = await authService.login({
+      const response = await authService.loginStart({
   phoneNumber: phoneNumber.trim(),
   password,
 });
 
-await login(response.token, response.role, response.firstName, response.lastName);
-router.replace('/(tabs)');
+router.push(`/login-verify?verificationId=${response.verificationId}`);
+setIsLoading(false);
     } catch (error: any) {
   const message =
     error?.response?.data?.message ||

@@ -21,6 +21,23 @@ export interface AuthResponse {
   lastName: string;
 }
 
+// ==================== LOGIN OTP ====================
+// Start reuses LoginRequest above; Resend/Verify/Complete reuse
+// StartOtpResponse/ResendOtpResponse/VerifyOtpResponse/AuthResponse below.
+export interface LoginResendRequest {
+  verificationId: string;
+}
+
+export interface LoginVerifyRequest {
+  verificationId: string;
+  code: string;
+}
+
+export interface LoginCompleteRequest {
+  verificationId: string;
+  operationToken: string;
+}
+
 // ==================== CHANGE PHONE ====================
 export interface ChangePhoneStartRequest {
   newPhoneNumber: string;
