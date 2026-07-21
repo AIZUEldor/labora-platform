@@ -1,8 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 using Labora.Application.Interfaces;
+using Labora.Application.Options;
 using Labora.Domain.Enums;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Labora.Application.Services;
 
@@ -14,9 +15,9 @@ public class OtpSecurityService : IOtpSecurityService
 
     private readonly byte[] _pepper;
 
-    public OtpSecurityService(IConfiguration configuration)
+    public OtpSecurityService(IOptions<OtpSecurityOptions> options)
     {
-        string? pepper = configuration["Otp:Pepper"];
+        string? pepper = options.Value.Pepper;
 
         if (string.IsNullOrWhiteSpace(pepper))
         {

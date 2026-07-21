@@ -20,22 +20,14 @@ public static class DependencyInjection
 
         services.AddOptions<IdentifierHashOptions>()
             .Bind(configuration.GetSection(IdentifierHashOptions.SectionName))
-            .Validate(options =>
-            {
-                if (string.IsNullOrWhiteSpace(options.Pepper))
-                {
-                    return false;
-                }
+            .Validate(options => IsValidPepper(options.Pepper),
+                "OtpIdentity:Pepper must be a base64-encoded 32-byte (256-bit) value, distinct from Otp:Pepper.")
+            .ValidateOnStart();
 
-                try
-                {
-                    return Convert.FromBase64String(options.Pepper).Length == 32;
-                }
-                catch (FormatException)
-                {
-                    return false;
-                }
-            }, "OtpIdentity:Pepper must be a base64-encoded 32-byte (256-bit) value, distinct from Otp:Pepper.")
+        services.AddOptions<OtpSecurityOptions>()
+            .Bind(configuration.GetSection(OtpSecurityOptions.SectionName))
+            .Validate(options => IsValidPepper(options.Pepper),
+                "Otp:Pepper must be a base64-encoded 32-byte (256-bit) value.")
             .ValidateOnStart();
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -56,5 +48,27 @@ public static class DependencyInjection
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IAdminService, AdminService>();
         return services;
+    }
+
+    /// <summary>
+    /// Shared by the OtpIdentity and Otp pepper ValidateOnStart() checks above - both peppers must be
+    /// a base64-encoded 32-byte (256-bit) value, so the predicate lives once here instead of being
+    /// duplicated per options class.
+    /// </summary>
+    private static bool IsValidPepper(string? pepper)
+    {
+        if (string.IsNullOrWhiteSpace(pepper))
+        {
+            return false;
+        }
+
+        try
+        {
+            return Convert.FromBase64String(pepper).Length == 32;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 }
