@@ -15,8 +15,19 @@ public class MappingProfile : Profile
     public MappingProfile()
     {
         // Job mappings
-        CreateMap<Job, JobResponseDto>();
+        // CoverImageUrl is the single source of truth for "first image by CreatedAt, then Id": when
+        // Images is loaded (detail/update), this derives the cover image from it directly, so the
+        // ordering/selection rule is expressed exactly once rather than duplicated per call site.
+        // List responses intentionally don't load Images, so this evaluates to null for them and
+        // JobService overwrites it with the repository's separately-projected value instead.
+        CreateMap<Job, JobResponseDto>()
+            .ForMember(dest => dest.CoverImageUrl, opt => opt.MapFrom(src => src.Images
+                .OrderBy(i => i.CreatedAt)
+                .ThenBy(i => i.Id)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault()));
         CreateMap<JobRequestDto, Job>();
+        CreateMap<JobImage, JobImageDto>();
         CreateMap<ApplicationRequestDto, JobApplication>();
         CreateMap<JobApplication, ApplicationResponseDto>()
     .ForMember(dest => dest.WorkerName,

@@ -1,5 +1,7 @@
 ﻿using Labora.Application.Common;
 using Labora.Application.DTOs.Jobs;
+using Labora.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 
 namespace Labora.Application.Interfaces;
 
@@ -13,4 +15,6 @@ public interface IJobService
     Task DeleteAsync(Guid id, Guid employerId);
     Task<IEnumerable<NearbyJobResponseDto>> GetNearbyJobsAsync(double latitude, double longitude, double radiusKm);
     Task<IEnumerable<NearbyJobResponseDto>> GetAllActiveJobsAsync(double latitude, double longitude);
+    Task<JobImage> AddImageAsync(Guid jobId, Guid employerId, IFormFile file, string? caption);
+    Task DeleteImageAsync(Guid jobId, Guid employerId, Guid imageId);
 }

@@ -30,4 +30,5 @@ public class Job : BaseEntity
     public User Employer { get; set; } = null!;
     public ICollection<JobApplication> JobApplications { get; set; } = new List<JobApplication>();
     public Category? Category { get; set; }
+    public ICollection<JobImage> Images { get; set; } = new List<JobImage>();
 }

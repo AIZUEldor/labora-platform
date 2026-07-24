@@ -5,12 +5,15 @@ namespace Labora.Domain.Interfaces;
 
 public interface IJobRepository : IGenericRepository<Job>
 {
-    Task<IEnumerable<Job>> GetJobsByEmployerIdAsync(Guid employerId);
+    // These two power the list-shaped endpoints (search/browse and "my jobs"). They pair each Job
+    // with a separately-projected cover image URL instead of loading the full Images collection -
+    // one query, no per-job round trip, and no Images navigation touched on the returned entities.
+    Task<IEnumerable<(Job Job, string? CoverImageUrl)>> GetJobsByEmployerIdAsync(Guid employerId);
     Task<IEnumerable<Job>> GetJobsByTypeAsync(JobType jobType);
     Task<IEnumerable<Job>> GetJobsByCategoryAsync(Guid categoryId);
     Task<IEnumerable<Job>> GetJobsByLocationAsync(string city, string country);
     Task<IEnumerable<Job>> SearchJobsAsync(string keyword);
-    Task<(IEnumerable<Job> Jobs, int TotalCount)> GetFilteredJobsAsync(
+    Task<(IEnumerable<(Job Job, string? CoverImageUrl)> Jobs, int TotalCount)> GetFilteredJobsAsync(
         string? keyword,
         string? city,
         string? country,
@@ -31,4 +34,8 @@ public interface IJobRepository : IGenericRepository<Job>
     IEnumerable<UserPreference> preferences);
 
     Task<IEnumerable<Job>> GetAllActiveWithLocationAsync();
+
+    Task<Job?> GetByIdWithImagesAsync(Guid id);
+    Task<JobImage> AddImageAsync(Guid jobId, string imageUrl, string? caption);
+    Task DeleteImageAsync(Guid imageId);
 }

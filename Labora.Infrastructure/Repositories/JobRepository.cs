@@ -15,12 +15,26 @@ public class JobRepository : GenericRepository<Job>, IJobRepository
         _context = context;
     }
 
-    public async Task<IEnumerable<Job>> GetJobsByEmployerIdAsync(Guid employerId)
+    public async Task<IEnumerable<(Job Job, string? CoverImageUrl)>> GetJobsByEmployerIdAsync(Guid employerId)
     {
-        return await _context.Jobs
+        // Single query: CoverImageUrl is a correlated-subquery scalar, not a loaded collection - no
+        // Include(j => j.Images) here, so the full gallery is never fetched for this list endpoint.
+        var rows = await _context.Jobs
             .Where(j => j.EmployerId == employerId && !j.IsDeleted)
             .OrderByDescending(j => j.CreatedAt)
+            .Select(j => new
+            {
+                Job = j,
+                CoverImageUrl = j.Images
+                    .Where(i => !i.IsDeleted)
+                    .OrderBy(i => i.CreatedAt)
+                    .ThenBy(i => i.Id)
+                    .Select(i => i.ImageUrl)
+                    .FirstOrDefault()
+            })
             .ToListAsync();
+
+        return rows.Select(r => (r.Job, r.CoverImageUrl));
     }
 
     public async Task<IEnumerable<Job>> GetJobsByTypeAsync(JobType jobType)
@@ -56,7 +70,7 @@ public class JobRepository : GenericRepository<Job>, IJobRepository
             .ToListAsync();
     }
 
-    public async Task<(IEnumerable<Job> Jobs, int TotalCount)> GetFilteredJobsAsync(
+    public async Task<(IEnumerable<(Job Job, string? CoverImageUrl)> Jobs, int TotalCount)> GetFilteredJobsAsync(
         string? keyword,
         string? city,
         string? country,
@@ -92,11 +106,25 @@ public class JobRepository : GenericRepository<Job>, IJobRepository
 
         int totalCount = await query.CountAsync();
 
-        IEnumerable<Job> jobs = await query
+        // Same single-query cover-image projection as GetJobsByEmployerIdAsync above - pagination
+        // and filtering happen exactly as before, only the final Select shape changed.
+        var rows = await query
             .OrderByDescending(j => j.CreatedAt)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
+            .Select(j => new
+            {
+                Job = j,
+                CoverImageUrl = j.Images
+                    .Where(i => !i.IsDeleted)
+                    .OrderBy(i => i.CreatedAt)
+                    .ThenBy(i => i.Id)
+                    .Select(i => i.ImageUrl)
+                    .FirstOrDefault()
+            })
             .ToListAsync();
+
+        IEnumerable<(Job Job, string? CoverImageUrl)> jobs = rows.Select(r => (r.Job, r.CoverImageUrl));
 
         return (jobs, totalCount);
     }
@@ -185,6 +213,45 @@ public class JobRepository : GenericRepository<Job>, IJobRepository
                         j.Longitude != 0)
             .OrderByDescending(j => j.CreatedAt)
             .ToListAsync();
+    }
+
+    public async Task<Job?> GetByIdWithImagesAsync(Guid id)
+    {
+        // Ordered + filtered Include: images must come back in a deterministic order (CreatedAt,
+        // then Id as a tie-breaker) rather than whatever order Postgres happens to return, and the
+        // IsDeleted filter is a defensive match for this codebase's universal soft-delete convention
+        // even though JobImage rows are currently hard-deleted (no code path sets IsDeleted on one).
+        return await _context.Jobs
+            .Include(j => j.Images
+                .Where(i => !i.IsDeleted)
+                .OrderBy(i => i.CreatedAt)
+                .ThenBy(i => i.Id))
+            .FirstOrDefaultAsync(j => j.Id == id && !j.IsDeleted);
+    }
+
+    public async Task<JobImage> AddImageAsync(Guid jobId, string imageUrl, string? caption)
+    {
+        JobImage image = new JobImage
+        {
+            Id = Guid.NewGuid(),
+            ImageUrl = imageUrl,
+            Caption = caption,
+            JobId = jobId,
+            CreatedAt = DateTime.UtcNow
+        };
+        await _context.JobImages.AddAsync(image);
+        await _context.SaveChangesAsync();
+        return image;
+    }
+
+    public async Task DeleteImageAsync(Guid imageId)
+    {
+        JobImage? image = await _context.JobImages.FindAsync(imageId);
+        if (image != null)
+        {
+            _context.JobImages.Remove(image);
+            await _context.SaveChangesAsync();
+        }
     }
 
     private static double CalculateDistance(

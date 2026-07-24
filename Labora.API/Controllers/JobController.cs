@@ -3,6 +3,7 @@ using FluentValidation.Results;
 using Labora.Application.Common;
 using Labora.Application.DTOs.Jobs;
 using Labora.Application.Interfaces;
+using Labora.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -98,6 +99,24 @@ public class JobController : ControllerBase
     {
         Guid employerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         await _jobService.DeleteAsync(id, employerId);
+        return NoContent();
+    }
+
+    [HttpPost("{jobId:guid}/images")]
+    [Authorize(Roles = "Employer")]
+    public async Task<IActionResult> UploadImage(Guid jobId, IFormFile file, [FromForm] string? caption)
+    {
+        Guid employerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        JobImage result = await _jobService.AddImageAsync(jobId, employerId, file, caption);
+        return Ok(result);
+    }
+
+    [HttpDelete("{jobId:guid}/images/{imageId:guid}")]
+    [Authorize(Roles = "Employer")]
+    public async Task<IActionResult> DeleteImage(Guid jobId, Guid imageId)
+    {
+        Guid employerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        await _jobService.DeleteImageAsync(jobId, employerId, imageId);
         return NoContent();
     }
 }

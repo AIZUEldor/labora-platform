@@ -13,6 +13,7 @@ public class LaboaDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<Job> Jobs { get; set; }
     public DbSet<JobApplication> JobApplications { get; set; }
+    public DbSet<JobImage> JobImages { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<PaymentOrder> PaymentOrders { get; set; }
@@ -57,6 +58,17 @@ public class LaboaDbContext : DbContext
                 .WithMany(c => c.Jobs)
                 .HasForeignKey(e => e.CategoryId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // JobImage
+        modelBuilder.Entity<JobImage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ImageUrl).IsRequired().HasMaxLength(500);
+            entity.HasOne(e => e.Job)
+                .WithMany(j => j.Images)
+                .HasForeignKey(e => e.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // JobApplication

@@ -23,4 +23,12 @@ public class JobResponseDto
     public Guid? CategoryId { get; set; }
     public Guid? SubCategoryId { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    // Cheap thumbnail for list/card responses: the first image by CreatedAt then Id. Always set
+    // (detail, update, and list responses alike). Never persisted - derived at read time.
+    public string? CoverImageUrl { get; set; }
+
+    // Full gallery. Only populated by detail/update responses (whichever service fetch actually
+    // loaded Images); list/search/my-jobs responses deliberately leave this empty - see JobService.
+    public List<JobImageDto> Images { get; set; } = new();
 }
