@@ -47,6 +47,10 @@ public static class DependencyInjection
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IAdminService, AdminService>();
+
+        // Payme
+        services.AddScoped<IPaymeCheckoutUrlBuilder, PaymeCheckoutUrlBuilder>();
+
         return services;
     }
 
