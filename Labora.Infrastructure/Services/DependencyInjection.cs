@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IOtpRepository, OtpRepository>();
         services.AddScoped<IOtpAbuseEventRepository, OtpAbuseEventRepository>();
         services.AddScoped<IOtpBlockRepository, OtpBlockRepository>();
+        services.AddScoped<IPaymeTransactionRepository, PaymeTransactionRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.AddOptions<EskizOptions>()

@@ -27,4 +27,11 @@ public class PaymentOrderRepository : GenericRepository<PaymentOrder>, IPaymentO
         return await _context.PaymentOrders
             .FirstOrDefaultAsync(p => p.ProviderOrderId == providerOrderId && !p.IsDeleted);
     }
+
+    public async Task<PaymentOrder?> GetByIdForUpdateAsync(Guid id)
+    {
+        return await _context.PaymentOrders
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
+    }
 }

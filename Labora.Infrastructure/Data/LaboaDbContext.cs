@@ -26,6 +26,7 @@ public class LaboaDbContext : DbContext
     public DbSet<OtpVerification> OtpVerifications { get; set; }
     public DbSet<OtpAbuseEvent> OtpAbuseEvents { get; set; }
     public DbSet<OtpBlock> OtpBlocks { get; set; }
+    public DbSet<PaymeTransaction> PaymeTransactions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -257,6 +258,39 @@ public class LaboaDbContext : DbContext
             entity.HasIndex(e => new { e.BlockType, e.ScopeKey })
                 .IsUnique()
                 .HasDatabaseName("IX_OtpBlocks_BlockType_ScopeKey");
+
+            // PostgreSQL system column xmin as the optimistic concurrency token
+            // (official Npgsql pattern: a uint property mapped via IsRowVersion()).
+            entity.Property(e => e.Version).IsRowVersion();
+        });
+
+        // PaymeTransaction
+        modelBuilder.Entity<PaymeTransaction>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PaymeTransactionId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.AccountReference).IsRequired().HasMaxLength(100);
+
+            entity.HasOne(e => e.PaymentOrder)
+                .WithMany()
+                .HasForeignKey(e => e.PaymentOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Payme's transaction id is the primary idempotency key for CreateTransaction/
+            // PerformTransaction/CancelTransaction/CheckTransaction.
+            entity.HasIndex(e => e.PaymeTransactionId)
+                .IsUnique()
+                .HasDatabaseName("IX_PaymeTransactions_PaymeTransactionId");
+
+            // Enforces at most one Payme transaction per PaymentOrder - a different/second Payme
+            // transaction id can never attach to an order that already has one.
+            entity.HasIndex(e => e.PaymentOrderId)
+                .IsUnique()
+                .HasDatabaseName("IX_PaymeTransactions_PaymentOrderId");
+
+            // Supports GetStatement's inclusive date-range query on Payme's own transaction time.
+            entity.HasIndex(e => e.PaymeTransactionTime)
+                .HasDatabaseName("IX_PaymeTransactions_PaymeTransactionTime");
 
             // PostgreSQL system column xmin as the optimistic concurrency token
             // (official Npgsql pattern: a uint property mapped via IsRowVersion()).
