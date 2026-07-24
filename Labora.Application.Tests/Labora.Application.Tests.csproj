@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Labora.Application\Labora.Application.csproj" />
     <ProjectReference Include="..\Labora.Infrastructure\Labora.Infrastructure.csproj" />
+    <ProjectReference Include="..\Labora.API\Labora.API.csproj" />
   </ItemGroup>
 
 </Project>

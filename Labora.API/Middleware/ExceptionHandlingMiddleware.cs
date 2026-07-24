@@ -45,6 +45,7 @@ public class ExceptionHandlingMiddleware
             OtpMaxAttemptsExceededException => (int)HttpStatusCode.BadRequest,
             OtpBlockedException => (int)HttpStatusCode.TooManyRequests,
             OtpSendRateLimitedException => (int)HttpStatusCode.TooManyRequests,
+            SmsProviderUnavailableException => (int)HttpStatusCode.ServiceUnavailable,
             InvalidOperationException => (int)HttpStatusCode.BadRequest,
             KeyNotFoundException => (int)HttpStatusCode.NotFound,
             UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,

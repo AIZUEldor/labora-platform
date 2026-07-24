@@ -1,3 +1,4 @@
+using Labora.API.Startup;
 using Labora.Application.Services;
 using Labora.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -109,6 +110,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 var app = builder.Build();
+
+EskizStartupDiagnostics.WarnIfDisabled(builder.Configuration, app.Logger);
 
 // Render terminates TLS and proxies to this container over a single hop.
 // ForwardLimit = 1 with cleared KnownNetworks/KnownProxies trusts only the
