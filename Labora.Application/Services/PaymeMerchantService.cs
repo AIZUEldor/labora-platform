@@ -12,9 +12,12 @@ public class PaymeMerchantService : IPaymeMerchantService
 {
     private const int MaxWriteConflictRetries = 3;
 
-    // Confirmed: Payme's "Created" transaction state is 1, "Performed" transaction state is 2.
+    // Confirmed: Payme's "Created" transaction state is 1, "Performed" transaction state is 2,
+    // "Cancelled from Created" state is -1, "Cancelled from Performed" state is -2.
     private const int PaymeCreatedStateCode = 1;
     private const int PaymePerformedStateCode = 2;
+    private const int PaymeCancelledFromCreatedStateCode = -1;
+    private const int PaymeCancelledFromPerformedStateCode = -2;
 
     private readonly IPaymeAuthenticator _paymeAuthenticator;
     private readonly IPaymentOrderRepository _paymentOrderRepository;
@@ -260,8 +263,137 @@ public class PaymeMerchantService : IPaymeMerchantService
             "Unable to process PerformTransaction after repeated conflicts.");
     }
 
-    public Task<CancelTransactionResponseDto> CancelTransactionAsync(CancelTransactionRequestDto request)
-        => throw new NotImplementedException("CancelTransaction business logic is implemented in a later batch.");
+    public async Task<CancelTransactionResponseDto> CancelTransactionAsync(CancelTransactionRequestDto request)
+    {
+        for (int attempt = 1; attempt <= MaxWriteConflictRetries; attempt++)
+        {
+            try
+            {
+                return await _unitOfWork.ExecuteInTransactionAsync(async () =>
+                {
+                    PaymeTransaction? transaction = await _paymeTransactionRepository.GetByPaymeTransactionIdForUpdateAsync(request.Id);
+                    if (transaction is null)
+                    {
+                        throw new PaymeRpcException(PaymeErrorCodes.TransactionNotFound, "Payme transaction not found.");
+                    }
+
+                    if (transaction.InternalStatus == PaymeTransactionInternalStatus.Cancelled)
+                    {
+                        // Idempotent replay: return the stored result, no writes, no second reversal,
+                        // regardless of what "reason" this replay call sent - reason has no financial or
+                        // security significance, unlike CreateTransaction's strict order/amount replay check.
+                        return BuildCancelResponse(transaction);
+                    }
+
+                    if (transaction.InternalStatus == PaymeTransactionInternalStatus.Performed)
+                    {
+                        return await CancelPerformedTransactionAsync(transaction, request);
+                    }
+
+                    if (transaction.InternalStatus == PaymeTransactionInternalStatus.Created)
+                    {
+                        return await CancelCreatedTransactionAsync(transaction, request);
+                    }
+
+                    // Defensive: every InternalStatus value that exists today is handled explicitly above -
+                    // this is only reachable if a future status value is added without updating this method.
+                    throw new PaymeRpcException(PaymeErrorCodes.InternalSystemError,
+                        "Unexpected Payme transaction internal status.");
+                });
+            }
+            catch (Exception ex) when (IsRetryableConflict(ex))
+            {
+                // Same reasoning as CreateTransactionAsync/PerformTransactionAsync: a DB-level conflict
+                // aborted the whole transaction, including any balance reversal already applied in this
+                // attempt - UnitOfWork has already rolled it back. If attempts remain, retry from scratch
+                // with fresh reads; a concurrent CancelTransaction for the same Payme id resolves to the
+                // idempotent-replay path once the winner's row becomes visible. On the final attempt,
+                // translate rather than let the conflict exception escape unhandled.
+                if (attempt >= MaxWriteConflictRetries)
+                {
+                    throw new PaymeRpcException(PaymeErrorCodes.InternalSystemError,
+                        "Unable to process CancelTransaction after repeated conflicts.");
+                }
+            }
+        }
+
+        throw new PaymeRpcException(PaymeErrorCodes.InternalSystemError,
+            "Unable to process CancelTransaction after repeated conflicts.");
+    }
+
+    private async Task<CancelTransactionResponseDto> CancelCreatedTransactionAsync(PaymeTransaction transaction, CancelTransactionRequestDto request)
+    {
+        PaymentOrder? order = await _paymentOrderRepository.GetByIdForUpdateAsync(transaction.PaymentOrderId);
+        if (order is null || order.Status != PaymentOrderStatus.Pending)
+        {
+            throw new PaymeRpcException(PaymeErrorCodes.OperationNotAllowed,
+                "The payment order linked to this transaction is not in a cancellable state.");
+        }
+
+        DateTime operationTimeUtc = DateTime.UtcNow;
+        long merchantCancelTime = new DateTimeOffset(operationTimeUtc).ToUnixTimeMilliseconds();
+
+        // PaymeTransaction written first (matches CreateTransactionAsync's ordering); no User is loaded
+        // or touched at all on this path - a Created (never-performed) transaction never credited balance.
+        transaction.InternalStatus = PaymeTransactionInternalStatus.Cancelled;
+        transaction.PaymeStateCode = PaymeCancelledFromCreatedStateCode;
+        transaction.MerchantCancelTime = merchantCancelTime;
+        transaction.CancelReason = request.Reason;
+        PaymeTransaction updatedTransaction = await _paymeTransactionRepository.UpdateAsync(transaction);
+
+        order.Status = PaymentOrderStatus.Cancelled;
+        await _paymentOrderRepository.UpdateAsync(order);
+
+        return BuildCancelResponse(updatedTransaction);
+    }
+
+    private async Task<CancelTransactionResponseDto> CancelPerformedTransactionAsync(PaymeTransaction transaction, CancelTransactionRequestDto request)
+    {
+        PaymentOrder? order = await _paymentOrderRepository.GetByIdForUpdateAsync(transaction.PaymentOrderId);
+        if (order is null || order.Status != PaymentOrderStatus.Paid)
+        {
+            throw new PaymeRpcException(PaymeErrorCodes.OperationNotAllowed,
+                "The payment order linked to this transaction is not in a cancellable state.");
+        }
+
+        User? user = await _userRepository.GetByIdForUpdateAsync(order.UserId);
+        if (user is null)
+        {
+            throw new PaymeRpcException(PaymeErrorCodes.InternalSystemError,
+                "The user linked to this payment order could not be found.");
+        }
+
+        // Same amount and unit PerformTransactionAsync credited (order.Amount, so'm, not tiyin) - the
+        // exact amount to reverse, since that is what was actually added to the balance.
+        if (user.Balance < order.Amount)
+        {
+            throw new PaymeRpcException(PaymeErrorCodes.OrderAlreadyCompleted,
+                "The user's balance is insufficient to reverse this transaction.");
+        }
+
+        DateTime operationTimeUtc = DateTime.UtcNow;
+        long merchantCancelTime = new DateTimeOffset(operationTimeUtc).ToUnixTimeMilliseconds();
+
+        // Required write order: PaymeTransaction (the xmin-guarded conflict gate) first, then User, then
+        // PaymentOrder - matching PerformTransactionAsync's ordering exactly. All three writes still
+        // commit/rollback together as one IUnitOfWork transaction regardless of order.
+        transaction.InternalStatus = PaymeTransactionInternalStatus.Cancelled;
+        transaction.PaymeStateCode = PaymeCancelledFromPerformedStateCode;
+        transaction.MerchantCancelTime = merchantCancelTime;
+        transaction.CancelReason = request.Reason;
+        PaymeTransaction updatedTransaction = await _paymeTransactionRepository.UpdateAsync(transaction);
+
+        user.Balance -= order.Amount;
+        await _userRepository.UpdateAsync(user);
+
+        // PaidAt is preserved: no existing lifecycle convention in this codebase clears a historical
+        // timestamp when status moves on, and PaidAt remains a true historical fact (the order WAS paid
+        // at that time) even after this later cancellation.
+        order.Status = PaymentOrderStatus.Cancelled;
+        await _paymentOrderRepository.UpdateAsync(order);
+
+        return BuildCancelResponse(updatedTransaction);
+    }
 
     public Task<CheckTransactionResponseDto> CheckTransactionAsync(CheckTransactionRequestDto request)
         => throw new NotImplementedException("CheckTransaction business logic is implemented in a later batch.");
@@ -316,6 +448,21 @@ public class PaymeMerchantService : IPaymeMerchantService
             Transaction = transaction.Id.ToString(),
             PerformTime = transaction.MerchantPerformTime ?? 0,
             State = transaction.PaymeStateCode ?? PaymePerformedStateCode
+        };
+    }
+
+    private static CancelTransactionResponseDto BuildCancelResponse(PaymeTransaction transaction)
+    {
+        return new CancelTransactionResponseDto
+        {
+            // Same merchant transaction identifier convention as CreateTransactionAsync's BuildResponse:
+            // PaymeTransaction.Id, not PaymentOrder.Id.
+            Transaction = transaction.Id.ToString(),
+            CancelTime = transaction.MerchantCancelTime ?? 0,
+            // PaymeStateCode is always set by the time InternalStatus is Cancelled (both cancel paths
+            // set it before this is ever called) - the fallback is purely defensive, mirroring
+            // BuildPerformResponse/BuildResponse's null-coalescing pattern.
+            State = transaction.PaymeStateCode ?? 0
         };
     }
 
