@@ -33,7 +33,7 @@ public class CreateTransactionTests
             Password = "secret"
         }));
 
-        PaymeMerchantService service = new(authenticator, orderRepository, transactionRepository, new PassThroughUnitOfWork());
+        PaymeMerchantService service = new(authenticator, orderRepository, transactionRepository, new FakeUserRepository(), new PassThroughUnitOfWork());
         return (service, orderRepository, transactionRepository);
     }
 

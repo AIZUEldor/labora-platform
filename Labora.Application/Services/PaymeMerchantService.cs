@@ -12,25 +12,27 @@ public class PaymeMerchantService : IPaymeMerchantService
 {
     private const int MaxWriteConflictRetries = 3;
 
-    // Confirmed: Payme's "Created" transaction state is 1. Consistent with CancelTransaction's
-    // official documentation example, which shows "state": -2 for a transaction cancelled after
-    // being performed - a signed-integer state scheme where 1 = Created, 2 = Performed.
+    // Confirmed: Payme's "Created" transaction state is 1, "Performed" transaction state is 2.
     private const int PaymeCreatedStateCode = 1;
+    private const int PaymePerformedStateCode = 2;
 
     private readonly IPaymeAuthenticator _paymeAuthenticator;
     private readonly IPaymentOrderRepository _paymentOrderRepository;
     private readonly IPaymeTransactionRepository _paymeTransactionRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public PaymeMerchantService(
         IPaymeAuthenticator paymeAuthenticator,
         IPaymentOrderRepository paymentOrderRepository,
         IPaymeTransactionRepository paymeTransactionRepository,
+        IUserRepository userRepository,
         IUnitOfWork unitOfWork)
     {
         _paymeAuthenticator = paymeAuthenticator;
         _paymentOrderRepository = paymentOrderRepository;
         _paymeTransactionRepository = paymeTransactionRepository;
+        _userRepository = userRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -174,8 +176,89 @@ public class PaymeMerchantService : IPaymeMerchantService
             "Unable to process CreateTransaction after repeated conflicts.");
     }
 
-    public Task<PerformTransactionResponseDto> PerformTransactionAsync(PerformTransactionRequestDto request)
-        => throw new NotImplementedException("PerformTransaction business logic is implemented in a later batch.");
+    public async Task<PerformTransactionResponseDto> PerformTransactionAsync(PerformTransactionRequestDto request)
+    {
+        for (int attempt = 1; attempt <= MaxWriteConflictRetries; attempt++)
+        {
+            try
+            {
+                return await _unitOfWork.ExecuteInTransactionAsync(async () =>
+                {
+                    PaymeTransaction? transaction = await _paymeTransactionRepository.GetByPaymeTransactionIdForUpdateAsync(request.Id);
+                    if (transaction is null)
+                    {
+                        throw new PaymeRpcException(PaymeErrorCodes.TransactionNotFound, "Payme transaction not found.");
+                    }
+
+                    if (transaction.InternalStatus == PaymeTransactionInternalStatus.Performed)
+                    {
+                        // Idempotent replay: return the stored result, no writes, no second credit.
+                        return BuildPerformResponse(transaction);
+                    }
+
+                    if (transaction.InternalStatus == PaymeTransactionInternalStatus.Cancelled)
+                    {
+                        throw new PaymeRpcException(PaymeErrorCodes.OperationNotAllowed,
+                            "This Payme transaction has been cancelled and cannot be performed.");
+                    }
+
+                    // Only InternalStatus.Created reaches here.
+                    PaymentOrder? order = await _paymentOrderRepository.GetByIdForUpdateAsync(transaction.PaymentOrderId);
+                    if (order is null || order.Status != PaymentOrderStatus.Pending)
+                    {
+                        throw new PaymeRpcException(PaymeErrorCodes.OperationNotAllowed,
+                            "The payment order linked to this transaction is no longer payable.");
+                    }
+
+                    User? user = await _userRepository.GetByIdForUpdateAsync(order.UserId);
+                    if (user is null)
+                    {
+                        throw new PaymeRpcException(PaymeErrorCodes.InternalSystemError,
+                            "The user linked to this payment order could not be found.");
+                    }
+
+                    DateTime operationTimeUtc = DateTime.UtcNow;
+                    long merchantPerformTime = new DateTimeOffset(operationTimeUtc).ToUnixTimeMilliseconds();
+
+                    // PaymeTransaction (the xmin-guarded, concurrency-sensitive write) is updated first,
+                    // before the balance credit or PaymentOrder update - matching CreateTransactionAsync's
+                    // "write the conflict-prone row first" ordering, so a conflict here is caught before
+                    // any other write in this attempt is even attempted. All writes still commit/rollback
+                    // together as one IUnitOfWork transaction regardless of order.
+                    transaction.InternalStatus = PaymeTransactionInternalStatus.Performed;
+                    transaction.MerchantPerformTime = merchantPerformTime;
+                    transaction.PaymeStateCode = PaymePerformedStateCode;
+                    PaymeTransaction updatedTransaction = await _paymeTransactionRepository.UpdateAsync(transaction);
+
+                    user.Balance += order.Amount;
+                    await _userRepository.UpdateAsync(user);
+
+                    order.Status = PaymentOrderStatus.Paid;
+                    order.PaidAt = operationTimeUtc;
+                    await _paymentOrderRepository.UpdateAsync(order);
+
+                    return BuildPerformResponse(updatedTransaction);
+                });
+            }
+            catch (Exception ex) when (IsRetryableConflict(ex))
+            {
+                // Same reasoning as CreateTransactionAsync: a DB-level conflict (unique index or xmin)
+                // aborted the whole transaction, including any balance credit already applied in this
+                // attempt - UnitOfWork has already rolled it back. If attempts remain, retry from
+                // scratch with fresh reads; a concurrent PerformTransaction for the same Payme id
+                // resolves to the idempotent-replay path once the winner's row becomes visible. On the
+                // final attempt, translate rather than let the conflict exception escape unhandled.
+                if (attempt >= MaxWriteConflictRetries)
+                {
+                    throw new PaymeRpcException(PaymeErrorCodes.InternalSystemError,
+                        "Unable to process PerformTransaction after repeated conflicts.");
+                }
+            }
+        }
+
+        throw new PaymeRpcException(PaymeErrorCodes.InternalSystemError,
+            "Unable to process PerformTransaction after repeated conflicts.");
+    }
 
     public Task<CancelTransactionResponseDto> CancelTransactionAsync(CancelTransactionRequestDto request)
         => throw new NotImplementedException("CancelTransaction business logic is implemented in a later batch.");
@@ -223,6 +306,18 @@ public class PaymeMerchantService : IPaymeMerchantService
     // repository it can have at most 2 decimal places (tiyin granularity), so this conversion is
     // exact; no rounding is needed.
     private static long ToTiyin(decimal soum) => (long)(soum * 100m);
+
+    private static PerformTransactionResponseDto BuildPerformResponse(PaymeTransaction transaction)
+    {
+        return new PerformTransactionResponseDto
+        {
+            // Same merchant transaction identifier convention as CreateTransactionAsync's BuildResponse:
+            // PaymeTransaction.Id, not PaymentOrder.Id.
+            Transaction = transaction.Id.ToString(),
+            PerformTime = transaction.MerchantPerformTime ?? 0,
+            State = transaction.PaymeStateCode ?? PaymePerformedStateCode
+        };
+    }
 
     private static CreateTransactionResponseDto BuildReplayResponse(PaymeTransaction existing, CreateTransactionRequestDto request)
     {

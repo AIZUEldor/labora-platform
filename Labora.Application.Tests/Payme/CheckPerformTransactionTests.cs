@@ -36,7 +36,7 @@ public class CheckPerformTransactionTests
             Password = "secret"
         }));
 
-        return new PaymeMerchantService(authenticator, orderRepository, new FakePaymeTransactionRepository(), new PassThroughUnitOfWork());
+        return new PaymeMerchantService(authenticator, orderRepository, new FakePaymeTransactionRepository(), new FakeUserRepository(), new PassThroughUnitOfWork());
     }
 
     [Fact]

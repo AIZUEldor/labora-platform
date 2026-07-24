@@ -34,6 +34,13 @@ public class UserRepository : GenericRepository<User>, IUserRepository
             .ToListAsync();
     }
 
+    public async Task<User?> GetByIdForUpdateAsync(Guid id)
+    {
+        return await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
+    }
+
     public override async Task<User> AddAsync(User entity)
     {
         try

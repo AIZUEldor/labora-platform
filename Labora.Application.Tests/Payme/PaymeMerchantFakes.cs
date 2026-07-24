@@ -22,7 +22,32 @@ internal class FakePaymentOrderRepository : IPaymentOrderRepository
     public Task<PaymentOrder?> GetByIdAsync(Guid id) =>
         Task.FromResult(_orders.TryGetValue(id, out PaymentOrder? order) && !order.IsDeleted ? order : null);
 
-    public Task<PaymentOrder?> GetByIdForUpdateAsync(Guid id) => GetByIdAsync(id);
+    /// <summary>
+    /// Returns an independent copy, matching real EF AsNoTracking() semantics: mutating the returned
+    /// instance (as callers on a retry path do) must never be visible to a subsequent fetch unless an
+    /// UpdateAsync explicitly persisted it - a shared reference here would silently mask exactly the
+    /// identity-map staleness bug this "for update" method exists to prevent.
+    /// </summary>
+    public Task<PaymentOrder?> GetByIdForUpdateAsync(Guid id)
+    {
+        bool found = _orders.TryGetValue(id, out PaymentOrder? order) && !order.IsDeleted;
+        return Task.FromResult(found ? Clone(order!) : null);
+    }
+
+    private static PaymentOrder Clone(PaymentOrder source) => new()
+    {
+        Id = source.Id,
+        Amount = source.Amount,
+        Provider = source.Provider,
+        Status = source.Status,
+        ProviderOrderId = source.ProviderOrderId,
+        PaidAt = source.PaidAt,
+        ExpiresAt = source.ExpiresAt,
+        UserId = source.UserId,
+        CreatedAt = source.CreatedAt,
+        UpdatedAt = source.UpdatedAt,
+        IsDeleted = source.IsDeleted
+    };
 
     public Task<IEnumerable<PaymentOrder>> GetByUserIdAsync(Guid userId) =>
         Task.FromResult(_orders.Values.Where(o => o.UserId == userId && !o.IsDeleted));
@@ -73,10 +98,15 @@ internal class FakePaymeTransactionRepository : IPaymeTransactionRepository
     private readonly Dictionary<Guid, PaymeTransaction> _byPaymentOrderId = new();
 
     public int AddAsyncCallCount { get; private set; }
+    public int UpdateAsyncCallCount { get; private set; }
 
     /// <summary>Given the 1-based AddAsync call number, optionally return an exception to throw instead
     /// of completing normally.</summary>
     public Func<int, Exception?>? FaultOnAddAsync { get; set; }
+
+    /// <summary>Given the 1-based UpdateAsync call number, optionally return an exception to throw
+    /// instead of completing normally.</summary>
+    public Func<int, Exception?>? FaultOnUpdateAsync { get; set; }
 
     /// <summary>Inserts a row directly, bypassing AddAsync (and any configured fault/call counting) -
     /// used to simulate a concurrent writer's row becoming visible mid-test.</summary>
@@ -94,8 +124,37 @@ internal class FakePaymeTransactionRepository : IPaymeTransactionRepository
     public Task<PaymeTransaction?> GetByPaymeTransactionIdAsync(string paymeTransactionId) =>
         Task.FromResult(_byPaymeTransactionId.TryGetValue(paymeTransactionId, out PaymeTransaction? t) ? t : null);
 
-    public Task<PaymeTransaction?> GetByPaymeTransactionIdForUpdateAsync(string paymeTransactionId) =>
-        GetByPaymeTransactionIdAsync(paymeTransactionId);
+    /// <summary>
+    /// Returns an independent copy, matching real EF AsNoTracking() semantics: mutating the returned
+    /// instance (as callers on a retry path do) must never be visible to a subsequent fetch unless an
+    /// UpdateAsync explicitly persisted it - a shared reference here would silently mask exactly the
+    /// identity-map staleness bug this "for update" method exists to prevent.
+    /// </summary>
+    public Task<PaymeTransaction?> GetByPaymeTransactionIdForUpdateAsync(string paymeTransactionId)
+    {
+        bool found = _byPaymeTransactionId.TryGetValue(paymeTransactionId, out PaymeTransaction? transaction);
+        return Task.FromResult(found ? Clone(transaction!) : null);
+    }
+
+    private static PaymeTransaction Clone(PaymeTransaction source) => new()
+    {
+        Id = source.Id,
+        PaymentOrderId = source.PaymentOrderId,
+        PaymeTransactionId = source.PaymeTransactionId,
+        AccountReference = source.AccountReference,
+        PaymeTransactionTime = source.PaymeTransactionTime,
+        RequestedAmountTiyin = source.RequestedAmountTiyin,
+        MerchantCreateTime = source.MerchantCreateTime,
+        MerchantPerformTime = source.MerchantPerformTime,
+        MerchantCancelTime = source.MerchantCancelTime,
+        InternalStatus = source.InternalStatus,
+        PaymeStateCode = source.PaymeStateCode,
+        CancelReason = source.CancelReason,
+        Version = source.Version,
+        CreatedAt = source.CreatedAt,
+        UpdatedAt = source.UpdatedAt,
+        IsDeleted = source.IsDeleted
+    };
 
     public Task<PaymeTransaction?> GetByPaymentOrderIdAsync(Guid paymentOrderId) =>
         Task.FromResult(_byPaymentOrderId.TryGetValue(paymentOrderId, out PaymeTransaction? t) ? t : null);
@@ -136,9 +195,112 @@ internal class FakePaymeTransactionRepository : IPaymeTransactionRepository
 
     public Task<PaymeTransaction> UpdateAsync(PaymeTransaction entity)
     {
+        UpdateAsyncCallCount++;
+
+        Exception? fault = FaultOnUpdateAsync?.Invoke(UpdateAsyncCallCount);
+        if (fault is not null)
+        {
+            throw fault;
+        }
+
         SeedDirectly(entity);
         return Task.FromResult(entity);
     }
+}
+
+/// <summary>Minimal in-memory IUserRepository double, matching FakePaymentOrderRepository's shape.</summary>
+internal class FakeUserRepository : IUserRepository
+{
+    private readonly Dictionary<Guid, User> _users;
+
+    public int UpdateAsyncCallCount { get; private set; }
+
+    public FakeUserRepository(params User[] seed)
+    {
+        _users = seed.ToDictionary(u => u.Id);
+    }
+
+    public Task<User?> GetByIdAsync(Guid id) =>
+        Task.FromResult(_users.TryGetValue(id, out User? user) && !user.IsDeleted ? user : null);
+
+    /// <summary>
+    /// Returns an independent copy, matching real EF AsNoTracking() semantics: mutating the returned
+    /// instance (as callers on a retry path do) must never be visible to a subsequent fetch unless an
+    /// UpdateAsync explicitly persisted it - a shared reference here would silently mask exactly the
+    /// identity-map staleness bug this "for update" method exists to prevent.
+    /// </summary>
+    public Task<User?> GetByIdForUpdateAsync(Guid id)
+    {
+        bool found = _users.TryGetValue(id, out User? user) && !user.IsDeleted;
+        return Task.FromResult(found ? Clone(user!) : null);
+    }
+
+    private static User Clone(User source) => new()
+    {
+        Id = source.Id,
+        FirstName = source.FirstName,
+        LastName = source.LastName,
+        Age = source.Age,
+        PhoneNumber = source.PhoneNumber,
+        PasswordHash = source.PasswordHash,
+        Role = source.Role,
+        ProfileImageUrl = source.ProfileImageUrl,
+        Latitude = source.Latitude,
+        Longitude = source.Longitude,
+        City = source.City,
+        Country = source.Country,
+        Balance = source.Balance,
+        IsVerified = source.IsVerified,
+        IsBlocked = source.IsBlocked,
+        CvUrl = source.CvUrl,
+        CreatedAt = source.CreatedAt,
+        UpdatedAt = source.UpdatedAt,
+        IsDeleted = source.IsDeleted
+    };
+
+    public Task<User?> GetByPhoneNumberAsync(string phoneNumber) =>
+        Task.FromResult(_users.Values.FirstOrDefault(u => u.PhoneNumber == phoneNumber && !u.IsDeleted));
+
+    public Task<bool> PhoneNumberExistsAsync(string phoneNumber) =>
+        Task.FromResult(_users.Values.Any(u => u.PhoneNumber == phoneNumber));
+
+    public Task<IEnumerable<User>> GetWorkerUsersAsync() =>
+        Task.FromResult(_users.Values.Where(u => u.Role == Labora.Domain.Enums.UserRole.Worker && !u.IsDeleted));
+
+    public Task<IEnumerable<User>> GetAllAsync() =>
+        Task.FromResult(_users.Values.Where(u => !u.IsDeleted));
+
+    public Task<IEnumerable<User>> FindAsync(Expression<Func<User, bool>> predicate) =>
+        Task.FromResult(_users.Values.AsQueryable().Where(predicate).AsEnumerable());
+
+    public Task<User> AddAsync(User entity)
+    {
+        _users[entity.Id] = entity;
+        return Task.FromResult(entity);
+    }
+
+    public Task<User> UpdateAsync(User entity)
+    {
+        UpdateAsyncCallCount++;
+        _users[entity.Id] = entity;
+        return Task.FromResult(entity);
+    }
+
+    public Task DeleteAsync(Guid id)
+    {
+        if (_users.TryGetValue(id, out User? user))
+        {
+            user.IsDeleted = true;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> ExistsAsync(Guid id) =>
+        Task.FromResult(_users.TryGetValue(id, out User? user) && !user.IsDeleted);
+
+    /// <summary>Direct dictionary read for test assertions, bypassing the IsDeleted filter used elsewhere.</summary>
+    public User? GetRaw(Guid id) => _users.TryGetValue(id, out User? user) ? user : null;
 }
 
 /// <summary>
