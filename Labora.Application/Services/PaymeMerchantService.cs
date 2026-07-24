@@ -1,17 +1,37 @@
 using System.Text.Json;
 using Labora.Application.DTOs.Payments.Payme;
 using Labora.Application.Interfaces;
+using Labora.Domain.Entities;
+using Labora.Domain.Enums;
 using Labora.Domain.Exceptions;
+using Labora.Domain.Interfaces;
 
 namespace Labora.Application.Services;
 
 public class PaymeMerchantService : IPaymeMerchantService
 {
-    private readonly IPaymeAuthenticator _paymeAuthenticator;
+    private const int MaxWriteConflictRetries = 3;
 
-    public PaymeMerchantService(IPaymeAuthenticator paymeAuthenticator)
+    // Confirmed: Payme's "Created" transaction state is 1. Consistent with CancelTransaction's
+    // official documentation example, which shows "state": -2 for a transaction cancelled after
+    // being performed - a signed-integer state scheme where 1 = Created, 2 = Performed.
+    private const int PaymeCreatedStateCode = 1;
+
+    private readonly IPaymeAuthenticator _paymeAuthenticator;
+    private readonly IPaymentOrderRepository _paymentOrderRepository;
+    private readonly IPaymeTransactionRepository _paymeTransactionRepository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public PaymeMerchantService(
+        IPaymeAuthenticator paymeAuthenticator,
+        IPaymentOrderRepository paymentOrderRepository,
+        IPaymeTransactionRepository paymeTransactionRepository,
+        IUnitOfWork unitOfWork)
     {
         _paymeAuthenticator = paymeAuthenticator;
+        _paymentOrderRepository = paymentOrderRepository;
+        _paymeTransactionRepository = paymeTransactionRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<PaymeRpcResponse<object?>> HandleRequestAsync(string rawRequestBody, string? authorizationHeader)
@@ -70,11 +90,89 @@ public class PaymeMerchantService : IPaymeMerchantService
         }
     }
 
-    public Task<CheckPerformTransactionResponseDto> CheckPerformTransactionAsync(CheckPerformTransactionRequestDto request)
-        => throw new NotImplementedException("CheckPerformTransaction business logic is implemented in a later batch.");
+    public async Task<CheckPerformTransactionResponseDto> CheckPerformTransactionAsync(CheckPerformTransactionRequestDto request)
+    {
+        Guid orderId = ParseOrderId(request.Account);
+        PaymentOrder? order = await _paymentOrderRepository.GetByIdAsync(orderId);
+        ValidateOrderForPayme(order, request.Amount);
 
-    public Task<CreateTransactionResponseDto> CreateTransactionAsync(CreateTransactionRequestDto request)
-        => throw new NotImplementedException("CreateTransaction business logic is implemented in a later batch.");
+        return new CheckPerformTransactionResponseDto { Allow = true };
+    }
+
+    public async Task<CreateTransactionResponseDto> CreateTransactionAsync(CreateTransactionRequestDto request)
+    {
+        for (int attempt = 1; attempt <= MaxWriteConflictRetries; attempt++)
+        {
+            try
+            {
+                return await _unitOfWork.ExecuteInTransactionAsync(async () =>
+                {
+                    // Idempotency check first, before any validation: a repeated CreateTransaction for
+                    // an id already created must replay the stored result, not re-validate from scratch
+                    // (matches the confirmed official-docs behavior: "basic check, return existing state").
+                    PaymeTransaction? existing = await _paymeTransactionRepository.GetByPaymeTransactionIdForUpdateAsync(request.Id);
+                    if (existing is not null)
+                    {
+                        return BuildReplayResponse(existing, request);
+                    }
+
+                    Guid orderId = ParseOrderId(request.Account);
+                    PaymentOrder? order = await _paymentOrderRepository.GetByIdForUpdateAsync(orderId);
+                    ValidateOrderForPayme(order, request.Amount);
+
+                    // Enforce one Payme transaction per PaymentOrder - a different Payme transaction id
+                    // must never be allowed to attach to an order that already has one.
+                    PaymeTransaction? attachedToOrder = await _paymeTransactionRepository.GetByPaymentOrderIdAsync(order!.Id);
+                    if (attachedToOrder is not null)
+                    {
+                        throw new PaymeRpcException(PaymeErrorCodes.OperationNotAllowed,
+                            "A different Payme transaction is already attached to this payment order.");
+                    }
+
+                    PaymeTransaction transaction = new()
+                    {
+                        PaymentOrderId = order.Id,
+                        PaymeTransactionId = request.Id,
+                        AccountReference = request.Account.OrderId,
+                        PaymeTransactionTime = request.Time,
+                        RequestedAmountTiyin = request.Amount,
+                        MerchantCreateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        InternalStatus = PaymeTransactionInternalStatus.Created,
+                        PaymeStateCode = PaymeCreatedStateCode
+                    };
+
+                    // PaymeTransaction is created before PaymentOrder is touched, so a failure here
+                    // (e.g. a unique-index conflict) never leaves PaymentOrder.ProviderOrderId
+                    // partially updated - and both writes still commit/rollback together as one
+                    // IUnitOfWork transaction regardless.
+                    PaymeTransaction created = await _paymeTransactionRepository.AddAsync(transaction);
+
+                    order.ProviderOrderId = request.Id;
+                    await _paymentOrderRepository.UpdateAsync(order);
+
+                    return BuildResponse(created);
+                });
+            }
+            catch (Exception ex) when (IsRetryableConflict(ex))
+            {
+                // A DB-level conflict (unique index or xmin) aborted the whole transaction - UnitOfWork
+                // has already rolled it back. If attempts remain, retry the entire delegate from
+                // scratch with fresh reads: a concurrent CreateTransaction for the same Payme id
+                // resolves to the idempotent-replay path once the winner's row becomes visible. On the
+                // final attempt, translate rather than let PaymeConflictException/PaymeConcurrencyException
+                // escape as an unhandled type - this method must only ever return a result or throw
+                // PaymeRpcException.
+                if (attempt >= MaxWriteConflictRetries)
+                {
+                    throw new PaymeRpcException(PaymeErrorCodes.InternalSystemError,
+                        "Unable to process CreateTransaction after repeated conflicts.");
+                }
+            }
+        }
+
+        throw new PaymeRpcException(PaymeErrorCodes.InternalSystemError,
+            "Unable to process CreateTransaction after repeated conflicts.");
+    }
 
     public Task<PerformTransactionResponseDto> PerformTransactionAsync(PerformTransactionRequestDto request)
         => throw new NotImplementedException("PerformTransaction business logic is implemented in a later batch.");
@@ -87,6 +185,70 @@ public class PaymeMerchantService : IPaymeMerchantService
 
     public Task<GetStatementResponseDto> GetStatementAsync(GetStatementRequestDto request)
         => throw new NotImplementedException("GetStatement business logic is implemented in a later batch.");
+
+    private static bool IsRetryableConflict(Exception ex) =>
+        ex is PaymeConcurrencyException or PaymeConflictException;
+
+    private static Guid ParseOrderId(PaymeAccountDto account)
+    {
+        if (string.IsNullOrWhiteSpace(account.OrderId) || !Guid.TryParse(account.OrderId, out Guid orderId))
+        {
+            throw new PaymeRpcException(PaymeErrorCodes.AccountErrorRangeStart, "Invalid or missing account.order_id.");
+        }
+
+        return orderId;
+    }
+
+    private static void ValidateOrderForPayme(PaymentOrder? order, long requestedAmountTiyin)
+    {
+        if (order is null || order.Provider != PaymentProvider.Payme)
+        {
+            throw new PaymeRpcException(PaymeErrorCodes.AccountErrorRangeStart, "Payment order not found.");
+        }
+
+        bool isExpired = order.ExpiresAt is not null && order.ExpiresAt <= DateTime.UtcNow;
+        if (order.Status != PaymentOrderStatus.Pending || isExpired)
+        {
+            throw new PaymeRpcException(PaymeErrorCodes.AccountErrorRangeStart, "Payment order is not payable.");
+        }
+
+        long expectedAmountTiyin = ToTiyin(order.Amount);
+        if (requestedAmountTiyin != expectedAmountTiyin)
+        {
+            throw new PaymeRpcException(PaymeErrorCodes.InvalidAmount, "Requested amount does not match the payment order.");
+        }
+    }
+
+    // PaymentOrder.Amount is a decimal(18,2) column - by the time any value is read back from the
+    // repository it can have at most 2 decimal places (tiyin granularity), so this conversion is
+    // exact; no rounding is needed.
+    private static long ToTiyin(decimal soum) => (long)(soum * 100m);
+
+    private static CreateTransactionResponseDto BuildReplayResponse(PaymeTransaction existing, CreateTransactionRequestDto request)
+    {
+        Guid orderId = ParseOrderId(request.Account);
+
+        if (existing.PaymentOrderId != orderId || existing.RequestedAmountTiyin != request.Amount)
+        {
+            throw new PaymeRpcException(PaymeErrorCodes.OperationNotAllowed,
+                "This Payme transaction id was already created with different order or amount parameters.");
+        }
+
+        return BuildResponse(existing);
+    }
+
+    private static CreateTransactionResponseDto BuildResponse(PaymeTransaction transaction)
+    {
+        return new CreateTransactionResponseDto
+        {
+            CreateTime = transaction.MerchantCreateTime ?? 0,
+            // Payme's "transaction" field is the merchant's own stable identifier for this specific
+            // transaction record - distinct from "account" (which already carries the order
+            // reference). PaymeTransaction.Id is that identifier; it is not PaymentOrder.Id.
+            Transaction = transaction.Id.ToString(),
+            State = transaction.PaymeStateCode ?? PaymeCreatedStateCode
+        };
+    }
 
     private Task<object?> DispatchAsync(string method, JsonElement paramsElement) => method switch
     {
