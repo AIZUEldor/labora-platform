@@ -3,6 +3,7 @@ using System;
 using Labora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Labora.Infrastructure.Migrations
 {
     [DbContext(typeof(LaboaDbContext))]
-    partial class LaboaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260724110255_AddJobImages")]
+    partial class AddJobImages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -58,7 +61,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("ParentCategoryId");
 
-                    b.ToTable("Categories", (string)null);
+                    b.ToTable("Categories");
 
                     b.HasData(
                         new
@@ -263,7 +266,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("SubCategoryId");
 
-                    b.ToTable("Jobs", (string)null);
+                    b.ToTable("Jobs");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.JobApplication", b =>
@@ -299,7 +302,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("WorkerId");
 
-                    b.ToTable("JobApplications", (string)null);
+                    b.ToTable("JobApplications");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.JobImage", b =>
@@ -332,7 +335,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("JobId");
 
-                    b.ToTable("JobImages", (string)null);
+                    b.ToTable("JobImages");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.Notification", b =>
@@ -376,7 +379,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Notifications", (string)null);
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.OtpAbuseEvent", b =>
@@ -427,7 +430,7 @@ namespace Labora.Infrastructure.Migrations
                     b.HasIndex("PhoneNumber", "EventType", "CreatedAt")
                         .HasDatabaseName("IX_OtpAbuseEvents_Phone_EventType_CreatedAt");
 
-                    b.ToTable("OtpAbuseEvents", (string)null);
+                    b.ToTable("OtpAbuseEvents");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.OtpBlock", b =>
@@ -477,7 +480,7 @@ namespace Labora.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_OtpBlocks_BlockType_ScopeKey");
 
-                    b.ToTable("OtpBlocks", (string)null);
+                    b.ToTable("OtpBlocks");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.OtpVerification", b =>
@@ -568,7 +571,7 @@ namespace Labora.Infrastructure.Migrations
                     b.HasIndex("PhoneNumber", "Purpose", "Status")
                         .HasDatabaseName("IX_OtpVerifications_Phone_Purpose_Status");
 
-                    b.ToTable("OtpVerifications", (string)null);
+                    b.ToTable("OtpVerifications");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.PaymentOrder", b =>
@@ -612,7 +615,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PaymentOrders", (string)null);
+                    b.ToTable("PaymentOrders");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.PushToken", b =>
@@ -648,7 +651,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PushTokens", (string)null);
+                    b.ToTable("PushTokens");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.Review", b =>
@@ -716,7 +719,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("ReviewerId");
 
-                    b.ToTable("Reviews", (string)null);
+                    b.ToTable("Reviews");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.SavedJob", b =>
@@ -741,7 +744,7 @@ namespace Labora.Infrastructure.Migrations
                     b.HasIndex("UserId", "JobId")
                         .IsUnique();
 
-                    b.ToTable("SavedJobs", (string)null);
+                    b.ToTable("SavedJobs");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.Transaction", b =>
@@ -776,7 +779,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Transactions", (string)null);
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.User", b =>
@@ -851,7 +854,7 @@ namespace Labora.Infrastructure.Migrations
                     b.HasIndex("PhoneNumber")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.UserPreference", b =>
@@ -887,7 +890,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserPreferences", (string)null);
+                    b.ToTable("UserPreferences");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.WorkerPortfolioImage", b =>
@@ -919,7 +922,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("WorkerPostId");
 
-                    b.ToTable("WorkerPortfolioImages", (string)null);
+                    b.ToTable("WorkerPortfolioImages");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.WorkerPost", b =>
@@ -985,7 +988,7 @@ namespace Labora.Infrastructure.Migrations
 
                     b.HasIndex("WorkerId");
 
-                    b.ToTable("WorkerPosts", (string)null);
+                    b.ToTable("WorkerPosts");
                 });
 
             modelBuilder.Entity("Labora.Domain.Entities.Category", b =>
