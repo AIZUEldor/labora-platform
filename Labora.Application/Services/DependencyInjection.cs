@@ -50,6 +50,18 @@ public static class DependencyInjection
 
         // Payme
         services.AddScoped<IPaymeCheckoutUrlBuilder, PaymeCheckoutUrlBuilder>();
+        services.AddScoped<IPaymeAuthenticator, PaymeAuthenticator>();
+        services.AddScoped<IPaymeMerchantService, PaymeMerchantService>();
+
+        // Intentionally no .ValidateOnStart() here (unlike the Otp/OtpIdentity/Eskiz options above):
+        // no Payme:Login/Payme:Password values exist in any environment's configuration yet, and no
+        // controller resolves IPaymeMerchantService/IPaymeAuthenticator today, so nothing forces this
+        // to validate. ValidateOnStart() would fail application startup in every environment as soon
+        // as this line ran. Add it back once real Payme credentials are configured and a controller
+        // is wired up to actually use them.
+        services.AddOptions<PaymeMerchantOptions>()
+            .Bind(configuration.GetSection(PaymeMerchantOptions.SectionName))
+            .ValidateDataAnnotations();
 
         return services;
     }
