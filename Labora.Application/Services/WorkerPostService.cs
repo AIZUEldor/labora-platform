@@ -8,15 +8,21 @@ namespace Labora.Application.Services;
 
 public class WorkerPostService : IWorkerPostService
 {
+    private const int MaxPortfolioImages = 5;
+    private const string PortfolioImagesSubFolder = "portfolio";
+
     private readonly IWorkerPostRepository _workerPostRepository;
     private readonly INotificationService _notificationService;
+    private readonly IFileStorageService _fileStorageService;
 
     public WorkerPostService(
         IWorkerPostRepository workerPostRepository,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IFileStorageService fileStorageService)
     {
         _workerPostRepository = workerPostRepository;
         _notificationService = notificationService;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<WorkerPostResponseDto?> GetByIdAsync(Guid id)
@@ -110,21 +116,25 @@ public class WorkerPostService : IWorkerPostService
             throw new KeyNotFoundException("WorkerPost topilmadi.");
         if (post.WorkerId != workerId)
             throw new UnauthorizedAccessException("Bu e'lon sizga tegishli emas.");
+        if (post.PortfolioImages.Count >= MaxPortfolioImages)
+            throw new ArgumentException($"Maksimal {MaxPortfolioImages} ta rasm yuklash mumkin.");
 
-        string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "portfolio");
-        if (!Directory.Exists(uploadsFolder))
-            Directory.CreateDirectory(uploadsFolder);
+        ImageUploadValidator.Validate(file);
 
-        string fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-        string filePath = Path.Combine(uploadsFolder, fileName);
+        string imageUrl = await _fileStorageService.SaveAsync(file, PortfolioImagesSubFolder);
 
-        using (FileStream stream = new FileStream(filePath, FileMode.Create))
+        try
         {
-            await file.CopyToAsync(stream);
+            return await _workerPostRepository.AddPortfolioImageAsync(postId, imageUrl, caption);
         }
-
-        string imageUrl = $"/uploads/portfolio/{fileName}";
-        return await _workerPostRepository.AddPortfolioImageAsync(postId, imageUrl, caption);
+        catch
+        {
+            // The physical file was already written before this DB write was attempted. If the DB
+            // write fails, the file would otherwise be orphaned with no matching row - remove it so
+            // a failed upload never leaves storage inconsistent with the database.
+            _fileStorageService.Delete(imageUrl);
+            throw;
+        }
     }
 
     public async Task DeletePortfolioImageAsync(Guid postId, Guid workerId, Guid imageId)
@@ -135,7 +145,16 @@ public class WorkerPostService : IWorkerPostService
         if (post.WorkerId != workerId)
             throw new UnauthorizedAccessException("Bu e'lon sizga tegishli emas.");
 
+        WorkerPostResponseDto.PortfolioImageDto? image = post.PortfolioImages.FirstOrDefault(i => i.Id == imageId);
+        if (image == null)
+            throw new KeyNotFoundException("Rasm ushbu e'longa tegishli emas.");
+
         await _workerPostRepository.DeletePortfolioImageAsync(imageId);
+
+        // Physical-file removal only happens after the DB row is confirmed gone, and must never turn
+        // this already-successful delete into a failed request - a missing/inaccessible file at this
+        // point is not an error (IFileStorageService.Delete guarantees it never throws for that).
+        _fileStorageService.Delete(image.ImageUrl);
     }
 
     public async Task IncrementViewCountAsync(Guid id)

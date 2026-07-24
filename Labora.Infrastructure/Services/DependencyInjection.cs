@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IOtpBlockRepository, OtpBlockRepository>();
         services.AddScoped<IPaymeTransactionRepository, PaymeTransactionRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IFileStorageService, LocalDiskFileStorageService>();
 
         services.AddOptions<EskizOptions>()
             .Bind(configuration.GetSection(EskizOptions.SectionName))
