@@ -140,6 +140,12 @@ export enum ApplicationStatus {
 }
 
 // ==================== JOB ====================
+export interface JobImage {
+  id: string;
+  imageUrl: string;
+  caption?: string;
+}
+
 export interface Job {
   id: string;
   title: string;
@@ -163,6 +169,12 @@ export interface Job {
   deadline?: string;
   createdAt: string;
   distance?: number;
+  // Cheap thumbnail derived server-side; always present on detail responses, present but possibly
+  // null on list/search/my-jobs responses (see JobResponseDto.CoverImageUrl on the backend).
+  coverImageUrl?: string | null;
+  // Full gallery; only populated by detail/update responses - list/search/my-jobs responses leave
+  // this empty or absent, so treat a missing/empty array as "not loaded", not "no images".
+  images?: JobImage[];
 }
 
 export interface JobListResponse {

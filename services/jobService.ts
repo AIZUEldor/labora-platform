@@ -1,5 +1,5 @@
 import api from './api';
-import { Job, JobListResponse, NearbyJob } from '../types';
+import { Job, JobImage, JobListResponse, NearbyJob } from '../types';
 
 export const jobService = {
   getJobs: async (page: number = 1, pageSize: number = 10): Promise<JobListResponse> => {
@@ -73,5 +73,23 @@ export const jobService = {
       params: { pageNumber: 1, pageSize: 1000 },
     });
     return response.data.items;
+  },
+
+  uploadJobImage: async (jobId: string, imageUri: string, caption?: string): Promise<JobImage> => {
+    const formData = new FormData();
+    formData.append('file', {
+      uri: imageUri,
+      name: 'job.jpg',
+      type: 'image/jpeg',
+    } as any);
+    if (caption) formData.append('caption', caption);
+    const response = await api.post<JobImage>(`/Job/${jobId}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deleteJobImage: async (jobId: string, imageId: string): Promise<void> => {
+    await api.delete(`/Job/${jobId}/images/${imageId}`);
   },
 };
