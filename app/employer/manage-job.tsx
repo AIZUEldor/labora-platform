@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
+  ActivityIndicator, Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
 import { useThemeStore } from '../../store/themeStore';
-import { MapPinIcon, ClockIcon, MoneyIcon, ApplicationsIcon } from '../../components/icons';
+import { MapPinIcon, ClockIcon, MoneyIcon, ApplicationsIcon, PlusIcon, CloseIcon } from '../../components/icons';
 import Svg, { Path } from 'react-native-svg';
 import { jobService } from '../../services/jobService';
 import { Job } from '../../types';
@@ -43,9 +45,11 @@ export default function ManageJobScreen() {
   const { t, language } = useLanguageStore();
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
 
-  const [job,     setJob]     = useState<Job | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
+  const [job,             setJob]             = useState<Job | null>(null);
+  const [loading,         setLoading]         = useState(true);
+  const [error,           setError]           = useState<string | null>(null);
+  const [uploading,       setUploading]       = useState(false);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!jobId) {
@@ -67,6 +71,78 @@ export default function ManageJobScreen() {
     };
     load();
   }, [jobId]);
+
+  // Post-mutation refresh only - the upload/delete already succeeded on the server, so a failure
+  // here must never blank the screen or drop the gallery the employer is currently looking at.
+  // Unlike the initial load above, this intentionally never touches `loading` or `error`.
+  // Returns whether the refetch itself succeeded, so callers can tell "mutation failed" apart from
+  // "mutation succeeded but the follow-up refresh didn't" and warn instead of showing a false error.
+  const refreshJob = async (): Promise<boolean> => {
+    if (!jobId) return false;
+    try {
+      const data = await jobService.getJobById(jobId);
+      setJob(data);
+      return true;
+    } catch {
+      // Keep showing the last known-good job/gallery rather than surface a stale-refresh error.
+      return false;
+    }
+  };
+
+  const handleAddImage = async () => {
+    if (!job || uploading) return;
+    if ((job.images?.length ?? 0) >= 5) {
+      Alert.alert('', t.job.maxImages);
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    setUploading(true);
+    try {
+      await jobService.uploadJobImage(job.id, result.assets[0].uri);
+      const refreshed = await refreshJob();
+      if (!refreshed) {
+        Alert.alert('', t.job.refreshFailed);
+      }
+    } catch (e: any) {
+      Alert.alert(t.common.error, e?.message ?? t.common.somethingWentWrong);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteImage = (imageId: string) => {
+    Alert.alert(
+      t.common.delete,
+      t.common.confirm,
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: t.common.yes,
+          style: 'destructive',
+          onPress: async () => {
+            if (!job) return;
+            setDeletingImageId(imageId);
+            try {
+              await jobService.deleteJobImage(job.id, imageId);
+              const refreshed = await refreshJob();
+              if (!refreshed) {
+                Alert.alert('', t.job.refreshFailed);
+              }
+            } catch (e: any) {
+              Alert.alert(t.common.error, e?.message ?? t.common.somethingWentWrong);
+            } finally {
+              setDeletingImageId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   if (loading) {
     return (
@@ -149,20 +225,45 @@ export default function ManageJobScreen() {
         </View>
 
         {/* Images */}
-        {job.images && job.images.length > 0 && (
-          <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.job.images}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageGalleryRow}>
-              {job.images.map((image) => (
+        <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.job.images}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageGalleryRow}>
+            {(job.images ?? []).map((image) => (
+              <View key={image.id} style={styles.imageWrapper}>
                 <Image
-                  key={image.id}
                   source={{ uri: `${MEDIA_URL}${image.imageUrl}` }}
                   style={styles.galleryImage}
                 />
-              ))}
-            </ScrollView>
-          </View>
-        )}
+                <TouchableOpacity
+                  style={styles.removeImageBtn}
+                  onPress={() => handleDeleteImage(image.id)}
+                  disabled={deletingImageId === image.id}
+                  activeOpacity={0.8}
+                >
+                  {deletingImageId === image.id ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <CloseIcon size={14} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            ))}
+            {(job.images?.length ?? 0) < 5 && (
+              <TouchableOpacity
+                style={[styles.addImageBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={handleAddImage}
+                disabled={uploading}
+                activeOpacity={0.7}
+              >
+                {uploading ? (
+                  <ActivityIndicator color={colors.primary} />
+                ) : (
+                  <PlusIcon size={28} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        </View>
 
         {/* View Applicants */}
         <TouchableOpacity
@@ -210,7 +311,17 @@ const styles = StyleSheet.create({
   sectionTitle:    { fontSize: FontSize.lg, fontWeight: FontWeight.bold, marginBottom: Spacing.md },
   description:     { fontSize: FontSize.md, lineHeight: 24 },
   imageGalleryRow: { marginTop: 4 },
-  galleryImage:    { width: 120, height: 120, borderRadius: BorderRadius.lg, marginRight: Spacing.sm },
+  imageWrapper:    { position: 'relative', marginRight: Spacing.sm },
+  galleryImage:    { width: 90, height: 90, borderRadius: BorderRadius.lg },
+  removeImageBtn: {
+    position: 'absolute', top: 4, right: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: BorderRadius.sm, padding: 3,
+  },
+  addImageBtn: {
+    width: 90, height: 90, borderRadius: BorderRadius.lg,
+    borderWidth: 1.5, borderStyle: 'dashed',
+    justifyContent: 'center', alignItems: 'center',
+  },
   applicantsBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: Spacing.sm, borderRadius: BorderRadius.xl, paddingVertical: 14,

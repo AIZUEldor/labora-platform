@@ -69,6 +69,8 @@ export const en = {
     deadline: 'Deadline',
     description: 'Description',
     images: 'Photos',
+    maxImages: 'Maximum 5 images allowed',
+    refreshFailed: 'The action may have succeeded, but the latest gallery could not be refreshed. Reopen the page to see the latest state.',
     category: 'Category',
     employer: 'Employer',
     applied: 'Application sent',

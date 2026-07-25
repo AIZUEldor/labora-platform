@@ -69,6 +69,8 @@ export const uz = {
     deadline: 'Muddat',
     description: 'Tavsif',
     images: 'Rasmlar',
+    maxImages: 'Maksimal 5 ta rasm yuklash mumkin',
+    refreshFailed: "Amal bajarilgan bo'lishi mumkin, lekin so'nggi holatni yangilab bo'lmadi. Yangilash uchun sahifani qayta oching.",
     category: 'Kategoriya',
     employer: 'Ish beruvchi',
     applied: 'Ariza topshirildi',
