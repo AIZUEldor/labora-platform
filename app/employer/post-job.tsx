@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  TextInput, ScrollView, ActivityIndicator, Alert, Modal, FlatList,
+  TextInput, ScrollView, ActivityIndicator, Alert, Modal, FlatList, Image,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { useThemeStore } from '../../store/themeStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 import { useMapPickerStore } from '../../stores/useMapPickerStore';
@@ -13,6 +14,7 @@ import { categoryService } from '../../services/categoryService';
 import { Category } from '../../types';
 import { Spacing, BorderRadius } from '../../constants/spacing';
 import { FontSize, FontWeight } from '../../constants/typography';
+import { PlusIcon, CloseIcon } from '../../components/icons';
 import Svg, { Path } from 'react-native-svg';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
@@ -81,6 +83,7 @@ export default function PostJobScreen() {
 
   const [loading,           setLoading]           = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [images,            setImages]            = useState<string[]>([]);
 
   useEffect(() => {
     loadCategories();
@@ -131,6 +134,24 @@ export default function PostJobScreen() {
     }
   };
 
+  const pickImage = async () => {
+    if (images.length >= 5) {
+      Alert.alert('', label('Maksimal 5 ta rasm yuklash mumkin', 'Максимум 5 фотографий', 'Maximum 5 images allowed'));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setImages(prev => [...prev, result.assets[0].uri]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
     if (!title.trim())     { Alert.alert('Xato', "Ish nomi kiritilmagan"); return; }
     if (!description.trim()) { Alert.alert('Xato', 'Tavsif kiritilmagan'); return; }
@@ -141,7 +162,7 @@ export default function PostJobScreen() {
 
     setLoading(true);
     try {
-      await jobService.createJob({
+      const job = await jobService.createJob({
         title:           title.trim(),
         description:     description.trim(),
         salary:          parseFloat(salary),
@@ -156,11 +177,37 @@ export default function PostJobScreen() {
         longitude:       longitude ?? undefined,
         experienceYears: experienceYears ? parseInt(experienceYears) : undefined,
       });
-      Alert.alert(
-        language === 'uz' ? 'Muvaffaqiyat' : language === 'ru' ? 'Успех' : 'Success',
-        language === 'uz' ? "Ish e'loni joylashtirildi!" : language === 'ru' ? 'Вакансия размещена!' : 'Job posted!',
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
+
+      // The job is already created at this point - an image upload failure must never be reported
+      // as job-creation failure. Each upload is isolated in its own try/catch (same swallow-and-
+      // continue pattern as the optional CV upload in job-detail.tsx's handleApply) so one failed
+      // image can't block the rest, and failures are only summarized in a separate warning below.
+      let failedUploads = 0;
+      for (const uri of images) {
+        try {
+          await jobService.uploadJobImage(job.id, uri);
+        } catch {
+          failedUploads += 1;
+        }
+      }
+
+      if (failedUploads > 0) {
+        Alert.alert(
+          label('Diqqat', 'Внимание', 'Warning'),
+          label(
+            `Ish e'loni joylashtirildi, lekin ${failedUploads} ta rasmni yuklab bo'lmadi.`,
+            `Вакансия размещена, но не удалось загрузить ${failedUploads} фото.`,
+            `Job posted, but ${failedUploads} image(s) could not be uploaded.`
+          ),
+          [{ text: 'OK', onPress: () => router.back() }]
+        );
+      } else {
+        Alert.alert(
+          language === 'uz' ? 'Muvaffaqiyat' : language === 'ru' ? 'Успех' : 'Success',
+          language === 'uz' ? "Ish e'loni joylashtirildi!" : language === 'ru' ? 'Вакансия размещена!' : 'Job posted!',
+          [{ text: 'OK', onPress: () => router.back() }]
+        );
+      }
     } catch {
       Alert.alert('Xato', "Ish e'lonini joylashtirishda xatolik");
     } finally {
@@ -399,6 +446,37 @@ export default function PostJobScreen() {
           <ChevronIcon size={18} color={latitude !== null ? colors.primary : colors.textSecondary} />
         </TouchableOpacity>
 
+        {/* Rasmlar */}
+        <Text style={[styles.label, { color: colors.textSecondary }]}>
+          {label('Rasmlar', 'Фотографии', 'Photos')}
+          <Text style={[styles.optional, { color: colors.textTertiary }]}>
+            {label(' (ixtiyoriy, maksimal 5 ta)', ' (необязательно, максимум 5)', ' (optional, max 5)')}
+          </Text>
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
+          {images.map((uri, index) => (
+            <View key={index} style={styles.imageWrapper}>
+              <Image source={{ uri }} style={styles.previewImage} />
+              <TouchableOpacity
+                style={styles.removeImageBtn}
+                onPress={() => removeImage(index)}
+                activeOpacity={0.8}
+              >
+                <CloseIcon size={14} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          {images.length < 5 && (
+            <TouchableOpacity
+              style={[styles.addImageBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={pickImage}
+              activeOpacity={0.7}
+            >
+              <PlusIcon size={28} color={colors.primary} />
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+
         {/* Submit */}
         <TouchableOpacity
           style={[styles.submitBtn, { opacity: loading ? 0.7 : 1 }]}
@@ -465,6 +543,11 @@ const styles = StyleSheet.create({
   selectorText:    { fontSize: FontSize.md },
   locationBtn:     { borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.md, paddingVertical: 14, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', gap: 8 },
   locationBtnText: { flex: 1, fontSize: FontSize.md },
+  imageRow:        { marginTop: 4 },
+  imageWrapper:    { position: 'relative', marginRight: Spacing.sm },
+  previewImage:    { width: 90, height: 90, borderRadius: BorderRadius.lg },
+  removeImageBtn:  { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: BorderRadius.sm, padding: 3 },
+  addImageBtn:     { width: 90, height: 90, borderRadius: BorderRadius.lg, borderWidth: 1.5, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
   submitBtn:       { marginTop: Spacing.xl, borderRadius: BorderRadius.xl, overflow: 'hidden' },
   submitGradient:  { paddingVertical: 16, alignItems: 'center' },
   submitText:      { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.bold },
