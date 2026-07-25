@@ -16,6 +16,7 @@ import { Job } from '../../types';
 import { JobDetailSkeleton } from '../../components/SkeletonLoader';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 import { MEDIA_URL } from '../../services/api';
+import { getJobTypeLabel } from '../../utils/jobType';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
   return (
@@ -23,21 +24,6 @@ function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string
       <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
-}
-
-const JOB_TYPES = [
-  { value: 1, labelUz: 'Kunlik',    labelRu: 'Ежедневная',  labelEn: 'Daily' },
-  { value: 2, labelUz: 'Mavsumiy',  labelRu: 'Сезонная',    labelEn: 'Seasonal' },
-  { value: 3, labelUz: 'Oylik',     labelRu: 'Ежемесячная', labelEn: 'Monthly' },
-  { value: 4, labelUz: 'Part-time', labelRu: 'Part-time',   labelEn: 'Part-time' },
-  { value: 5, labelUz: 'Full-time', labelRu: 'Full-time',   labelEn: 'Full-time' },
-  { value: 6, labelUz: 'Masofaviy', labelRu: 'Удалённая',   labelEn: 'Remote' },
-];
-
-function getJobTypeLabel(value: number, language: string): string {
-  const found = JOB_TYPES.find(j => j.value === value);
-  if (!found) return '';
-  return language === 'uz' ? found.labelUz : language === 'ru' ? found.labelRu : found.labelEn;
 }
 
 export default function ManageJobScreen() {

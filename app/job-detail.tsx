@@ -24,6 +24,7 @@ import { userService } from '../services/userService';
 import { useLanguageStore } from '../stores/useLanguageStore';
 import { savedJobService } from '../services/savedJobService';
 import { MEDIA_URL } from '../services/api';
+import { getJobTypeLabel } from '../utils/jobType';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
   return (
@@ -32,11 +33,6 @@ function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string
     </Svg>
   );
 }
-
-const JOB_TYPE_LABEL: Record<string, string> = {
-  FullTime: 'Full-time', PartTime: 'Part-time',
-  Remote: 'Remote', Contract: 'Contract', Internship: 'Internship',
-};
 
 function BenefitIcon({ name, color }: { name: string; color: string }) {
   const props = { size: 20, color };
@@ -51,7 +47,7 @@ function BenefitIcon({ name, color }: { name: string; color: string }) {
 
 export default function JobDetailScreen() {
   const { colors, isDark } = useThemeStore();
-  const { t } = useLanguageStore();
+  const { t, language } = useLanguageStore();
   const { id } = useLocalSearchParams<{ id: string }>();
   const role       = useAuthStore((state: AuthState) => state.role);
   const token      = useAuthStore((state: AuthState) => state.token);
@@ -207,7 +203,7 @@ export default function JobDetailScreen() {
   }
 
   const salary  = job.salary ? `${(job.salary / 1_000_000).toFixed(1)}M ${t.common.currency}` : t.common.noData;
-  const jobType = JOB_TYPE_LABEL[job.status as any] ?? 'Full-time';
+  const jobType = getJobTypeLabel(job.jobType, language);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

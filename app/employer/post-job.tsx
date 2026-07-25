@@ -16,6 +16,7 @@ import { Spacing, BorderRadius } from '../../constants/spacing';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { PlusIcon, CloseIcon } from '../../components/icons';
 import { sanitizeDigits, formatThousands } from '../../utils/numberFormat';
+import { JOB_TYPES, getJobTypeLabel } from '../../utils/jobType';
 import Svg, { Path } from 'react-native-svg';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
@@ -41,21 +42,6 @@ function MapPinIcon({ size = 18, color = '#000' }: { size?: number; color?: stri
       <Path d="M12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" stroke={color} strokeWidth={1.8} />
     </Svg>
   );
-}
-
-const JOB_TYPES = [
-  { value: 1, labelUz: 'Kunlik',    labelRu: 'Ежедневная',  labelEn: 'Daily' },
-  { value: 2, labelUz: 'Mavsumiy',  labelRu: 'Сезонная',    labelEn: 'Seasonal' },
-  { value: 3, labelUz: 'Oylik',     labelRu: 'Ежемесячная', labelEn: 'Monthly' },
-  { value: 4, labelUz: 'Part-time', labelRu: 'Part-time',   labelEn: 'Part-time' },
-  { value: 5, labelUz: 'Full-time', labelRu: 'Full-time',   labelEn: 'Full-time' },
-  { value: 6, labelUz: 'Masofaviy', labelRu: 'Удалённая',   labelEn: 'Remote' },
-];
-
-function getJobTypeLabel(value: number, language: string): string {
-  const found = JOB_TYPES.find(j => j.value === value);
-  if (!found) return '';
-  return language === 'uz' ? found.labelUz : language === 'ru' ? found.labelRu : found.labelEn;
 }
 
 export default function PostJobScreen() {
