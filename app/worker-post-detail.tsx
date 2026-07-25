@@ -19,6 +19,7 @@ import { BorderRadius, Shadow, Spacing } from '../constants/spacing';
 import { FontSize, FontWeight } from '../constants/typography';
 import { MEDIA_URL } from '../services/api';
 import { useLanguageStore } from '../stores/useLanguageStore';
+import { sanitizeDigits, formatThousands } from '../utils/numberFormat';
 
 const WORKER_POST_STATUS_LABEL: Record<number, { label: string; bg: string; text: string }> = {
   1: { label: 'Faol',          bg: '#DCFCE7', text: '#166534' },
@@ -348,8 +349,8 @@ export default function WorkerPostDetailScreen() {
                 </Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-                  value={form.expectedSalary > 0 ? String(form.expectedSalary) : ''}
-                  onChangeText={t => setForm(p => ({ ...p, expectedSalary: Number(t) || 0 }))}
+                  value={form.expectedSalary > 0 ? formatThousands(String(form.expectedSalary)) : ''}
+                  onChangeText={t => setForm(p => ({ ...p, expectedSalary: Number(sanitizeDigits(t)) || 0 }))}
                   keyboardType="numeric"
                   placeholderTextColor={colors.textSecondary}
                 />

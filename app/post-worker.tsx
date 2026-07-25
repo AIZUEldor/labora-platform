@@ -21,6 +21,7 @@ import { workerPostService } from '../services/workerPostService';
 import { categoryService } from '../services/categoryService';
 import { Category, CreateWorkerPostRequest } from '../types';
 import { BackIcon, CloseIcon, PlusIcon } from '../components/icons';
+import { sanitizeDigits, formatThousands } from '../utils/numberFormat';
 
 export default function PostWorkerScreen() {
   const router = useRouter();
@@ -195,8 +196,8 @@ export default function PostWorkerScreen() {
           style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
           placeholder="Masalan: 3000000"
           placeholderTextColor={colors.textSecondary}
-          value={form.expectedSalary > 0 ? String(form.expectedSalary) : ''}
-          onChangeText={text => setForm(prev => ({ ...prev, expectedSalary: Number(text) || 0 }))}
+          value={form.expectedSalary > 0 ? formatThousands(String(form.expectedSalary)) : ''}
+          onChangeText={text => setForm(prev => ({ ...prev, expectedSalary: Number(sanitizeDigits(text)) || 0 }))}
           keyboardType="numeric"
         />
 

@@ -15,6 +15,7 @@ import { Category } from '../../types';
 import { Spacing, BorderRadius } from '../../constants/spacing';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { PlusIcon, CloseIcon } from '../../components/icons';
+import { sanitizeDigits, formatThousands } from '../../utils/numberFormat';
 import Svg, { Path } from 'react-native-svg';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
@@ -315,8 +316,8 @@ export default function PostJobScreen() {
           style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
           placeholder="3 000 000"
           placeholderTextColor={colors.textTertiary}
-          value={salary}
-          onChangeText={setSalary}
+          value={formatThousands(salary)}
+          onChangeText={text => setSalary(sanitizeDigits(text))}
           keyboardType="numeric"
         />
 
