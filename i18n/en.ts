@@ -68,6 +68,7 @@ export const en = {
     skills: 'Skills',
     deadline: 'Deadline',
     description: 'Description',
+    images: 'Photos',
     employer: 'Employer',
     applied: 'Application sent',
     fullTime: 'Full-time',

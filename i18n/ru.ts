@@ -68,6 +68,7 @@ export const ru = {
     skills: 'Навыки',
     deadline: 'Срок',
     description: 'Описание',
+    images: 'Фотографии',
     employer: 'Работодатель',
     applied: 'Заявка отправлена',
     fullTime: 'Полная занятость',

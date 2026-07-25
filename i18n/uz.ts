@@ -68,6 +68,7 @@ export const uz = {
     skills: "Ko'nikmalar",
     deadline: 'Muddat',
     description: 'Tavsif',
+    images: 'Rasmlar',
     employer: 'Ish beruvchi',
     applied: 'Ariza topshirildi',
     fullTime: "To'liq stavka",

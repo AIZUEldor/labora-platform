@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Modal, TextInput, Alert,
+  ActivityIndicator, Modal, TextInput, Alert, Image,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +23,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { userService } from '../services/userService';
 import { useLanguageStore } from '../stores/useLanguageStore';
 import { savedJobService } from '../services/savedJobService';
+import { MEDIA_URL } from '../services/api';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
   return (
@@ -281,6 +282,22 @@ export default function JobDetailScreen() {
           </Text>
         </View>
 
+        {/* Images */}
+        {job.images && job.images.length > 0 && (
+          <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.job.images}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageGalleryRow}>
+              {job.images.map((image) => (
+                <Image
+                  key={image.id}
+                  source={{ uri: `${MEDIA_URL}${image.imageUrl}` }}
+                  style={styles.galleryImage}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Requirements */}
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.job.requirements}</Text>
@@ -509,6 +526,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle:    { fontSize: FontSize.lg, fontWeight: FontWeight.bold, marginBottom: Spacing.md },
   description:     { fontSize: FontSize.md, lineHeight: 24 },
+  imageGalleryRow: { marginTop: 4 },
+  galleryImage:    { width: 120, height: 120, borderRadius: BorderRadius.lg, marginRight: Spacing.sm },
   requirementItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
   requirementText: { fontSize: FontSize.md, flex: 1 },
   benefitsGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
