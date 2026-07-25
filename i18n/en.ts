@@ -69,6 +69,7 @@ export const en = {
     deadline: 'Deadline',
     description: 'Description',
     images: 'Photos',
+    category: 'Category',
     employer: 'Employer',
     applied: 'Application sent',
     fullTime: 'Full-time',

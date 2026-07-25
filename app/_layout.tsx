@@ -66,6 +66,7 @@ export default function RootLayout() {
         <Stack.Screen name="post-worker" />
         <Stack.Screen name="employer/post-job" />
         <Stack.Screen name="employer/job-applications" />
+        <Stack.Screen name="employer/manage-job" />
         <Stack.Screen name="job-detail" />
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="notifications" />

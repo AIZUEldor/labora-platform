@@ -69,6 +69,7 @@ export const ru = {
     deadline: 'Срок',
     description: 'Описание',
     images: 'Фотографии',
+    category: 'Категория',
     employer: 'Работодатель',
     applied: 'Заявка отправлена',
     fullTime: 'Полная занятость',

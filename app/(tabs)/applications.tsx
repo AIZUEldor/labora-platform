@@ -124,7 +124,7 @@ function EmployerJobsView({ colors }: { colors: any }) {
         <TouchableOpacity
           style={[styles.card, { backgroundColor: colors.card, ...Shadow.md }]}
           activeOpacity={0.85}
-          onPress={() => router.push({ pathname: '/employer/job-applications', params: { jobId: item.id, jobTitle: item.title } })}
+          onPress={() => router.push({ pathname: '/employer/manage-job', params: { jobId: item.id } })}
         >
           <View style={styles.cardHeader}>
             <View style={[styles.logo, { backgroundColor: colors.primaryLight }]}>
