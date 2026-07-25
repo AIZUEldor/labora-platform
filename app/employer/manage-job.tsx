@@ -17,6 +17,7 @@ import { JobDetailSkeleton } from '../../components/SkeletonLoader';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 import { MEDIA_URL } from '../../services/api';
 import { getJobTypeLabel } from '../../utils/jobType';
+import { getCategoryLabel } from '../../utils/categoryLocalization';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
   return (
@@ -198,7 +199,7 @@ export default function ManageJobScreen() {
         <View style={[styles.section, { backgroundColor: colors.card, ...Shadow.sm }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.job.category}</Text>
           <Text style={[styles.description, { color: colors.textSecondary }]}>
-            {job.categoryName}{job.subCategoryName ? ` › ${job.subCategoryName}` : ''}
+            {getCategoryLabel(job.categoryName, language)}{job.subCategoryName ? ` › ${getCategoryLabel(job.subCategoryName, language)}` : ''}
           </Text>
         </View>
 

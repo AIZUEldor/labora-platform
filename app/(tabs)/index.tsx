@@ -24,32 +24,7 @@ import { workerPostService } from '../../services/workerPostService';
 import { Job, Category, WorkerPost } from '../../types';
 import { useAuthStore, AuthState } from '../../store/authStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
-
-const CATEGORY_NAMES: Record<string, { uz: string; ru: string; en: string }> = {
-  'Daily':         { uz: 'Kunlik ishlar',       ru: 'Ежедневная работа',  en: 'Daily jobs' },
-  'IT':            { uz: 'IT',                  ru: 'ИТ',                 en: 'IT' },
-  'Construction':  { uz: 'Qurilish',            ru: 'Строительство',      en: 'Construction' },
-  'Driver':        { uz: 'Haydovchi',           ru: 'Водитель',           en: 'Driver' },
-  'Chef':          { uz: 'Oshpaz',              ru: 'Повар',              en: 'Chef' },
-  'Medical':       { uz: 'Tibbiyot',            ru: 'Медицина',           en: 'Medical' },
-  'Education':     { uz: "Ta'lim",              ru: 'Образование',        en: 'Education' },
-  'Finance':       { uz: 'Moliya',              ru: 'Финансы',            en: 'Finance' },
-  'Security':      { uz: 'Qorovul',             ru: 'Охрана',             en: 'Security' },
-  'Cleaning':      { uz: 'Tozalik',             ru: 'Уборка',             en: 'Cleaning' },
-  'Design':        { uz: 'Dizayn',              ru: 'Дизайн',             en: 'Design' },
-  'Marketing':     { uz: 'Marketing',           ru: 'Маркетинг',          en: 'Marketing' },
-  'Warehouse':     { uz: 'Ombor',               ru: 'Склад',              en: 'Warehouse' },
-  'Trade':         { uz: 'Savdo',               ru: 'Торговля',           en: 'Trade' },
-  'Agriculture':   { uz: "Qishloq xo'jaligi",  ru: 'Сельское хозяйство', en: 'Agriculture' },
-  'Manufacturing': { uz: 'Ishlab chiqarish',    ru: 'Производство',       en: 'Manufacturing' },
-  'Courier':       { uz: 'Kuryer',              ru: 'Курьер',             en: 'Courier' },
-  'Legal':         { uz: 'Huquq',               ru: 'Юридические услуги', en: 'Legal' },
-  'HR':            { uz: 'Kadrlar',             ru: 'Кадры',              en: 'HR' },
-  'Real Estate':   { uz: "Ko'chmas mulk",       ru: 'Недвижимость',       en: 'Real Estate' },
-  'Beauty':        { uz: "Go'zallik",           ru: 'Красота',            en: 'Beauty' },
-  'Auto Service':  { uz: "Avto ta'mir",         ru: 'Авто сервис',        en: 'Auto Service' },
-  'Textile':       { uz: "To'qimachilik",       ru: 'Текстиль',           en: 'Textile' },
-};
+import { getCategoryLabel } from '../../utils/categoryLocalization';
 
 function CategoryIcon({ name, color }: { name: string; color: string }) {
   const props = { size: 28, color };
@@ -238,7 +213,7 @@ function WorkerHome() {
                 >
                   <CategoryIcon name={cat.name?.toLowerCase()} color={isSelected ? '#fff' : colors.primary} />
                   <Text style={[styles.categoryName, { color: isSelected ? '#fff' : colors.textSecondary }]}>
-                    {CATEGORY_NAMES[cat.name]?.[language as 'uz' | 'ru' | 'en'] ?? cat.name}
+                    {getCategoryLabel(cat.name, language)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -265,7 +240,7 @@ function WorkerHome() {
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.subCategoryText, { color: isSelected ? '#fff' : colors.textSecondary }]}>
-                      {sub.name}
+                      {getCategoryLabel(sub.name, language)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -277,8 +252,7 @@ function WorkerHome() {
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             {selectedCat
-              ? CATEGORY_NAMES[categories.find(c => c.id === selectedCat)?.name ?? '']?.[language as 'uz' | 'ru' | 'en']
-                ?? categories.find(c => c.id === selectedCat)?.name
+              ? getCategoryLabel(categories.find(c => c.id === selectedCat)?.name, language)
               : t.home.recentJobs}
           </Text>
           {!loading && (
@@ -501,7 +475,7 @@ function EmployerHome() {
                 >
                   <CategoryIcon name={cat.name?.toLowerCase()} color={isSelected ? '#fff' : colors.primary} />
                   <Text style={[styles.categoryName, { color: isSelected ? '#fff' : colors.textSecondary }]}>
-                    {CATEGORY_NAMES[cat.name]?.[language as 'uz' | 'ru' | 'en'] ?? cat.name}
+                    {getCategoryLabel(cat.name, language)}
                   </Text>
                 </TouchableOpacity>
               );

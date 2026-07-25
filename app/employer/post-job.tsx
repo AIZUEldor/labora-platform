@@ -17,6 +17,7 @@ import { FontSize, FontWeight } from '../../constants/typography';
 import { PlusIcon, CloseIcon } from '../../components/icons';
 import { sanitizeDigits, formatThousands } from '../../utils/numberFormat';
 import { JOB_TYPES, getJobTypeLabel } from '../../utils/jobType';
+import { getCategoryLabel } from '../../utils/categoryLocalization';
 import Svg, { Path } from 'react-native-svg';
 
 function BackIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
@@ -337,7 +338,7 @@ export default function PostJobScreen() {
             activeOpacity={0.7}
           >
             <Text style={[styles.selectorText, { color: selectedCategory ? colors.textPrimary : colors.textTertiary }]}>
-              {selectedCategory?.name ?? label('Kategoriya tanlang', 'Выберите категорию', 'Select category')}
+              {selectedCategory ? getCategoryLabel(selectedCategory.name, language) : label('Kategoriya tanlang', 'Выберите категорию', 'Select category')}
             </Text>
             <ChevronIcon size={18} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -358,7 +359,7 @@ export default function PostJobScreen() {
               activeOpacity={0.7}
             >
               <Text style={[styles.selectorText, { color: selectedSubCategory ? colors.textPrimary : colors.textTertiary }]}>
-                {selectedSubCategory?.name ?? label("Yo'nalish tanlang", 'Выберите направление', 'Select subcategory')}
+                {selectedSubCategory ? getCategoryLabel(selectedSubCategory.name, language) : label("Yo'nalish tanlang", 'Выберите направление', 'Select subcategory')}
               </Text>
               <ChevronIcon size={18} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -490,7 +491,7 @@ export default function PostJobScreen() {
         categories,
         handleCategorySelect,
         (item) => item.id,
-        (item) => item.name,
+        (item) => getCategoryLabel(item.name, language),
       )}
 
       {selectedCategory && renderModal(
@@ -500,7 +501,7 @@ export default function PostJobScreen() {
         selectedCategory.subCategories ?? [],
         (item) => { setSelectedSubCategory(item); setSubCategoryModal(false); },
         (item) => item.id,
-        (item) => item.name,
+        (item) => getCategoryLabel(item.name, language),
       )}
 
       {renderModal(

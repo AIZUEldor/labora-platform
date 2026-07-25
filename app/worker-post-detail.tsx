@@ -20,6 +20,7 @@ import { FontSize, FontWeight } from '../constants/typography';
 import { MEDIA_URL } from '../services/api';
 import { useLanguageStore } from '../stores/useLanguageStore';
 import { sanitizeDigits, formatThousands } from '../utils/numberFormat';
+import { getCategoryLabel } from '../utils/categoryLocalization';
 
 const WORKER_POST_STATUS_LABEL: Record<number, { label: string; bg: string; text: string }> = {
   1: { label: 'Faol',          bg: '#DCFCE7', text: '#166534' },
@@ -245,7 +246,7 @@ export default function WorkerPostDetailScreen() {
               {label('Kategoriya', 'Категория', 'Category')}
             </Text>
             <Text style={[styles.sectionText, { color: colors.textSecondary }]}>
-              {post.categoryName}{post.subCategoryName ? ` › ${post.subCategoryName}` : ''}
+              {getCategoryLabel(post.categoryName, language)}{post.subCategoryName ? ` › ${getCategoryLabel(post.subCategoryName, language)}` : ''}
             </Text>
           </View>
         )}

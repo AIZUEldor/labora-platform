@@ -72,6 +72,8 @@ export const uz = {
     maxImages: 'Maksimal 5 ta rasm yuklash mumkin',
     refreshFailed: "Amal bajarilgan bo'lishi mumkin, lekin so'nggi holatni yangilab bo'lmadi. Yangilash uchun sahifani qayta oching.",
     category: 'Kategoriya',
+    selectCategory: 'Kategoriya tanlang',
+    selectSubcategory: 'Sub-kategoriya tanlang',
     employer: 'Ish beruvchi',
     applied: 'Ariza topshirildi',
     fullTime: "To'liq stavka",

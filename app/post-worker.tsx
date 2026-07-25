@@ -22,12 +22,13 @@ import { categoryService } from '../services/categoryService';
 import { Category, CreateWorkerPostRequest } from '../types';
 import { BackIcon, CloseIcon, PlusIcon } from '../components/icons';
 import { sanitizeDigits, formatThousands } from '../utils/numberFormat';
+import { getCategoryLabel } from '../utils/categoryLocalization';
 
 export default function PostWorkerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useThemeStore();
-  const { t } = useLanguageStore();
+  const { t, language } = useLanguageStore();
 
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -248,7 +249,7 @@ export default function PostWorkerScreen() {
 
         {/* Kategoriya */}
         <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: 24 }]}>
-          Kategoriya
+          {t.job.category}
         </Text>
 
         <TouchableOpacity
@@ -256,7 +257,7 @@ export default function PostWorkerScreen() {
           onPress={() => setShowCategoryModal(true)}
         >
           <Text style={{ color: selectedCategory ? colors.textPrimary : colors.textSecondary }}>
-            {selectedCategory ? selectedCategory.name : 'Kategoriya tanlang'}
+            {selectedCategory ? getCategoryLabel(selectedCategory.name, language) : t.job.selectCategory}
           </Text>
         </TouchableOpacity>
 
@@ -266,7 +267,7 @@ export default function PostWorkerScreen() {
             onPress={() => setShowSubCategoryModal(true)}
           >
             <Text style={{ color: selectedSubCategory ? colors.textPrimary : colors.textSecondary }}>
-              {selectedSubCategory ? selectedSubCategory.name : 'Sub-kategoriya tanlang'}
+              {selectedSubCategory ? getCategoryLabel(selectedSubCategory.name, language) : t.job.selectSubcategory}
             </Text>
           </TouchableOpacity>
         )}
@@ -336,7 +337,7 @@ export default function PostWorkerScreen() {
       {showCategoryModal && (
         <View style={[styles.modal, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Kategoriya tanlang</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t.job.selectCategory}</Text>
             <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
               <CloseIcon size={24} color={colors.textPrimary} />
             </TouchableOpacity>
@@ -348,7 +349,7 @@ export default function PostWorkerScreen() {
                 style={[styles.modalItem, { borderBottomColor: colors.border }]}
                 onPress={() => handleSelectCategory(cat)}
               >
-                <Text style={[styles.modalItemText, { color: colors.textPrimary }]}>{cat.name}</Text>
+                <Text style={[styles.modalItemText, { color: colors.textPrimary }]}>{getCategoryLabel(cat.name, language)}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -359,7 +360,7 @@ export default function PostWorkerScreen() {
       {showSubCategoryModal && selectedCategory && (
         <View style={[styles.modal, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Sub-kategoriya tanlang</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t.job.selectSubcategory}</Text>
             <TouchableOpacity onPress={() => setShowSubCategoryModal(false)}>
               <CloseIcon size={24} color={colors.textPrimary} />
             </TouchableOpacity>
@@ -371,7 +372,7 @@ export default function PostWorkerScreen() {
                 style={[styles.modalItem, { borderBottomColor: colors.border }]}
                 onPress={() => handleSelectSubCategory(sub)}
               >
-                <Text style={[styles.modalItemText, { color: colors.textPrimary }]}>{sub.name}</Text>
+                <Text style={[styles.modalItemText, { color: colors.textPrimary }]}>{getCategoryLabel(sub.name, language)}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>

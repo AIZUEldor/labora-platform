@@ -72,6 +72,8 @@ export const en = {
     maxImages: 'Maximum 5 images allowed',
     refreshFailed: 'The action may have succeeded, but the latest gallery could not be refreshed. Reopen the page to see the latest state.',
     category: 'Category',
+    selectCategory: 'Select category',
+    selectSubcategory: 'Select subcategory',
     employer: 'Employer',
     applied: 'Application sent',
     fullTime: 'Full-time',
