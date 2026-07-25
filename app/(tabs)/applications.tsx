@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, RefreshControl, FlatList,
+  TouchableOpacity, RefreshControl, FlatList, Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
 import { useThemeStore } from '../../store/themeStore';
+import { MEDIA_URL } from '../../services/api';
 import { useAuthStore, AuthState } from '../../store/authStore';
 import { ClockIcon, BriefcaseIcon, ChevronRightIcon, StarIcon, EyeIcon } from '../../components/icons';
 import { jobApplicationService } from '../../services/jobApplicationService';
@@ -127,7 +128,15 @@ function EmployerJobsView({ colors }: { colors: any }) {
         >
           <View style={styles.cardHeader}>
             <View style={[styles.logo, { backgroundColor: colors.primaryLight }]}>
-              <BriefcaseIcon size={22} color={colors.primary} />
+              {item.coverImageUrl ? (
+                <Image
+                  source={{ uri: `${MEDIA_URL}${item.coverImageUrl}` }}
+                  style={styles.logoImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <BriefcaseIcon size={22} color={colors.primary} />
+              )}
             </View>
             <View style={styles.cardInfo}>
               <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>{item.title}</Text>
@@ -554,6 +563,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md,
   },
   logoText:        { fontSize: FontSize.lg, fontWeight: FontWeight.bold },
+  logoImage:       { width: 48, height: 48, borderRadius: BorderRadius.md },
   cardInfo:        { flex: 1 },
   jobTitle:        { fontSize: FontSize.md, fontWeight: FontWeight.bold, marginBottom: 2 },
   subText:         { fontSize: FontSize.sm },

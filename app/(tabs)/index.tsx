@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, ActivityIndicator, RefreshControl, TextInput,
+  TouchableOpacity, ActivityIndicator, RefreshControl, TextInput, Image,
 } from 'react-native';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
 import { useThemeStore } from '../../store/themeStore';
+import { MEDIA_URL } from '../../services/api';
 import {
   ConstructionIcon, ITIcon, DriverIcon, ChefIcon,
   MedicalIcon, EducationIcon, FinanceIcon, SecurityIcon,
@@ -318,9 +319,17 @@ function WorkerHome() {
           >
             <View style={styles.jobCardTop}>
               <View style={[styles.companyLogo, { backgroundColor: colors.primaryLight }]}>
-                <Text style={[styles.companyLogoText, { color: colors.primary }]}>
-                  {(job.employerName ?? job.title ?? '?')[0].toUpperCase()}
-                </Text>
+                {job.coverImageUrl ? (
+                  <Image
+                    source={{ uri: `${MEDIA_URL}${job.coverImageUrl}` }}
+                    style={styles.companyLogoImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text style={[styles.companyLogoText, { color: colors.primary }]}>
+                    {(job.employerName ?? job.title ?? '?')[0].toUpperCase()}
+                  </Text>
+                )}
               </View>
               <View style={styles.jobInfo}>
                 <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>{job.title}</Text>
@@ -637,6 +646,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md,
   },
   companyLogoText: { fontSize: FontSize.lg, fontWeight: FontWeight.bold },
+  companyLogoImage: { width: 48, height: 48, borderRadius: BorderRadius.md },
   jobInfo:         { flex: 1 },
   jobTitle:        { fontSize: FontSize.md, fontWeight: FontWeight.bold, marginBottom: 2 },
   companyName:     { fontSize: FontSize.sm },
