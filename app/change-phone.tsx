@@ -17,6 +17,7 @@ import { ThemeColors, LightColors } from '../constants/colors';
 import { ArrowLeftIcon, PhoneIcon, CheckIcon, EyeIcon, EyeOffIcon } from '../components/icons';
 import { userService } from '../services/userService';
 import { useLanguageStore } from '../stores/useLanguageStore';
+import { Features } from '../constants/features';
 
 export default function ChangePhoneScreen(): React.JSX.Element {
   const router = useRouter();
@@ -33,6 +34,10 @@ export default function ChangePhoneScreen(): React.JSX.Element {
     if (loading) return;
     if (!newPhoneNumber.trim() || !currentPassword) {
       Alert.alert(t.common.error, t.changePhone.fillAllFields);
+      return;
+    }
+    if (!Features.otpEnabled) {
+      Alert.alert(t.common.error, t.changePhone.otpUnavailable);
       return;
     }
 

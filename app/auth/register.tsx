@@ -18,8 +18,10 @@ import { authService } from '../../services/authService';
 import { Colors } from '../../constants/colors';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
+import { Features } from '../../constants/features';
 import { UserRole } from '../../types';
 import { useLanguageStore } from '../../stores/useLanguageStore';
+import { useAuthStore } from '../../store/authStore';
 
 export default function RegisterScreen() {
   const [firstName, setFirstName] = useState<string>('');
@@ -32,6 +34,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
   const { t } = useLanguageStore();
+  const login = useAuthStore((state) => state.login);
 
   const handleRegister = async () => {
     if (isLoading) return;
@@ -46,15 +49,28 @@ export default function RegisterScreen() {
     }
     setIsLoading(true);
     try {
-      const response = await authService.registerStart({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        age: ageNum,
-        phoneNumber: phoneNumber.trim(),
-        password,
-        role,
-      });
-      router.push(`/register-verify?verificationId=${response.verificationId}`);
+      if (Features.otpEnabled) {
+        const response = await authService.registerStart({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          age: ageNum,
+          phoneNumber: phoneNumber.trim(),
+          password,
+          role,
+        });
+        router.push(`/register-verify?verificationId=${response.verificationId}`);
+      } else {
+        const response = await authService.register({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          age: ageNum,
+          phoneNumber: phoneNumber.trim(),
+          password,
+          role,
+        });
+        await login(response.token, response.role, response.firstName, response.lastName);
+        router.replace('/(tabs)');
+      }
       setIsLoading(false);
     } catch (error: any) {
       const data = error.response?.data;

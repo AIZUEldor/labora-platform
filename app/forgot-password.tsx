@@ -17,6 +17,7 @@ import { ThemeColors, LightColors } from '../constants/colors';
 import { ArrowLeftIcon, LockIcon, CheckIcon, PhoneIcon } from '../components/icons';
 import { authService } from '../services/authService';
 import { useLanguageStore } from '../stores/useLanguageStore';
+import { Features } from '../constants/features';
 
 export default function ForgotPasswordScreen(): React.JSX.Element {
   const router = useRouter();
@@ -31,6 +32,10 @@ export default function ForgotPasswordScreen(): React.JSX.Element {
     if (loading) return;
     if (!phoneNumber.trim()) {
       Alert.alert(t.common.error, t.forgotPassword.fillAllFields);
+      return;
+    }
+    if (!Features.otpEnabled) {
+      Alert.alert(t.common.error, t.forgotPassword.otpUnavailable);
       return;
     }
 

@@ -17,8 +17,10 @@ import { authService } from '../../services/authService';
 import { Colors } from '../../constants/colors';
 import { FontSize, FontWeight } from '../../constants/typography';
 import { Spacing, BorderRadius } from '../../constants/spacing';
+import { Features } from '../../constants/features';
 import { PhoneIcon, LockIcon, EyeIcon, EyeOffIcon } from '../../components/icons';
 import { useLanguageStore } from '../../stores/useLanguageStore';
+import { useAuthStore } from '../../store/authStore';
 
 export default function LoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -29,6 +31,7 @@ export default function LoginScreen() {
   const [passwordFocused, setPasswordFocused] = useState(false);
 
   const { t } = useLanguageStore();
+  const login = useAuthStore((state) => state.login);
 
   const handleLogin = async () => {
     if (isLoading) return;
@@ -38,13 +41,23 @@ export default function LoginScreen() {
     }
     setIsLoading(true);
     try {
-      const response = await authService.loginStart({
-  phoneNumber: phoneNumber.trim(),
-  password,
-});
+      if (Features.otpEnabled) {
+        const response = await authService.loginStart({
+          phoneNumber: phoneNumber.trim(),
+          password,
+        });
 
-router.push(`/login-verify?verificationId=${response.verificationId}`);
-setIsLoading(false);
+        router.push(`/login-verify?verificationId=${response.verificationId}`);
+      } else {
+        const response = await authService.login({
+          phoneNumber: phoneNumber.trim(),
+          password,
+        });
+
+        await login(response.token, response.role, response.firstName, response.lastName);
+        router.replace('/(tabs)');
+      }
+      setIsLoading(false);
     } catch (error: any) {
   const message =
     error?.response?.data?.message ||

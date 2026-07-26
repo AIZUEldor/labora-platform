@@ -185,6 +185,7 @@ export const uz = {
     invalidCode: "Kod noto'g'ri. Qaytadan urinib ko'ring.",
     successMessage: "Telefon raqam muvaffaqiyatli o'zgartirildi.",
     genericError: "Xatolik yuz berdi. Qaytadan urinib ko'ring.",
+    otpUnavailable: "Bu funksiya hozircha vaqtincha mavjud emas. Iltimos, keyinroq qayta urinib ko'ring.",
   },
   forgotPassword: {
     title: 'Parolni tiklash',
@@ -209,6 +210,7 @@ export const uz = {
     passwordMismatch: 'Yangi parol va tasdiqlash paroli mos kelmaydi.',
     successMessage: 'Parol muvaffaqiyatli yangilandi.',
     genericError: "Xatolik yuz berdi. Qaytadan urinib ko'ring.",
+    otpUnavailable: "Bu funksiya hozircha vaqtincha mavjud emas. Iltimos, keyinroq qayta urinib ko'ring.",
   },
   loginVerify: {
     verifyTitle: 'Tasdiqlash kodi',

@@ -185,6 +185,7 @@ export const en = {
     invalidCode: 'Invalid code. Please try again.',
     successMessage: 'Phone number changed successfully.',
     genericError: 'Something went wrong. Please try again.',
+    otpUnavailable: 'This feature is temporarily unavailable. Please try again later.',
   },
   forgotPassword: {
     title: 'Reset Password',
@@ -209,6 +210,7 @@ export const en = {
     passwordMismatch: 'New password and confirmation do not match.',
     successMessage: 'Password changed successfully.',
     genericError: 'Something went wrong. Please try again.',
+    otpUnavailable: 'This feature is temporarily unavailable. Please try again later.',
   },
   loginVerify: {
     verifyTitle: 'Verification code',
