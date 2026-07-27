@@ -108,6 +108,26 @@ public class PropertyListingService : IPropertyListingService
         return _mapper.Map<PropertyListingResponseDto>(updated);
     }
 
+    // Mirrors JobService.DeleteAsync exactly: plain (non-images) fetch for the ownership check,
+    // then the inherited GenericRepository.DeleteAsync soft-delete (sets IsDeleted, never touches
+    // PropertyImage rows). Every existing read query (GetAllPublishedAsync, GetByOwnerIdAsync,
+    // GetByIdWithImagesAsync, GetPublishedMarkersAsync) already filters !IsDeleted, so this alone
+    // removes the listing from the published list, map markers and public/owner detail - no query
+    // changes needed. PropertyImage rows are left untouched (same convention as JobImage on Job
+    // delete), preserving them and the listing row itself as history, not hard-removed.
+    public async Task DeleteAsync(Guid id, Guid ownerId)
+    {
+        PropertyListing? propertyListing = await _propertyListingRepository.GetByIdAsync(id);
+
+        if (propertyListing is null)
+            throw new InvalidOperationException($"Id={id} bo'lgan ko'chmas mulk e'loni topilmadi.");
+
+        if (propertyListing.OwnerId != ownerId)
+            throw new InvalidOperationException("Siz bu e'lonni o'chirish huquqiga ega emassiz.");
+
+        await _propertyListingRepository.DeleteAsync(id);
+    }
+
     public async Task<PropertyListingResponseDto> GetByIdAsync(Guid id)
     {
         // Images-inclusive fetch (see PropertyListingRepository.GetByIdWithImagesAsync), so

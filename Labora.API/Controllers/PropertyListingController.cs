@@ -58,6 +58,17 @@ public class PropertyListingController : ControllerBase
         return Ok(result);
     }
 
+    // Ownership check and the soft-delete itself both happen inside PropertyListingService.DeleteAsync;
+    // the controller only forwards the JWT-derived owner id, matching Update above.
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Employer")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        Guid ownerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        await _propertyListingService.DeleteAsync(id, ownerId);
+        return NoContent();
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {

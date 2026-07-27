@@ -11,6 +11,7 @@ internal sealed class FakePropertyListingRepository : IPropertyListingRepository
 
     public int UpdateAsyncCallCount { get; private set; }
     public int GetByIdWithImagesAsyncCallCount { get; private set; }
+    public int DeleteAsyncCallCount { get; private set; }
 
     public void SeedListing(PropertyListing listing) => _listings[listing.Id] = listing;
 
@@ -44,8 +45,14 @@ internal sealed class FakePropertyListingRepository : IPropertyListingRepository
 
     public Task DeleteAsync(Guid id)
     {
+        DeleteAsyncCallCount++;
+        // Mirrors GenericRepository.DeleteAsync's real behavior: soft-delete only, PropertyImage
+        // rows are never touched.
         if (_listings.TryGetValue(id, out PropertyListing? listing))
+        {
             listing.IsDeleted = true;
+            listing.UpdatedAt = DateTime.UtcNow;
+        }
         return Task.CompletedTask;
     }
 
@@ -63,13 +70,39 @@ internal sealed class FakePropertyListingRepository : IPropertyListingRepository
     }
 
     public Task<IEnumerable<(PropertyListing PropertyListing, string? CoverImageUrl)>> GetAllPublishedAsync()
-        => throw new NotImplementedException();
+    {
+        // Mirrors the real query's filter: !IsDeleted && Status == Published.
+        IEnumerable<(PropertyListing, string?)> result = _listings.Values
+            .Where(l => !l.IsDeleted && l.Status == PropertyListingStatus.Published)
+            .Select(l => (Clone(l, includeImages: false), ComputeCoverImageUrl(l)));
+        return Task.FromResult(result);
+    }
 
     public Task<IEnumerable<(PropertyListing PropertyListing, string? CoverImageUrl)>> GetByOwnerIdAsync(Guid ownerId)
-        => throw new NotImplementedException();
+    {
+        // Mirrors the real query's filter: !IsDeleted && OwnerId == ownerId, no Status filter.
+        IEnumerable<(PropertyListing, string?)> result = _listings.Values
+            .Where(l => !l.IsDeleted && l.OwnerId == ownerId)
+            .Select(l => (Clone(l, includeImages: false), ComputeCoverImageUrl(l)));
+        return Task.FromResult(result);
+    }
 
     public Task<IEnumerable<(Guid Id, double Latitude, double Longitude, decimal Price, PropertyType PropertyType)>> GetPublishedMarkersAsync()
-        => throw new NotImplementedException();
+    {
+        // Mirrors the real query's filter: !IsDeleted && Status == Published.
+        IEnumerable<(Guid, double, double, decimal, PropertyType)> result = _listings.Values
+            .Where(l => !l.IsDeleted && l.Status == PropertyListingStatus.Published)
+            .Select(l => (l.Id, l.Latitude, l.Longitude, l.Price, l.PropertyType));
+        return Task.FromResult(result);
+    }
+
+    private static string? ComputeCoverImageUrl(PropertyListing listing)
+        => listing.Images
+            .Where(i => !i.IsDeleted)
+            .OrderBy(i => i.SortOrder)
+            .ThenBy(i => i.Id)
+            .Select(i => i.ImageUrl)
+            .FirstOrDefault();
 
     private static PropertyListing Clone(PropertyListing source, bool includeImages)
     {
