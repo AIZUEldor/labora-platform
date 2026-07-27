@@ -1,10 +1,11 @@
 using Labora.Domain.Enums;
 
-namespace Labora.Application.DTOs.Properties;
+namespace Labora.API.Models;
 
-public class PropertyListingResponseDto
+// [FromForm] binding target for POST api/PropertyListing - multipart-only concerns (IFormFile)
+// live here so Application-layer contracts stay framework-independent.
+public class PropertyListingCreateForm
 {
-    public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public PropertyType PropertyType { get; set; }
@@ -19,15 +20,5 @@ public class PropertyListingResponseDto
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public string ContactPhoneNumber { get; set; } = string.Empty;
-    public PropertyListingStatus Status { get; set; }
-    public Guid OwnerId { get; set; }
-
-    // Cheap thumbnail for list/card responses: the first non-deleted image by SortOrder, then Id.
-    // Same derivation rule as Job.CoverImageUrl (see MappingProfile) - always set, never persisted.
-    public string? CoverImageUrl { get; set; }
-
-    public DateTime CreatedAt { get; set; }
-
-    // Full ordered gallery, detail responses only - list/marker responses leave this empty.
-    public List<PropertyImageDto> Images { get; set; } = new();
+    public List<IFormFile> Images { get; set; } = new();
 }

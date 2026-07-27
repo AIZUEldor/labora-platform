@@ -1,3 +1,4 @@
+using Labora.API.Models;
 using Labora.Application.DTOs.Properties;
 using Labora.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -19,10 +20,29 @@ public class PropertyListingController : ControllerBase
 
     [HttpPost]
     [Authorize]
-    public async Task<IActionResult> Create([FromBody] PropertyListingRequestDto request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Create([FromForm] PropertyListingCreateForm form)
     {
+        PropertyListingRequestDto request = new()
+        {
+            Title = form.Title,
+            Description = form.Description,
+            PropertyType = form.PropertyType,
+            RoomCount = form.RoomCount,
+            AreaSquareMeters = form.AreaSquareMeters,
+            FloorNumber = form.FloorNumber,
+            TotalFloors = form.TotalFloors,
+            RenovationStatus = form.RenovationStatus,
+            Price = form.Price,
+            RentalPeriod = form.RentalPeriod,
+            Address = form.Address,
+            Latitude = form.Latitude,
+            Longitude = form.Longitude,
+            ContactPhoneNumber = form.ContactPhoneNumber
+        };
+
         Guid ownerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        PropertyListingResponseDto result = await _propertyListingService.CreateAsync(request, ownerId);
+        PropertyListingResponseDto result = await _propertyListingService.CreateAsync(request, form.Images, ownerId);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 

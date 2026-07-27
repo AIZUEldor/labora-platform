@@ -1,32 +1,85 @@
 using AutoMapper;
+using FluentValidation;
+using FluentValidation.Results;
 using Labora.Application.DTOs.Properties;
 using Labora.Application.Interfaces;
 using Labora.Domain.Entities;
 using Labora.Domain.Enums;
 using Labora.Domain.Interfaces;
+using Microsoft.AspNetCore.Http;
 
 namespace Labora.Application.Services;
 
 public class PropertyListingService : IPropertyListingService
 {
+    private const int MinPropertyImages = 1;
+    private const int MaxPropertyImages = 10;
+    private const string PropertyImagesSubFolder = "property-images";
+
     private readonly IPropertyListingRepository _propertyListingRepository;
     private readonly IMapper _mapper;
+    private readonly IFileStorageService _fileStorageService;
+    private readonly IValidator<PropertyListingRequestDto> _propertyListingValidator;
 
-    public PropertyListingService(IPropertyListingRepository propertyListingRepository, IMapper mapper)
+    public PropertyListingService(
+        IPropertyListingRepository propertyListingRepository,
+        IMapper mapper,
+        IFileStorageService fileStorageService,
+        IValidator<PropertyListingRequestDto> propertyListingValidator)
     {
         _propertyListingRepository = propertyListingRepository;
         _mapper = mapper;
+        _fileStorageService = fileStorageService;
+        _propertyListingValidator = propertyListingValidator;
     }
 
-    public async Task<PropertyListingResponseDto> CreateAsync(PropertyListingRequestDto request, Guid ownerId)
+    public async Task<PropertyListingResponseDto> CreateAsync(PropertyListingRequestDto request, List<IFormFile> images, Guid ownerId)
     {
-        PropertyListing propertyListing = _mapper.Map<PropertyListing>(request);
-        propertyListing.OwnerId = ownerId;
-        propertyListing.Status = PropertyListingStatus.Published;
+        ValidationResult validationResult = await _propertyListingValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+            throw new ArgumentException(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)));
 
-        PropertyListing created = await _propertyListingRepository.AddAsync(propertyListing);
+        if (images is null || images.Count < MinPropertyImages || images.Count > MaxPropertyImages)
+            throw new ArgumentException($"Kamida {MinPropertyImages} va ko'pi bilan {MaxPropertyImages} ta rasm yuklash mumkin.");
 
-        return _mapper.Map<PropertyListingResponseDto>(created);
+        // Tracked so a failed upload or DB save can delete every file already written this request.
+        List<string> uploadedUrls = new();
+        try
+        {
+            List<PropertyImage> propertyImages = new();
+            for (int i = 0; i < images.Count; i++)
+            {
+                IFormFile file = images[i];
+                ImageUploadValidator.Validate(file);
+                string imageUrl = await _fileStorageService.SaveAsync(file, PropertyImagesSubFolder);
+                uploadedUrls.Add(imageUrl);
+
+                // SortOrder preserves upload order; 0 is the cover image.
+                propertyImages.Add(new PropertyImage
+                {
+                    ImageUrl = imageUrl,
+                    StorageKey = imageUrl,
+                    SortOrder = i
+                });
+            }
+
+            PropertyListing propertyListing = _mapper.Map<PropertyListing>(request);
+            propertyListing.OwnerId = ownerId;
+            propertyListing.Status = PropertyListingStatus.Published;
+            propertyListing.Images = propertyImages;
+
+            PropertyListing created = await _propertyListingRepository.AddAsync(propertyListing);
+
+            return _mapper.Map<PropertyListingResponseDto>(created);
+        }
+        catch
+        {
+            foreach (string url in uploadedUrls)
+            {
+                _fileStorageService.Delete(url);
+            }
+            throw;
+        }
     }
 
     public async Task<PropertyListingResponseDto> GetByIdAsync(Guid id)

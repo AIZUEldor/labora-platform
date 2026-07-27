@@ -88,8 +88,9 @@ public class MappingProfile : Profile
                 .ThenBy(i => i.Id)
                 .Select(i => i.ImageUrl)
                 .FirstOrDefault()));
-        // OwnerId and Status are assigned by PropertyListingService.CreateAsync, never from client
-        // input - ignored here so AutoMapper never overwrites them from the request DTO.
+        CreateMap<PropertyImage, PropertyImageDto>();
+        // OwnerId and Status are assigned by PropertyListingService.CreateAsync, not mapped from
+        // client input.
         CreateMap<PropertyListingRequestDto, PropertyListing>()
             .ForMember(dest => dest.OwnerId, opt => opt.Ignore())
             .ForMember(dest => dest.Status, opt => opt.Ignore());
