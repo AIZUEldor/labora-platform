@@ -329,3 +329,89 @@ export interface NearbyJob {
   createdAt: string;
   distanceKm: number;
 }
+
+// ==================== PROPERTY ====================
+// Numeric values must exactly match the backend enums (Labora.Domain/Enums/PropertyType.cs,
+// RenovationStatus.cs, RentalPeriod.cs, PropertyListingStatus.cs).
+export enum PropertyType {
+  House = 1,
+  Apartment = 2,
+}
+
+export enum RenovationStatus {
+  NeedsRenovation = 1,
+  Average = 2,
+  Good = 3,
+  EuroRenovated = 4,
+  NewlyBuilt = 5,
+}
+
+export enum RentalPeriod {
+  Monthly = 1,
+  Daily = 2,
+}
+
+export enum PropertyListingStatus {
+  Published = 1,
+  Archived = 2,
+}
+
+export interface PropertyImage {
+  id: string;
+  imageUrl: string;
+  sortOrder: number;
+}
+
+// Mirrors PropertyListingResponseDto. FloorNumber/TotalFloors are only ever set for Apartment.
+export interface PropertyListing {
+  id: string;
+  title: string;
+  description: string;
+  propertyType: PropertyType;
+  roomCount: number;
+  areaSquareMeters: number;
+  floorNumber?: number | null;
+  totalFloors?: number | null;
+  renovationStatus: RenovationStatus;
+  price: number;
+  rentalPeriod: RentalPeriod;
+  address: string;
+  latitude: number;
+  longitude: number;
+  contactPhoneNumber: string;
+  status: PropertyListingStatus;
+  ownerId: string;
+  // Cheap thumbnail; always set on detail responses, may be null on list/marker-adjacent responses.
+  coverImageUrl?: string | null;
+  createdAt: string;
+  // Full ordered gallery - only populated by the detail fetch, empty on list responses.
+  images: PropertyImage[];
+}
+
+// Lightweight marker projection for the map screen - mirrors PropertyMarkerDto.
+export interface PropertyMarker {
+  id: string;
+  latitude: number;
+  longitude: number;
+  price: number;
+  propertyType: PropertyType;
+}
+
+// Scalar fields only, mirroring PropertyListingRequestDto - image URIs are passed separately to
+// propertyService.createProperty, matching how the backend keeps IFormFile out of this shape.
+export interface CreatePropertyRequest {
+  title: string;
+  description: string;
+  propertyType: PropertyType;
+  roomCount: number;
+  areaSquareMeters: number;
+  floorNumber?: number | null;
+  totalFloors?: number | null;
+  renovationStatus: RenovationStatus;
+  price: number;
+  rentalPeriod: RentalPeriod;
+  address: string;
+  latitude: number;
+  longitude: number;
+  contactPhoneNumber: string;
+}
