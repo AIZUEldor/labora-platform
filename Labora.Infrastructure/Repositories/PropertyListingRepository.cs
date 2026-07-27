@@ -54,6 +54,29 @@ public class PropertyListingRepository : GenericRepository<PropertyListing>, IPr
         return rows.Select(r => (r.PropertyListing, r.CoverImageUrl));
     }
 
+    public async Task<IEnumerable<(PropertyListing PropertyListing, string? CoverImageUrl)>> GetByOwnerIdAsync(Guid ownerId)
+    {
+        // Same cover-image projection as GetAllPublishedAsync, but no Status filter - the owner's
+        // own list includes both Published and Archived listings.
+        var rows = await _context.PropertyListings
+            .AsNoTracking()
+            .Where(p => !p.IsDeleted && p.OwnerId == ownerId)
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => new
+            {
+                PropertyListing = p,
+                CoverImageUrl = p.Images
+                    .Where(i => !i.IsDeleted)
+                    .OrderBy(i => i.SortOrder)
+                    .ThenBy(i => i.Id)
+                    .Select(i => i.ImageUrl)
+                    .FirstOrDefault()
+            })
+            .ToListAsync();
+
+        return rows.Select(r => (r.PropertyListing, r.CoverImageUrl));
+    }
+
     public async Task<IEnumerable<(Guid Id, double Latitude, double Longitude, decimal Price, PropertyType PropertyType)>> GetPublishedMarkersAsync()
     {
         var rows = await _context.PropertyListings

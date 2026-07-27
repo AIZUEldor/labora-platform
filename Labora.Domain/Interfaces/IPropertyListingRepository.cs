@@ -15,6 +15,11 @@ public interface IPropertyListingRepository : IGenericRepository<PropertyListing
     // per-listing round trip, and no Images navigation touched on the returned entities.
     Task<IEnumerable<(PropertyListing PropertyListing, string? CoverImageUrl)>> GetAllPublishedAsync();
 
+    // "My listings" - unlike GetAllPublishedAsync, this is not filtered by Status: the owner sees
+    // both Published and Archived listings, same "my X" convention as IJobRepository's employer
+    // list. Same cover-image-only projection, no full Images Include.
+    Task<IEnumerable<(PropertyListing PropertyListing, string? CoverImageUrl)>> GetByOwnerIdAsync(Guid ownerId);
+
     // Lightweight marker projection for the map screen - scalars only, no entity materialized and
     // no Application-layer DTO referenced here (Labora.Domain cannot depend on Labora.Application).
     Task<IEnumerable<(Guid Id, double Latitude, double Longitude, decimal Price, PropertyType PropertyType)>> GetPublishedMarkersAsync();

@@ -103,6 +103,14 @@ public class PropertyListingService : IPropertyListingService
         return listings.Select(MapToListItem);
     }
 
+    public async Task<IEnumerable<PropertyListingResponseDto>> GetByOwnerIdAsync(Guid ownerId)
+    {
+        IEnumerable<(PropertyListing PropertyListing, string? CoverImageUrl)> listings =
+            await _propertyListingRepository.GetByOwnerIdAsync(ownerId);
+
+        return listings.Select(MapToListItem);
+    }
+
     // Single conversion point for the list endpoint: maps scalar fields via the normal AutoMapper
     // profile, then overwrites CoverImageUrl with the value the repository already computed cheaply
     // (the AutoMapper-derived one would otherwise be null here, since Images was never loaded for
