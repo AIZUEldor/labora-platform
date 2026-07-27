@@ -10,8 +10,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { jobService } from '../../services/jobService';
-import { NearbyJob } from '../../types';
+import { propertyService } from '../../services/propertyService';
+import { NearbyJob, PropertyMarker } from '../../types';
 import { useLanguageStore } from '../../stores/useLanguageStore';
+import { getPropertyTypeLabel } from '../../utils/propertyLocalization';
 import Svg, { Path } from 'react-native-svg';
 
 function SearchIcon({ color = '#999' }: { color?: string }) {
@@ -39,8 +41,16 @@ export default function MapScreen() {
   const [locationError, setLocationError] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [jobs, setJobs] = useState<NearbyJob[]>([]);
+  const [properties, setProperties] = useState<PropertyMarker[]>([]);
   const [selectedType, setSelectedType] = useState(0);
   const [mapReady, setMapReady] = useState(false);
+  // mapReady only ever flips false->true once and then stays true, but the WebView actually
+  // reloads (a fresh page/Leaflet instance) at least once more after that - whenever `jobs`
+  // settles from its initial empty value - which a plain boolean can't distinguish. This counter
+  // increments on every MAP_READY message (one per real page load) so Property injection can
+  // reliably re-run against whichever page is current, without touching the Job filter effect,
+  // which only needs the boolean and is left as-is.
+  const [mapReadyGen, setMapReadyGen] = useState(0);
 
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -66,10 +76,27 @@ export default function MapScreen() {
     webViewRef.current?.injectJavaScript(buildUpdateMarkersJs(filtered));
   }, [selectedType, mapReady]);
 
+  // Property markers are never baked into the WebView's initial HTML with live data - they're
+  // always added via injectJavaScript once MAP_READY fires, whether the fetch resolved before or
+  // after the map is ready. This means Property data updating never changes the WebView's `source`
+  // prop, so it can never force a full reload (which would reset zoom/pan and re-init Leaflet).
+  useEffect(() => {
+    if (!mapReady) return;
+    webViewRef.current?.injectJavaScript(buildUpdatePropertyMarkersJs(properties, language));
+  }, [properties, mapReady, mapReadyGen, language]);
+
   const initMap = async () => {
     setLoading(true);
     setLocationError(false);
     setMapReady(false);
+
+    // Property markers are independent of the Jobs/location flow below: separate fetch, own
+    // failure isolation. The markers endpoint isn't location-scoped, so it isn't awaited inline -
+    // a Property failure must never block Jobs from loading, and vice versa.
+    propertyService.getPropertyMarkers()
+      .then(setProperties)
+      .catch(() => setProperties([]));
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setLocationError(true); setLoading(false); return; }
@@ -193,9 +220,101 @@ export default function MapScreen() {
     `;
   };
 
+  // HTML-entity escape for text embedded into the WebView's popup markup - defense in depth
+  // alongside JSON.stringify (which only escapes for the JS-string-literal context, not HTML).
+  const escapeHtml = (s: string): string =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  // Property markers are rendered via a separate Leaflet array (propertyMarkers) and never touch
+  // jobMarkers/buildUpdateMarkersJs, so Job filter updates can never clear or duplicate them.
+  // A single shared, idempotently-registered zoomend listener updates all Property marker icons -
+  // avoids one listener per marker (which would scale badly with marker count).
+  const buildPropertyMarkersJs = (properties: PropertyMarker[], language: string): string => {
+    const viewPropertyLabel = escapeHtml(
+      language === 'uz' ? "Mulkni ko'rish" : language === 'ru' ? 'Посмотреть объявление' : 'View Property'
+    );
+    const viewPropertyJs = JSON.stringify(viewPropertyLabel);
+
+    const validProperties = properties.filter(p =>
+      typeof p.id === 'string' && p.id.length > 0 &&
+      Number.isFinite(p.latitude) && Number.isFinite(p.longitude)
+    );
+
+    const markersJs = validProperties.map(property => {
+      // HTML-escaped (not manually quote-stripped) before JSON.stringify, so the value is safe
+      // both as a JS string literal and as the data-id HTML attribute value below.
+      const id = JSON.stringify(escapeHtml(property.id));
+      const typeLabel = JSON.stringify(escapeHtml(getPropertyTypeLabel(property.propertyType, language)));
+      const price = JSON.stringify(
+        Number.isFinite(property.price)
+          ? property.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + " so'm"
+          : ''
+      );
+
+      return `
+        (function() {
+          var id = ${id};
+          var typeLabel = ${typeLabel};
+          var price = ${price};
+          var viewProperty = ${viewPropertyJs};
+
+          var m = L.marker([${property.latitude}, ${property.longitude}], { icon: makePropertyIcon(map.getZoom(), price) }).addTo(map);
+          m._propertyPrice = price;
+          m.bindPopup(
+  '<div style="min-width:190px;font-family:sans-serif;padding:6px;">'
+  + '<span style="color:#2563EB;font-weight:700;font-size:14px;display:block;margin-bottom:4px;">' + price + '</span>'
+  + '<span style="color:#555;font-size:12px;">' + typeLabel + '</span><br/>'
+  + '<button class="view-property-btn" data-id="' + id + '" '
+  + 'style="margin-top:10px;background:#2563EB;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;width:100%;font-weight:600;">' + viewProperty + '</button>'
+  + '</div>'
+);
+          propertyMarkers.push(m);
+        })();
+      `;
+    }).join('\n');
+
+    return `
+      function makePropertyIcon(zoom, price) {
+        if (zoom >= 13) {
+          var html = '<div style="display:flex;flex-direction:column;align-items:center;transform:translateX(-50%);">'
+            + '<div style="background:#2563EB;color:#fff;font-size:12px;font-weight:700;padding:5px 11px;border-radius:20px;border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,0.35);white-space:nowrap;">' + price + '</div>'
+            + '<div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #2563EB;margin-top:-1px;"></div>'
+            + '</div>';
+          return L.divIcon({ html: html, iconAnchor: [0, 38], className: '' });
+        }
+        var dot = '<div style="width:14px;height:14px;background:#2563EB;border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>';
+        return L.divIcon({ html: dot, iconAnchor: [7, 7], className: '' });
+      }
+
+      ${markersJs}
+
+      if (propertyMarkers.length > 0 && typeof window.__propertyZoomListenerRegistered === 'undefined') {
+        window.__propertyZoomListenerRegistered = true;
+        map.on('zoomend', function() {
+          var zoom = map.getZoom();
+          propertyMarkers.forEach(function(pm) { pm.setIcon(makePropertyIcon(zoom, pm._propertyPrice)); });
+        });
+      }
+    `;
+  };
+
+  const buildUpdatePropertyMarkersJs = (properties: PropertyMarker[], language: string): string => {
+    return `
+      (function() {
+        propertyMarkers.forEach(function(m) { map.removeLayer(m); });
+        propertyMarkers = [];
+        ${buildPropertyMarkersJs(properties, language)}
+      })();
+      true;
+    `;
+  };
+
   const getMapHtml = (lat: number, lng: number, jobs: NearbyJob[]): string => {
     const youAreHere = JSON.stringify(t.map.youAreHere);
     const markersJs = buildMarkersJs(jobs);
+    // Always emitted empty here - real Property data is added later via injectJavaScript (see the
+    // properties/mapReady effect above), never baked into this initial HTML.
+    const propertyMarkersJs = buildPropertyMarkersJs([], language);
 
     return `<!DOCTYPE html>
 <html>
@@ -212,6 +331,7 @@ export default function MapScreen() {
   <div id="map"></div>
   <script>
     var jobMarkers = [];
+    var propertyMarkers = [];
     var map = L.map('map', { zoomControl: true }).setView([${lat}, ${lng}], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap', maxZoom: 19,
@@ -227,12 +347,22 @@ export default function MapScreen() {
 
     ${markersJs}
 
+    ${propertyMarkersJs}
+
     document.addEventListener('click', function(e) {
   var btn = e.target.closest('.view-job-btn');
 
   if (btn) {
     var jobId = btn.getAttribute('data-id');
     window.ReactNativeWebView.postMessage(jobId);
+    return;
+  }
+
+  var propertyBtn = e.target.closest('.view-property-btn');
+
+  if (propertyBtn) {
+    var propertyId = propertyBtn.getAttribute('data-id');
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'property', id: propertyId }));
   }
 });
 
@@ -247,10 +377,22 @@ export default function MapScreen() {
   const handleWebViewMessage = (event: any) => {
     console.log('MAP MESSAGE:', event.nativeEvent.data);
   const raw = event.nativeEvent.data;
-  if (raw === 'MAP_READY') { setMapReady(true); return; }
+  if (raw === 'MAP_READY') { setMapReady(true); setMapReadyGen(g => g + 1); return; }
   try {
-    const id = JSON.parse(raw);
-    if (id) router.push({ pathname: '/job-detail', params: { id: String(id) } });
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && parsed.type === 'property') {
+      const validId = (typeof parsed.id === 'string' || typeof parsed.id === 'number') && String(parsed.id).length > 0;
+      if (validId) {
+        router.push({ pathname: '/property-detail', params: { id: String(parsed.id) } });
+      }
+      return;
+    }
+    // Only scalar (string/number) values ever route to Job detail - a parsed JSON object or array
+    // that isn't a recognized typed message (e.g. an unrelated/malformed payload) must not
+    // navigate with a garbage id like "[object Object]".
+    if (typeof parsed === 'string' || typeof parsed === 'number') {
+      router.push({ pathname: '/job-detail', params: { id: String(parsed) } });
+    }
   } catch {
     if (raw) router.push({ pathname: '/job-detail', params: { id: raw } });
   }
