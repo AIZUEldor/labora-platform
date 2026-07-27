@@ -11,7 +11,7 @@ import { Spacing, BorderRadius, Shadow } from '../../constants/spacing';
 import { useThemeStore } from '../../store/themeStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 import { MEDIA_URL } from '../../services/api';
-import { RealEstateIcon, LocationIcon, ChevronRightIcon } from '../../components/icons';
+import { RealEstateIcon, LocationIcon, ChevronRightIcon, EditIcon } from '../../components/icons';
 import { propertyService } from '../../services/propertyService';
 import { PropertyListing, PropertyListingStatus } from '../../types';
 import { ApplicationListSkeleton } from '../../components/SkeletonLoader';
@@ -148,6 +148,17 @@ export default function MyPropertiesScreen() {
                       {getPropertyListingStatusLabel(item.status, language)}
                     </Text>
                   </View>
+                  {/* A nested TouchableOpacity claims the touch responder on its own hit area, so
+                      this never also triggers the outer card's onPress (standard RN behavior,
+                      unlike DOM event bubbling - no stopPropagation needed). */}
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={() => router.push({ pathname: '/property/create', params: { id: item.id } })}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <EditIcon size={18} color={colors.primary} />
+                  </TouchableOpacity>
                   <ChevronRightIcon size={20} color={colors.textTertiary} />
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -200,6 +211,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs, marginLeft: Spacing.sm,
   },
   badgeText:  { fontSize: FontSize.xs, fontWeight: FontWeight.bold },
+  editBtn:    { padding: 6, marginLeft: Spacing.sm },
   divider:    { height: 1, marginVertical: Spacing.md },
   metaRow:    { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText:   { fontSize: FontSize.xs, fontWeight: FontWeight.medium },

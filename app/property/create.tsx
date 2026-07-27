@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ScrollView, ActivityIndicator, Alert, Modal, FlatList, Image,
 } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useThemeStore } from '../../store/themeStore';
@@ -57,6 +57,9 @@ export default function CreatePropertyScreen() {
   const { colors } = useThemeStore();
   const { language } = useLanguageStore();
   const { pickedLat, pickedLng, pickedAddress, clear: clearPicked } = useMapPickerStore();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const propertyId = Array.isArray(id) ? id[0] : id;
+  const editMode = Boolean(propertyId);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -80,6 +83,12 @@ export default function CreatePropertyScreen() {
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<string[]>([]);
 
+  // Edit mode only: gates the whole form behind a full-screen loading/error state until the
+  // existing listing has been fetched, so submitting before data is loaded is structurally
+  // impossible (the submit button doesn't exist in the tree yet - see the early returns below).
+  const [initialLoading, setInitialLoading] = useState(editMode);
+  const [initialError, setInitialError] = useState<string | null>(null);
+
   const label = (uz: string, ru: string, en: string) =>
     language === 'uz' ? uz : language === 'ru' ? ru : en;
 
@@ -97,6 +106,41 @@ export default function CreatePropertyScreen() {
       }
     }, [pickedLat, pickedLng])
   );
+
+  // Prefill: fetches once per mount (propertyId is stable for the screen's lifetime) and always
+  // overwrites latitude/longitude/address unconditionally from the server - this runs after the
+  // focus-effect above and never checks "was a location already picked", so it always wins over
+  // whatever the (normally already-cleared) map-picker store held at mount time.
+  const loadExistingProperty = useCallback(async () => {
+    if (!propertyId) return;
+    setInitialLoading(true);
+    setInitialError(null);
+    try {
+      const data = await propertyService.getPropertyById(propertyId);
+      setTitle(data.title);
+      setDescription(data.description);
+      setPropertyType(data.propertyType);
+      setRoomCount(String(data.roomCount));
+      setAreaSquareMeters(String(data.areaSquareMeters));
+      setFloorNumber(data.floorNumber != null ? String(data.floorNumber) : '');
+      setTotalFloors(data.totalFloors != null ? String(data.totalFloors) : '');
+      setRenovationStatus(data.renovationStatus);
+      setPrice(String(data.price));
+      setRentalPeriod(data.rentalPeriod);
+      setAddress(data.address);
+      setLatitude(data.latitude);
+      setLongitude(data.longitude);
+      setContactPhoneNumber(data.contactPhoneNumber);
+    } catch (e: any) {
+      setInitialError(e?.message ?? label("Ma'lumotni yuklashda xatolik", 'Ошибка загрузки данных', 'Failed to load data'));
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [propertyId]);
+
+  useEffect(() => {
+    if (editMode) loadExistingProperty();
+  }, [editMode, loadExistingProperty]);
 
   const handleOpenMapPicker = () => {
     if (latitude !== null && longitude !== null) {
@@ -156,8 +200,12 @@ export default function CreatePropertyScreen() {
 
     if (latitude === null || longitude === null) { Alert.alert('Xato', label('Joylashuvni xaritada belgilang', 'Укажите местоположение на карте', 'Please mark location on map')); return; }
 
-    if (images.length < MIN_IMAGES) { Alert.alert('Xato', label(`Kamida ${MIN_IMAGES} ta rasm yuklang`, `Загрузите минимум ${MIN_IMAGES} фото`, `Upload at least ${MIN_IMAGES} image`)); return; }
-    if (images.length > MAX_IMAGES) { Alert.alert('Xato', label(`Maksimal ${MAX_IMAGES} ta rasm yuklash mumkin`, `Максимум ${MAX_IMAGES} фотографий`, `Maximum ${MAX_IMAGES} images allowed`)); return; }
+    // Image-count rules only apply to Create - Edit has no image UI/payload at all (Update never
+    // touches PropertyImage rows), so `images` is always empty here and must not block submission.
+    if (!editMode) {
+      if (images.length < MIN_IMAGES) { Alert.alert('Xato', label(`Kamida ${MIN_IMAGES} ta rasm yuklang`, `Загрузите минимум ${MIN_IMAGES} фото`, `Upload at least ${MIN_IMAGES} image`)); return; }
+      if (images.length > MAX_IMAGES) { Alert.alert('Xato', label(`Maksimal ${MAX_IMAGES} ta rasm yuklash mumkin`, `Максимум ${MAX_IMAGES} фотографий`, `Maximum ${MAX_IMAGES} images allowed`)); return; }
+    }
 
     setLoading(true);
     try {
@@ -178,17 +226,26 @@ export default function CreatePropertyScreen() {
         contactPhoneNumber: contactPhoneNumber.trim(),
       };
 
-      // Single combined multipart request - the listing and all its images are created together
-      // in one call, unlike Job/WorkerPost's create-then-loop-upload flow.
-      await propertyService.createProperty(data, images);
+      if (editMode && propertyId) {
+        // JSON PUT, no images - existing PropertyImage rows are never referenced or sent here.
+        await propertyService.updateProperty(propertyId, data);
+      } else {
+        // Single combined multipart request - the listing and all its images are created together
+        // in one call, unlike Job/WorkerPost's create-then-loop-upload flow.
+        await propertyService.createProperty(data, images);
+      }
 
       Alert.alert(
         language === 'uz' ? 'Muvaffaqiyat' : language === 'ru' ? 'Успех' : 'Success',
-        label("E'lon joylashtirildi!", 'Объявление размещено!', 'Listing posted!'),
+        editMode
+          ? label("E'lon yangilandi!", 'Объявление обновлено!', 'Listing updated!')
+          : label("E'lon joylashtirildi!", 'Объявление размещено!', 'Listing posted!'),
         [{ text: 'OK', onPress: () => router.back() }]
       );
     } catch (error: any) {
-      Alert.alert('Xato', error?.message || label("E'lonni joylashtirishda xatolik", 'Ошибка при размещении объявления', 'Error posting listing'));
+      Alert.alert('Xato', error?.message || (editMode
+        ? label("O'zgarishlarni saqlashda xatolik", 'Ошибка при сохранении изменений', 'Error saving changes')
+        : label("E'lonni joylashtirishda xatolik", 'Ошибка при размещении объявления', 'Error posting listing')));
     } finally {
       setLoading(false);
     }
@@ -235,6 +292,30 @@ export default function CreatePropertyScreen() {
     </Modal>
   );
 
+  if (editMode && initialLoading) {
+    return (
+      <View style={[styles.container, styles.centerBox, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (editMode && initialError) {
+    return (
+      <View style={[styles.container, styles.centerBox, { backgroundColor: colors.background }]}>
+        <Text style={{ color: '#EF4444', fontSize: FontSize.sm }}>{initialError}</Text>
+        <View style={styles.retryRow}>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.retryBtn, { backgroundColor: colors.border }]}>
+            <Text style={[styles.retryText, { color: colors.textPrimary }]}>{label('Orqaga', 'Назад', 'Back')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={loadExistingProperty} style={[styles.retryBtn, { backgroundColor: colors.primary }]}>
+            <Text style={styles.retryText}>{label('Qayta urinish', 'Повторить', 'Retry')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient colors={[colors.primary, '#15803d']} style={styles.header}>
@@ -242,7 +323,9 @@ export default function CreatePropertyScreen() {
           <BackIcon size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {label("Ko'chmas mulk e'loni", 'Объявление о недвижимости', 'Property Listing')}
+          {editMode
+            ? label("E'lonni tahrirlash", 'Редактировать объявление', 'Edit Listing')
+            : label("Ko'chmas mulk e'loni", 'Объявление о недвижимости', 'Property Listing')}
         </Text>
         <View style={{ width: 22 }} />
       </LinearGradient>
@@ -455,36 +538,41 @@ export default function CreatePropertyScreen() {
           keyboardType="phone-pad"
         />
 
-        {/* Rasmlar */}
-        <Text style={[styles.label, { color: colors.textSecondary }]}>
-          {label('Rasmlar', 'Фотографии', 'Photos')}
-          <Text style={[styles.optional, { color: colors.textTertiary }]}>
-            {label(` (${MIN_IMAGES}-${MAX_IMAGES} ta)`, ` (${MIN_IMAGES}-${MAX_IMAGES})`, ` (${MIN_IMAGES}-${MAX_IMAGES})`)}
-          </Text>
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
-          {images.map((uri, index) => (
-            <View key={index} style={styles.imageWrapper}>
-              <Image source={{ uri }} style={styles.previewImage} />
-              <TouchableOpacity
-                style={styles.removeImageBtn}
-                onPress={() => removeImage(index)}
-                activeOpacity={0.8}
-              >
-                <CloseIcon size={14} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          ))}
-          {images.length < MAX_IMAGES && (
-            <TouchableOpacity
-              style={[styles.addImageBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={pickImage}
-              activeOpacity={0.7}
-            >
-              <PlusIcon size={28} color={colors.primary} />
-            </TouchableOpacity>
-          )}
-        </ScrollView>
+        {/* Rasmlar - Create mode only; Edit has no image upload/delete endpoints yet, so existing
+            images are never shown, edited, or sent here (Update never references PropertyImage). */}
+        {!editMode && (
+          <>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              {label('Rasmlar', 'Фотографии', 'Photos')}
+              <Text style={[styles.optional, { color: colors.textTertiary }]}>
+                {label(` (${MIN_IMAGES}-${MAX_IMAGES} ta)`, ` (${MIN_IMAGES}-${MAX_IMAGES})`, ` (${MIN_IMAGES}-${MAX_IMAGES})`)}
+              </Text>
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
+              {images.map((uri, index) => (
+                <View key={index} style={styles.imageWrapper}>
+                  <Image source={{ uri }} style={styles.previewImage} />
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={() => removeImage(index)}
+                    activeOpacity={0.8}
+                  >
+                    <CloseIcon size={14} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {images.length < MAX_IMAGES && (
+                <TouchableOpacity
+                  style={[styles.addImageBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={pickImage}
+                  activeOpacity={0.7}
+                >
+                  <PlusIcon size={28} color={colors.primary} />
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </>
+        )}
 
         {/* Submit */}
         <TouchableOpacity
@@ -498,7 +586,9 @@ export default function CreatePropertyScreen() {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.submitText}>
-                {label("E'lon joylash", 'Разместить', 'Post Listing')}
+                {editMode
+                  ? label('Saqlash', 'Сохранить', 'Save Changes')
+                  : label("E'lon joylash", 'Разместить', 'Post Listing')}
               </Text>
             )}
           </LinearGradient>
@@ -540,6 +630,10 @@ export default function CreatePropertyScreen() {
 
 const styles = StyleSheet.create({
   container:       { flex: 1 },
+  centerBox:       { alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: Spacing.xl },
+  retryRow:        { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
+  retryBtn:        { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg },
+  retryText:       { color: '#fff', fontWeight: FontWeight.semiBold, fontSize: FontSize.sm },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingTop: 56, paddingBottom: Spacing.lg },
   headerTitle:     { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#fff' },
   scroll:          { flex: 1 },

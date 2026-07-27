@@ -62,4 +62,12 @@ export const propertyService = {
     });
     return response.data;
   },
+
+  // JSON body (not multipart) - the PUT endpoint never touches images, so there is nothing to
+  // upload here. ASP.NET Core's default [FromBody] binding is case-insensitive, so the camelCase
+  // CreatePropertyRequest shape can be sent directly, matching jobService.createJob's convention.
+  updateProperty: async (id: string, data: CreatePropertyRequest): Promise<PropertyListing> => {
+    const response = await api.put<PropertyListing>(`/PropertyListing/${id}`, data);
+    return response.data;
+  },
 };
