@@ -53,9 +53,13 @@ export default function ProfileScreen() {
   const token      = useAuthStore((state: AuthState) => state.token);
   const isEmployer = Number(role) === UserRole.Employer;
 
+  const MY_PROPERTIES_LABEL =
+    language === 'uz' ? 'Mening mulklarim' : language === 'ru' ? 'Мои объявления' : 'My Properties';
+
   const WORKER_MENU = [
     { icon: 'edit',         label: t.profile.editProfile,    route: '/edit-profile' },
     { icon: 'applications', label: t.applications.title,     route: '/(tabs)/applications' },
+    { icon: 'realestate',   label: MY_PROPERTIES_LABEL,      route: '/property/my-properties' },
     { icon: 'heart',        label: t.profile.savedJobs,      route: '/saved-jobs' },
     { icon: 'star',         label: t.profile.reviews,        route: '/my-reviews' },
     { icon: 'bell',         label: t.notifications.title,    route: '/notifications' },
@@ -67,11 +71,7 @@ export default function ProfileScreen() {
   const EMPLOYER_MENU = [
     { icon: 'edit',       label: t.profile.editProfile,    route: '/edit-profile' },
     { icon: 'briefcase',  label: t.employer.myJobs,        route: '/(tabs)/applications' },
-    {
-      icon: 'realestate',
-      label: language === 'uz' ? 'Mening mulklarim' : language === 'ru' ? 'Мои объявления' : 'My Properties',
-      route: '/employer/my-properties',
-    },
+    { icon: 'realestate', label: MY_PROPERTIES_LABEL,      route: '/property/my-properties' },
     { icon: 'star',       label: t.profile.reviews,        route: '/my-reviews' },
     { icon: 'bell',      label: t.notifications.title,    route: '/notifications' },
     { icon: 'lock',      label: t.profile.changePassword, route: '/change-password' },

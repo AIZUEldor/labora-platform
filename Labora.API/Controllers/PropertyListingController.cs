@@ -50,7 +50,7 @@ public class PropertyListingController : ControllerBase
     // matching this service's own Create convention (unlike JobController, which validates before
     // calling the service) - the controller stays thin and forwards only the JWT-derived owner id.
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Employer")]
+    [Authorize]
     public async Task<IActionResult> Update(Guid id, [FromBody] PropertyListingRequestDto request)
     {
         Guid ownerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -61,7 +61,7 @@ public class PropertyListingController : ControllerBase
     // Ownership check and the soft-delete itself both happen inside PropertyListingService.DeleteAsync;
     // the controller only forwards the JWT-derived owner id, matching Update above.
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Employer")]
+    [Authorize]
     public async Task<IActionResult> Delete(Guid id)
     {
         Guid ownerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
