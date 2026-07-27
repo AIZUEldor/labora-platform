@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, RefreshControl, TextInput, Image,
@@ -21,10 +21,12 @@ import { router } from 'expo-router';
 import { jobService } from '../../services/jobService';
 import { categoryService } from '../../services/categoryService';
 import { workerPostService } from '../../services/workerPostService';
-import { Job, Category, WorkerPost } from '../../types';
+import { propertyService } from '../../services/propertyService';
+import { Job, Category, WorkerPost, PropertyListing } from '../../types';
 import { useAuthStore, AuthState } from '../../store/authStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 import { getCategoryLabel } from '../../utils/categoryLocalization';
+import { getPropertyTypeLabel, getRentalPeriodLabel } from '../../utils/propertyLocalization';
 
 function CategoryIcon({ name, color }: { name: string; color: string }) {
   const props = { size: 28, color };
@@ -62,6 +64,8 @@ function WorkerHome() {
   const { language, t } = useLanguageStore();
   const firstName = useAuthStore((state: AuthState) => state.firstName);
 
+  const [mode, setMode] = useState<'jobs' | 'properties'>('jobs');
+
   const [jobs,           setJobs]           = useState<Job[]>([]);
   const [categories,     setCategories]     = useState<Category[]>([]);
   const [loading,        setLoading]        = useState(true);
@@ -74,7 +78,14 @@ function WorkerHome() {
   const [page,           setPage]           = useState(1);
   const [totalCount,     setTotalCount]     = useState(0);
 
+  const [properties,        setProperties]        = useState<PropertyListing[]>([]);
+  const [loadingProperties, setLoadingProperties] = useState(false);
+  const [errorProperties,   setErrorProperties]   = useState<string | null>(null);
+
   const PAGE_SIZE = 10;
+
+  const label = (uz: string, ru: string, en: string) =>
+    language === 'uz' ? uz : language === 'ru' ? ru : en;
 
   const fetchJobs = useCallback(async (p: number, reset: boolean) => {
     try {
@@ -91,6 +102,7 @@ function WorkerHome() {
   }, [search, selectedCat, selectedSubCat]);
 
   useEffect(() => {
+    if (mode !== 'jobs') return;
     const load = async () => {
       setLoading(true);
       setError(null);
@@ -107,7 +119,7 @@ function WorkerHome() {
       }
     };
     load();
-  }, [search, selectedCat, selectedSubCat]);
+  }, [mode, search, selectedCat, selectedSubCat]);
 
   useEffect(() => {
     if (page === 1) return;
@@ -119,15 +131,53 @@ function WorkerHome() {
     load();
   }, [page]);
 
+  // Property listings are independent of the Jobs feed above: separate state, separate fetch,
+  // never merged into `jobs`. Fetched once (raw, unfiltered) when Properties mode is first
+  // entered; search filtering below is purely local and never re-triggers a network request.
+  const propertiesFetchedRef = useRef(false);
+
+  const fetchProperties = useCallback(async () => {
+    setLoadingProperties(true);
+    setErrorProperties(null);
+    try {
+      const data = await propertyService.getProperties();
+      setProperties(data);
+      propertiesFetchedRef.current = true;
+    } catch (e: any) {
+      setErrorProperties(e?.message ?? t.common.somethingWentWrong);
+    } finally {
+      setLoadingProperties(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mode === 'properties' && !propertiesFetchedRef.current) fetchProperties();
+  }, [mode, fetchProperties]);
+
+  const filteredProperties = useMemo(() => {
+    if (!search) return properties;
+    const q = search.toLowerCase();
+    return properties.filter(p =>
+      p.title?.toLowerCase().includes(q) ||
+      p.description?.toLowerCase().includes(q) ||
+      p.address?.toLowerCase().includes(q)
+    );
+  }, [properties, search]);
+
   const onRefresh = () => {
     setRefreshing(true);
-    setSearch('');
-    setSelectedCat(null);
-    setSelectedSubCat(null);
-    setPage(1);
+    if (mode === 'jobs') {
+      setSearch('');
+      setSelectedCat(null);
+      setSelectedSubCat(null);
+      setPage(1);
+    } else {
+      fetchProperties().finally(() => setRefreshing(false));
+    }
   };
 
   const loadMore = () => {
+    if (mode !== 'jobs') return;
     if (loadingMore || jobs.length >= totalCount) return;
     setPage(p => p + 1);
   };
@@ -172,11 +222,32 @@ function WorkerHome() {
             tintColor={colors.primary} colors={[colors.primary]} />
         }
       >
+        <View style={[styles.modeToggleContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.modeToggleBtn, mode === 'jobs' && { backgroundColor: colors.primary }]}
+            onPress={() => setMode('jobs')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.modeToggleText, { color: mode === 'jobs' ? '#fff' : colors.textSecondary }]}>
+              {label('Ishlar', 'Работы', 'Jobs')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeToggleBtn, mode === 'properties' && { backgroundColor: colors.primary }]}
+            onPress={() => setMode('properties')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.modeToggleText, { color: mode === 'properties' ? '#fff' : colors.textSecondary }]}>
+              {label("Ko'chmas mulk", 'Недвижимость', 'Properties')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <SearchIcon size={18} color={colors.textTertiary} />
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }]}
-            placeholder={t.search.placeholder}
+            placeholder={mode === 'jobs' ? t.search.placeholder : label('Mulk qidirish...', 'Поиск недвижимости...', 'Search properties...')}
             placeholderTextColor={colors.textTertiary}
             value={search}
             onChangeText={v => { setSearch(v); setPage(1); }}
@@ -190,147 +261,231 @@ function WorkerHome() {
           )}
         </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.home.categories}</Text>
-          {selectedCat !== null && (
-            <TouchableOpacity onPress={() => { setSelectedCat(null); setSelectedSubCat(null); }}>
-              <Text style={[styles.seeAll, { color: colors.primary }]}>{t.home.seeAll}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {categories.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesContainer}>
-            {categories.map(cat => {
-              const isSelected = selectedCat === cat.id;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  onPress={() => { setSelectedCat(isSelected ? null : cat.id); setSelectedSubCat(null); }}
-                  style={[styles.categoryCard, { backgroundColor: isSelected ? colors.primary : colors.card, ...Shadow.sm }]}
-                  activeOpacity={0.8}
-                >
-                  <CategoryIcon name={cat.name?.toLowerCase()} color={isSelected ? '#fff' : colors.primary} />
-                  <Text style={[styles.categoryName, { color: isSelected ? '#fff' : colors.textSecondary }]}>
-                    {getCategoryLabel(cat.name, language)}
-                  </Text>
+        {mode === 'jobs' && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.home.categories}</Text>
+              {selectedCat !== null && (
+                <TouchableOpacity onPress={() => { setSelectedCat(null); setSelectedSubCat(null); }}>
+                  <Text style={[styles.seeAll, { color: colors.primary }]}>{t.home.seeAll}</Text>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        )}
-
-        {selectedCat && (() => {
-          const subs = categories.find(c => c.id === selectedCat)?.subCategories ?? [];
-          if (subs.length === 0) return null;
-          return (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.subCategoriesContainer}>
-              {subs.map(sub => {
-                const isSelected = selectedSubCat === sub.id;
-                return (
-                  <TouchableOpacity
-                    key={sub.id}
-                    onPress={() => setSelectedSubCat(isSelected ? null : sub.id)}
-                    style={[styles.subCategoryChip, {
-                      backgroundColor: isSelected ? colors.primary : colors.card,
-                      borderColor: isSelected ? colors.primary : colors.border,
-                    }]}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.subCategoryText, { color: isSelected ? '#fff' : colors.textSecondary }]}>
-                      {getCategoryLabel(sub.name, language)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          );
-        })()}
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {selectedCat
-              ? getCategoryLabel(categories.find(c => c.id === selectedCat)?.name, language)
-              : t.home.recentJobs}
-          </Text>
-          {!loading && (
-            <Text style={[styles.seeAll, { color: colors.textTertiary }]}>{totalCount}</Text>
-          )}
-        </View>
-
-        {loading && (
-          <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.md }}>
-            <JobListSkeleton count={4} />
-          </View>
-        )}
-
-        {!loading && error && (
-          <View style={styles.centerBox}>
-            <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
-            <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
-              onPress={() => { setError(null); setPage(1); }} activeOpacity={0.8}>
-              <Text style={styles.retryText}>{t.common.retry}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {!loading && !error && jobs.length === 0 && (
-          <View style={styles.centerBox}>
-            <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-              {search ? `"${search}" ${t.search.noResults}` : t.home.noJobs}
-            </Text>
-          </View>
-        )}
-
-        {!loading && !error && jobs.map(job => (
-          <TouchableOpacity
-            key={job.id}
-            style={[styles.jobCard, { backgroundColor: colors.card, ...Shadow.md }]}
-            activeOpacity={0.85}
-            onPress={() => router.push({ pathname: '/job-detail', params: { id: job.id } })}
-          >
-            <View style={styles.jobCardTop}>
-              <View style={[styles.companyLogo, { backgroundColor: colors.primaryLight }]}>
-                {job.coverImageUrl ? (
-                  <Image
-                    source={{ uri: `${MEDIA_URL}${job.coverImageUrl}` }}
-                    style={styles.companyLogoImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <Text style={[styles.companyLogoText, { color: colors.primary }]}>
-                    {(job.employerName ?? job.title ?? '?')[0].toUpperCase()}
-                  </Text>
-                )}
-              </View>
-              <View style={styles.jobInfo}>
-                <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>{job.title}</Text>
-                <Text style={[styles.companyName, { color: colors.textSecondary }]} numberOfLines={1}>{job.employerName}</Text>
-              </View>
-              <View style={[styles.salaryBadge, { backgroundColor: colors.primaryLight }]}>
-                <Text style={[styles.salaryText, { color: colors.primary }]}>
-                  {job.salary ? `${(job.salary / 1_000_000).toFixed(1)}M ${t.common.currency}` : t.common.noData}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.jobCardBottom}>
-              {job.location && (
-                <View style={styles.jobMeta}>
-                  <LocationIcon size={12} color={colors.textTertiary} />
-                  <Text style={[styles.jobMetaText, { color: colors.textTertiary }]} numberOfLines={1}>{job.location}</Text>
-                </View>
               )}
             </View>
-          </TouchableOpacity>
-        ))}
 
-        {loadingMore && (
-          <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-            <ActivityIndicator size="small" color={colors.primary} />
-          </View>
+            {categories.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoriesContainer}>
+                {categories.map(cat => {
+                  const isSelected = selectedCat === cat.id;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      onPress={() => { setSelectedCat(isSelected ? null : cat.id); setSelectedSubCat(null); }}
+                      style={[styles.categoryCard, { backgroundColor: isSelected ? colors.primary : colors.card, ...Shadow.sm }]}
+                      activeOpacity={0.8}
+                    >
+                      <CategoryIcon name={cat.name?.toLowerCase()} color={isSelected ? '#fff' : colors.primary} />
+                      <Text style={[styles.categoryName, { color: isSelected ? '#fff' : colors.textSecondary }]}>
+                        {getCategoryLabel(cat.name, language)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            {selectedCat && (() => {
+              const subs = categories.find(c => c.id === selectedCat)?.subCategories ?? [];
+              if (subs.length === 0) return null;
+              return (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.subCategoriesContainer}>
+                  {subs.map(sub => {
+                    const isSelected = selectedSubCat === sub.id;
+                    return (
+                      <TouchableOpacity
+                        key={sub.id}
+                        onPress={() => setSelectedSubCat(isSelected ? null : sub.id)}
+                        style={[styles.subCategoryChip, {
+                          backgroundColor: isSelected ? colors.primary : colors.card,
+                          borderColor: isSelected ? colors.primary : colors.border,
+                        }]}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.subCategoryText, { color: isSelected ? '#fff' : colors.textSecondary }]}>
+                          {getCategoryLabel(sub.name, language)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              );
+            })()}
+
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                {selectedCat
+                  ? getCategoryLabel(categories.find(c => c.id === selectedCat)?.name, language)
+                  : t.home.recentJobs}
+              </Text>
+              {!loading && (
+                <Text style={[styles.seeAll, { color: colors.textTertiary }]}>{totalCount}</Text>
+              )}
+            </View>
+
+            {loading && (
+              <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.md }}>
+                <JobListSkeleton count={4} />
+              </View>
+            )}
+
+            {!loading && error && (
+              <View style={styles.centerBox}>
+                <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
+                <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => { setError(null); setPage(1); }} activeOpacity={0.8}>
+                  <Text style={styles.retryText}>{t.common.retry}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {!loading && !error && jobs.length === 0 && (
+              <View style={styles.centerBox}>
+                <Text style={[styles.stateText, { color: colors.textSecondary }]}>
+                  {search ? `"${search}" ${t.search.noResults}` : t.home.noJobs}
+                </Text>
+              </View>
+            )}
+
+            {!loading && !error && jobs.map(job => (
+              <TouchableOpacity
+                key={job.id}
+                style={[styles.jobCard, { backgroundColor: colors.card, ...Shadow.md }]}
+                activeOpacity={0.85}
+                onPress={() => router.push({ pathname: '/job-detail', params: { id: job.id } })}
+              >
+                <View style={styles.jobCardTop}>
+                  <View style={[styles.companyLogo, { backgroundColor: colors.primaryLight }]}>
+                    {job.coverImageUrl ? (
+                      <Image
+                        source={{ uri: `${MEDIA_URL}${job.coverImageUrl}` }}
+                        style={styles.companyLogoImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={[styles.companyLogoText, { color: colors.primary }]}>
+                        {(job.employerName ?? job.title ?? '?')[0].toUpperCase()}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.jobInfo}>
+                    <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>{job.title}</Text>
+                    <Text style={[styles.companyName, { color: colors.textSecondary }]} numberOfLines={1}>{job.employerName}</Text>
+                  </View>
+                  <View style={[styles.salaryBadge, { backgroundColor: colors.primaryLight }]}>
+                    <Text style={[styles.salaryText, { color: colors.primary }]}>
+                      {job.salary ? `${(job.salary / 1_000_000).toFixed(1)}M ${t.common.currency}` : t.common.noData}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.jobCardBottom}>
+                  {job.location && (
+                    <View style={styles.jobMeta}>
+                      <LocationIcon size={12} color={colors.textTertiary} />
+                      <Text style={[styles.jobMetaText, { color: colors.textTertiary }]} numberOfLines={1}>{job.location}</Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+
+            {loadingMore && (
+              <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            )}
+          </>
         )}
+
+        {mode === 'properties' && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                {label("Ko'chmas mulk e'lonlari", 'Объявления о недвижимости', 'Property Listings')}
+              </Text>
+              {!loadingProperties && (
+                <Text style={[styles.seeAll, { color: colors.textTertiary }]}>{filteredProperties.length}</Text>
+              )}
+            </View>
+
+            {loadingProperties && (
+              <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.md }}>
+                <JobListSkeleton count={4} />
+              </View>
+            )}
+
+            {!loadingProperties && errorProperties && (
+              <View style={styles.centerBox}>
+                <Text style={[styles.stateText, { color: '#EF4444' }]}>{errorProperties}</Text>
+                <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => fetchProperties()} activeOpacity={0.8}>
+                  <Text style={styles.retryText}>{t.common.retry}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {!loadingProperties && !errorProperties && filteredProperties.length === 0 && (
+              <View style={styles.centerBox}>
+                <Text style={[styles.stateText, { color: colors.textSecondary }]}>
+                  {search
+                    ? `"${search}" ${t.search.noResults}`
+                    : label("Ko'chmas mulk e'lonlari topilmadi", 'Объявления не найдены', 'No properties found')}
+                </Text>
+              </View>
+            )}
+
+            {!loadingProperties && !errorProperties && filteredProperties.map(property => (
+              <TouchableOpacity
+                key={property.id}
+                style={[styles.jobCard, { backgroundColor: colors.card, ...Shadow.md }]}
+                activeOpacity={0.85}
+                onPress={() => router.push({ pathname: '/property-detail', params: { id: property.id } })}
+              >
+                <View style={styles.jobCardTop}>
+                  <View style={[styles.companyLogo, { backgroundColor: colors.primaryLight }]}>
+                    {property.coverImageUrl ? (
+                      <Image
+                        source={{ uri: `${MEDIA_URL}${property.coverImageUrl}` }}
+                        style={styles.companyLogoImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <RealEstateIcon size={24} color={colors.primary} />
+                    )}
+                  </View>
+                  <View style={styles.jobInfo}>
+                    <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>{property.title}</Text>
+                    <Text style={[styles.companyName, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {getPropertyTypeLabel(property.propertyType, language)}
+                    </Text>
+                  </View>
+                  <View style={[styles.salaryBadge, { backgroundColor: colors.primaryLight, maxWidth: '45%', flexShrink: 1 }]}>
+                    <Text style={[styles.salaryText, { color: colors.primary }]} numberOfLines={1}>
+                      {`${(property.price / 1_000_000).toFixed(1)}M ${t.common.currency} / ${getRentalPeriodLabel(property.rentalPeriod, language)}`}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.jobCardBottom}>
+                  <View style={styles.jobMeta}>
+                    <LocationIcon size={12} color={colors.textTertiary} />
+                    <Text style={[styles.jobMetaText, { color: colors.textTertiary }]} numberOfLines={1}>{property.address}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+
         <View style={{ height: 24 }} />
       </ScrollView>
 
@@ -351,6 +506,8 @@ function EmployerHome() {
   const { language, t } = useLanguageStore();
   const firstName = useAuthStore((state: AuthState) => state.firstName);
 
+  const [mode, setMode] = useState<'workers' | 'properties'>('workers');
+
   const [posts,      setPosts]      = useState<WorkerPost[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -358,6 +515,13 @@ function EmployerHome() {
   const [error,      setError]      = useState<string | null>(null);
   const [search,     setSearch]     = useState('');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
+
+  const [properties,        setProperties]        = useState<PropertyListing[]>([]);
+  const [loadingProperties, setLoadingProperties] = useState(false);
+  const [errorProperties,   setErrorProperties]   = useState<string | null>(null);
+
+  const label = (uz: string, ru: string, en: string) =>
+    language === 'uz' ? uz : language === 'ru' ? ru : en;
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -376,6 +540,7 @@ function EmployerHome() {
   }, [selectedCat, search]);
 
   useEffect(() => {
+    if (mode !== 'workers') return;
     const load = async () => {
       setLoading(true);
       try {
@@ -390,12 +555,49 @@ function EmployerHome() {
       }
     };
     load();
-  }, [selectedCat, search]);
+  }, [mode, selectedCat, search]);
+
+  // Property listings are independent of the WorkerPost feed above: separate state, separate
+  // fetch, never merged into `posts`. Fetched once (raw, unfiltered) when Properties mode is
+  // first entered; search filtering below is purely local and never re-triggers a network request.
+  const propertiesFetchedRef = useRef(false);
+
+  const fetchProperties = useCallback(async () => {
+    setLoadingProperties(true);
+    setErrorProperties(null);
+    try {
+      const data = await propertyService.getProperties();
+      setProperties(data);
+      propertiesFetchedRef.current = true;
+    } catch (e: any) {
+      setErrorProperties(e?.message ?? t.common.somethingWentWrong);
+    } finally {
+      setLoadingProperties(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mode === 'properties' && !propertiesFetchedRef.current) fetchProperties();
+  }, [mode, fetchProperties]);
+
+  const filteredProperties = useMemo(() => {
+    if (!search) return properties;
+    const q = search.toLowerCase();
+    return properties.filter(p =>
+      p.title?.toLowerCase().includes(q) ||
+      p.description?.toLowerCase().includes(q) ||
+      p.address?.toLowerCase().includes(q)
+    );
+  }, [properties, search]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    setSearch('');
-    setSelectedCat(null);
+    if (mode === 'workers') {
+      setSearch('');
+      setSelectedCat(null);
+    } else {
+      fetchProperties().finally(() => setRefreshing(false));
+    }
   };
 
   return (
@@ -434,11 +636,36 @@ function EmployerHome() {
             tintColor={colors.primary} colors={[colors.primary]} />
         }
       >
+        <View style={[styles.modeToggleContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.modeToggleBtn, mode === 'workers' && { backgroundColor: colors.primary }]}
+            onPress={() => setMode('workers')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.modeToggleText, { color: mode === 'workers' ? '#fff' : colors.textSecondary }]}>
+              {language === 'uz' ? 'Ishchilar' : language === 'ru' ? 'Работники' : 'Workers'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeToggleBtn, mode === 'properties' && { backgroundColor: colors.primary }]}
+            onPress={() => setMode('properties')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.modeToggleText, { color: mode === 'properties' ? '#fff' : colors.textSecondary }]}>
+              {label("Ko'chmas mulk", 'Недвижимость', 'Properties')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <SearchIcon size={18} color={colors.textTertiary} />
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }]}
-            placeholder={language === 'uz' ? 'Ishchi qidiring...' : language === 'ru' ? 'Поиск работника...' : 'Search workers...'}
+            placeholder={
+              mode === 'workers'
+                ? (language === 'uz' ? 'Ishchi qidiring...' : language === 'ru' ? 'Поиск работника...' : 'Search workers...')
+                : label('Mulk qidirish...', 'Поиск недвижимости...', 'Search properties...')
+            }
             placeholderTextColor={colors.textTertiary}
             value={search}
             onChangeText={setSearch}
@@ -452,111 +679,192 @@ function EmployerHome() {
           )}
         </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.home.categories}</Text>
-          {selectedCat !== null && (
-            <TouchableOpacity onPress={() => setSelectedCat(null)}>
-              <Text style={[styles.seeAll, { color: colors.primary }]}>{t.home.seeAll}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {categories.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesContainer}>
-            {categories.map(cat => {
-              const isSelected = selectedCat === cat.id;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  onPress={() => setSelectedCat(isSelected ? null : cat.id)}
-                  style={[styles.categoryCard, { backgroundColor: isSelected ? colors.primary : colors.card, ...Shadow.sm }]}
-                  activeOpacity={0.8}
-                >
-                  <CategoryIcon name={cat.name?.toLowerCase()} color={isSelected ? '#fff' : colors.primary} />
-                  <Text style={[styles.categoryName, { color: isSelected ? '#fff' : colors.textSecondary }]}>
-                    {getCategoryLabel(cat.name, language)}
-                  </Text>
+        {mode === 'workers' && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.home.categories}</Text>
+              {selectedCat !== null && (
+                <TouchableOpacity onPress={() => setSelectedCat(null)}>
+                  <Text style={[styles.seeAll, { color: colors.primary }]}>{t.home.seeAll}</Text>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        )}
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {language === 'uz' ? 'Ishchilar' : language === 'ru' ? 'Работники' : 'Workers'}
-          </Text>
-          {!loading && (
-            <Text style={[styles.seeAll, { color: colors.textTertiary }]}>{posts.length}</Text>
-          )}
-        </View>
-
-        {loading && (
-          <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.md }}>
-            <JobListSkeleton count={4} />
-          </View>
-        )}
-
-        {!loading && error && (
-          <View style={styles.centerBox}>
-            <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
-            <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
-              onPress={() => { setError(null); setLoading(true); fetchPosts(); }} activeOpacity={0.8}>
-              <Text style={styles.retryText}>{t.common.retry}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {!loading && !error && posts.length === 0 && (
-          <View style={styles.centerBox}>
-            <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-              {language === 'uz' ? 'Ishchilar topilmadi' : language === 'ru' ? 'Работники не найдены' : 'No workers found'}
-            </Text>
-          </View>
-        )}
-
-        {!loading && !error && posts.map(post => (
-          <TouchableOpacity
-            key={post.id}
-            style={[styles.jobCard, { backgroundColor: colors.card, ...Shadow.md }]}
-            activeOpacity={0.85}
-            onPress={() => router.push({ pathname: '/worker-post-detail', params: { id: post.id } })}
-          >
-            <View style={styles.jobCardTop}>
-              <View style={[styles.companyLogo, { backgroundColor: colors.primaryLight }]}>
-                <Text style={[styles.companyLogoText, { color: colors.primary }]}>
-                  {(post.workerFirstName ?? post.title ?? '?')[0].toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.jobInfo}>
-                <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                  {post.title}
-                </Text>
-                <Text style={[styles.companyName, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {`${post.workerFirstName} ${post.workerLastName}`}
-                </Text>
-              </View>
-              {post.expectedSalary && (
-                <View style={[styles.salaryBadge, { backgroundColor: colors.primaryLight }]}>
-                  <Text style={[styles.salaryText, { color: colors.primary }]}>
-                    {`${(post.expectedSalary / 1_000_000).toFixed(1)}M ${t.common.currency}`}
-                  </Text>
-                </View>
               )}
             </View>
-            {post.city && (
-              <View style={styles.jobCardBottom}>
-                <View style={styles.jobMeta}>
-                  <LocationIcon size={12} color={colors.textTertiary} />
-                  <Text style={[styles.jobMetaText, { color: colors.textTertiary }]} numberOfLines={1}>
-                    {post.city}
-                  </Text>
-                </View>
+
+            {categories.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoriesContainer}>
+                {categories.map(cat => {
+                  const isSelected = selectedCat === cat.id;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      onPress={() => setSelectedCat(isSelected ? null : cat.id)}
+                      style={[styles.categoryCard, { backgroundColor: isSelected ? colors.primary : colors.card, ...Shadow.sm }]}
+                      activeOpacity={0.8}
+                    >
+                      <CategoryIcon name={cat.name?.toLowerCase()} color={isSelected ? '#fff' : colors.primary} />
+                      <Text style={[styles.categoryName, { color: isSelected ? '#fff' : colors.textSecondary }]}>
+                        {getCategoryLabel(cat.name, language)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                {language === 'uz' ? 'Ishchilar' : language === 'ru' ? 'Работники' : 'Workers'}
+              </Text>
+              {!loading && (
+                <Text style={[styles.seeAll, { color: colors.textTertiary }]}>{posts.length}</Text>
+              )}
+            </View>
+
+            {loading && (
+              <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.md }}>
+                <JobListSkeleton count={4} />
               </View>
             )}
-          </TouchableOpacity>
-        ))}
+
+            {!loading && error && (
+              <View style={styles.centerBox}>
+                <Text style={[styles.stateText, { color: '#EF4444' }]}>{error}</Text>
+                <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => { setError(null); setLoading(true); fetchPosts(); }} activeOpacity={0.8}>
+                  <Text style={styles.retryText}>{t.common.retry}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {!loading && !error && posts.length === 0 && (
+              <View style={styles.centerBox}>
+                <Text style={[styles.stateText, { color: colors.textSecondary }]}>
+                  {language === 'uz' ? 'Ishchilar topilmadi' : language === 'ru' ? 'Работники не найдены' : 'No workers found'}
+                </Text>
+              </View>
+            )}
+
+            {!loading && !error && posts.map(post => (
+              <TouchableOpacity
+                key={post.id}
+                style={[styles.jobCard, { backgroundColor: colors.card, ...Shadow.md }]}
+                activeOpacity={0.85}
+                onPress={() => router.push({ pathname: '/worker-post-detail', params: { id: post.id } })}
+              >
+                <View style={styles.jobCardTop}>
+                  <View style={[styles.companyLogo, { backgroundColor: colors.primaryLight }]}>
+                    <Text style={[styles.companyLogoText, { color: colors.primary }]}>
+                      {(post.workerFirstName ?? post.title ?? '?')[0].toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.jobInfo}>
+                    <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                      {post.title}
+                    </Text>
+                    <Text style={[styles.companyName, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {`${post.workerFirstName} ${post.workerLastName}`}
+                    </Text>
+                  </View>
+                  {post.expectedSalary && (
+                    <View style={[styles.salaryBadge, { backgroundColor: colors.primaryLight }]}>
+                      <Text style={[styles.salaryText, { color: colors.primary }]}>
+                        {`${(post.expectedSalary / 1_000_000).toFixed(1)}M ${t.common.currency}`}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                {post.city && (
+                  <View style={styles.jobCardBottom}>
+                    <View style={styles.jobMeta}>
+                      <LocationIcon size={12} color={colors.textTertiary} />
+                      <Text style={[styles.jobMetaText, { color: colors.textTertiary }]} numberOfLines={1}>
+                        {post.city}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+
+        {mode === 'properties' && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                {label("Ko'chmas mulk e'lonlari", 'Объявления о недвижимости', 'Property Listings')}
+              </Text>
+              {!loadingProperties && (
+                <Text style={[styles.seeAll, { color: colors.textTertiary }]}>{filteredProperties.length}</Text>
+              )}
+            </View>
+
+            {loadingProperties && (
+              <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.md }}>
+                <JobListSkeleton count={4} />
+              </View>
+            )}
+
+            {!loadingProperties && errorProperties && (
+              <View style={styles.centerBox}>
+                <Text style={[styles.stateText, { color: '#EF4444' }]}>{errorProperties}</Text>
+                <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => fetchProperties()} activeOpacity={0.8}>
+                  <Text style={styles.retryText}>{t.common.retry}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {!loadingProperties && !errorProperties && filteredProperties.length === 0 && (
+              <View style={styles.centerBox}>
+                <Text style={[styles.stateText, { color: colors.textSecondary }]}>
+                  {label("Ko'chmas mulk e'lonlari topilmadi", 'Объявления не найдены', 'No properties found')}
+                </Text>
+              </View>
+            )}
+
+            {!loadingProperties && !errorProperties && filteredProperties.map(property => (
+              <TouchableOpacity
+                key={property.id}
+                style={[styles.jobCard, { backgroundColor: colors.card, ...Shadow.md }]}
+                activeOpacity={0.85}
+                onPress={() => router.push({ pathname: '/property-detail', params: { id: property.id } })}
+              >
+                <View style={styles.jobCardTop}>
+                  <View style={[styles.companyLogo, { backgroundColor: colors.primaryLight }]}>
+                    {property.coverImageUrl ? (
+                      <Image
+                        source={{ uri: `${MEDIA_URL}${property.coverImageUrl}` }}
+                        style={styles.companyLogoImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <RealEstateIcon size={24} color={colors.primary} />
+                    )}
+                  </View>
+                  <View style={styles.jobInfo}>
+                    <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>{property.title}</Text>
+                    <Text style={[styles.companyName, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {getPropertyTypeLabel(property.propertyType, language)}
+                    </Text>
+                  </View>
+                  <View style={[styles.salaryBadge, { backgroundColor: colors.primaryLight, maxWidth: '45%', flexShrink: 1 }]}>
+                    <Text style={[styles.salaryText, { color: colors.primary }]} numberOfLines={1}>
+                      {`${(property.price / 1_000_000).toFixed(1)}M ${t.common.currency} / ${getRentalPeriodLabel(property.rentalPeriod, language)}`}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.jobCardBottom}>
+                  <View style={styles.jobMeta}>
+                    <LocationIcon size={12} color={colors.textTertiary} />
+                    <Text style={[styles.jobMetaText, { color: colors.textTertiary }]} numberOfLines={1}>{property.address}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
 
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -591,6 +899,14 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: BorderRadius.full,
     alignItems: 'center', justifyContent: 'center',
   },
+  modeToggleContainer: {
+    flexDirection: 'row', marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
+    borderRadius: BorderRadius.lg, borderWidth: 1.5, padding: 4, gap: 4,
+  },
+  modeToggleBtn: {
+    flex: 1, borderRadius: BorderRadius.md, paddingVertical: Spacing.sm, alignItems: 'center',
+  },
+  modeToggleText: { fontSize: FontSize.sm, fontWeight: FontWeight.semiBold },
   searchContainer: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: Spacing.xl, marginTop: Spacing.lg, marginBottom: Spacing.sm,
