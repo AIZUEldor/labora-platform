@@ -18,12 +18,11 @@ public class PropertyListingRepository : GenericRepository<PropertyListing>, IPr
     // Separate from the inherited GenericRepository.GetByIdAsync (which never loads Images) so the
     // detail response's CoverImageUrl/gallery - derived from Images in MappingProfile - reflects
     // real persisted PropertyImage rows, same convention as JobRepository.GetByIdWithImagesAsync.
-    // AsNoTracking is safe here: unlike Job, there is no update/delete flow yet that reuses this
-    // fetch for a save.
+    // Tracked (no AsNoTracking) - PropertyListingService.UpdateAsync reuses this fetch and mutates
+    // the returned graph in place before saving, exactly like JobRepository.GetByIdWithImagesAsync.
     public async Task<PropertyListing?> GetByIdWithImagesAsync(Guid id)
     {
         return await _context.PropertyListings
-            .AsNoTracking()
             .Include(p => p.Images
                 .Where(i => !i.IsDeleted)
                 .OrderBy(i => i.SortOrder)

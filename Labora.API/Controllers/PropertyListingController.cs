@@ -46,6 +46,18 @@ public class PropertyListingController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
+    // Validation and the owner check both happen inside PropertyListingService.UpdateAsync,
+    // matching this service's own Create convention (unlike JobController, which validates before
+    // calling the service) - the controller stays thin and forwards only the JWT-derived owner id.
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Employer")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] PropertyListingRequestDto request)
+    {
+        Guid ownerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        PropertyListingResponseDto result = await _propertyListingService.UpdateAsync(id, request, ownerId);
+        return Ok(result);
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {

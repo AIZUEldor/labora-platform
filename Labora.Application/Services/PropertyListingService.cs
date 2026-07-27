@@ -82,6 +82,32 @@ public class PropertyListingService : IPropertyListingService
         }
     }
 
+    // Mirrors JobService.UpdateAsync: images-inclusive fetch (now tracked - see the repository
+    // comment) survives _mapper.Map(request, propertyListing) untouched, since
+    // PropertyListingRequestDto has no Images property; OwnerId/Status are also protected by the
+    // same CreateMap<PropertyListingRequestDto, PropertyListing>() Ignore()s used by CreateAsync.
+    // Validation lives here rather than in the controller, matching this service's own
+    // CreateAsync convention (not JobController's, which validates before calling the service).
+    public async Task<PropertyListingResponseDto> UpdateAsync(Guid id, PropertyListingRequestDto request, Guid ownerId)
+    {
+        ValidationResult validationResult = await _propertyListingValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+            throw new ArgumentException(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)));
+
+        PropertyListing? propertyListing = await _propertyListingRepository.GetByIdWithImagesAsync(id);
+
+        if (propertyListing is null)
+            throw new InvalidOperationException($"Id={id} bo'lgan ko'chmas mulk e'loni topilmadi.");
+
+        if (propertyListing.OwnerId != ownerId)
+            throw new InvalidOperationException("Siz bu e'lonni tahrirlash huquqiga ega emassiz.");
+
+        _mapper.Map(request, propertyListing);
+
+        PropertyListing updated = await _propertyListingRepository.UpdateAsync(propertyListing);
+        return _mapper.Map<PropertyListingResponseDto>(updated);
+    }
+
     public async Task<PropertyListingResponseDto> GetByIdAsync(Guid id)
     {
         // Images-inclusive fetch (see PropertyListingRepository.GetByIdWithImagesAsync), so
