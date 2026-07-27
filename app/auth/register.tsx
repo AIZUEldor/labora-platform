@@ -59,6 +59,7 @@ export default function RegisterScreen() {
           role,
         });
         router.push(`/register-verify?verificationId=${response.verificationId}`);
+        setIsLoading(false);
       } else {
         const response = await authService.register({
           firstName: firstName.trim(),
@@ -71,7 +72,6 @@ export default function RegisterScreen() {
         await login(response.token, response.role, response.firstName, response.lastName);
         router.replace('/(tabs)');
       }
-      setIsLoading(false);
     } catch (error: any) {
       const data = error.response?.data;
       const message = Array.isArray(data)

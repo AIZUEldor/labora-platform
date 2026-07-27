@@ -48,6 +48,7 @@ export default function LoginScreen() {
         });
 
         router.push(`/login-verify?verificationId=${response.verificationId}`);
+        setIsLoading(false);
       } else {
         const response = await authService.login({
           phoneNumber: phoneNumber.trim(),
@@ -57,7 +58,6 @@ export default function LoginScreen() {
         await login(response.token, response.role, response.firstName, response.lastName);
         router.replace('/(tabs)');
       }
-      setIsLoading(false);
     } catch (error: any) {
   const message =
     error?.response?.data?.message ||
