@@ -28,6 +28,11 @@ export const RENTAL_PERIODS: PropertyEnumOption[] = [
   { value: 2, labelUz: 'Kunlik', labelRu: 'Посуточно', labelEn: 'Daily' },
 ];
 
+export const PROPERTY_LISTING_STATUSES: PropertyEnumOption[] = [
+  { value: 1, labelUz: 'Nashr etilgan', labelRu: 'Опубликовано', labelEn: 'Published' },
+  { value: 2, labelUz: 'Arxivlangan',   labelRu: 'В архиве',     labelEn: 'Archived' },
+];
+
 function getLabel(options: PropertyEnumOption[], value: number, language: string): string {
   const found = options.find(o => o.value === value);
   if (!found) return '';
@@ -44,4 +49,8 @@ export function getRenovationStatusLabel(value: number, language: string): strin
 
 export function getRentalPeriodLabel(value: number, language: string): string {
   return getLabel(RENTAL_PERIODS, value, language);
+}
+
+export function getPropertyListingStatusLabel(value: number, language: string): string {
+  return getLabel(PROPERTY_LISTING_STATUSES, value, language);
 }

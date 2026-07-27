@@ -16,7 +16,7 @@ import {
   LockIcon, HelpIcon, LogoutIcon, SunIcon,
   MoonIcon, ChevronRightIcon, CameraIcon,
   ApplicationsIcon, BriefcaseIcon, PhoneIcon,
-  InstagramIcon, TelegramIcon, TrashIcon,
+  InstagramIcon, TelegramIcon, TrashIcon, RealEstateIcon,
 } from '../../components/icons';
 import { userService } from '../../services/userService';
 import { jobApplicationService } from '../../services/jobApplicationService';
@@ -40,13 +40,14 @@ function MenuIcon({ name, color }: { name: string; color: string }) {
     case 'lock':         return <LockIcon         {...props} />;
     case 'phone':        return <PhoneIcon        {...props} />;
     case 'help':         return <HelpIcon         {...props} />;
+    case 'realestate':   return <RealEstateIcon   {...props} />;
     default:             return null;
   }
 }
 
 export default function ProfileScreen() {
   const { colors, isDark, toggleTheme } = useThemeStore();
-  const { t } = useLanguageStore();
+  const { t, language } = useLanguageStore();
   const logout     = useAuthStore((state: AuthState) => state.logout);
   const role       = useAuthStore((state: AuthState) => state.role);
   const token      = useAuthStore((state: AuthState) => state.token);
@@ -64,9 +65,14 @@ export default function ProfileScreen() {
   ];
 
   const EMPLOYER_MENU = [
-    { icon: 'edit',      label: t.profile.editProfile,    route: '/edit-profile' },
-    { icon: 'briefcase', label: t.employer.myJobs,        route: '/(tabs)/applications' },
-    { icon: 'star',      label: t.profile.reviews,        route: '/my-reviews' },
+    { icon: 'edit',       label: t.profile.editProfile,    route: '/edit-profile' },
+    { icon: 'briefcase',  label: t.employer.myJobs,        route: '/(tabs)/applications' },
+    {
+      icon: 'realestate',
+      label: language === 'uz' ? 'Mening mulklarim' : language === 'ru' ? 'Мои объявления' : 'My Properties',
+      route: '/employer/my-properties',
+    },
+    { icon: 'star',       label: t.profile.reviews,        route: '/my-reviews' },
     { icon: 'bell',      label: t.notifications.title,    route: '/notifications' },
     { icon: 'lock',      label: t.profile.changePassword, route: '/change-password' },
     { icon: 'phone',     label: t.profile.changePhone,    route: '/change-phone' },
