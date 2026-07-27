@@ -3,6 +3,7 @@ using Labora.Application.DTOs.Applications;
 using Labora.Application.DTOs.Categories;
 using Labora.Application.DTOs.Jobs;
 using Labora.Application.DTOs.Payments;
+using Labora.Application.DTOs.Properties;
 using Labora.Application.DTOs.Reviews;
 using Labora.Application.DTOs.Transactions;
 using Labora.Application.DTOs.Users;
@@ -75,6 +76,23 @@ public class MappingProfile : Profile
         // PaymentOrder mappings
         CreateMap<PaymentOrder, PaymentOrderResponseDto>();
         CreateMap<CreateTopUpRequestDto, PaymentOrder>();
+
+        // PropertyListing mappings
+        // CoverImageUrl mirrors Job's rule exactly (see Job mapping above), but ordered by
+        // SortOrder then Id instead of CreatedAt, since PropertyImage carries an explicit
+        // SortOrder column (Job/JobImage does not).
+        CreateMap<PropertyListing, PropertyListingResponseDto>()
+            .ForMember(dest => dest.CoverImageUrl, opt => opt.MapFrom(src => src.Images
+                .Where(i => !i.IsDeleted)
+                .OrderBy(i => i.SortOrder)
+                .ThenBy(i => i.Id)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault()));
+        // OwnerId and Status are assigned by PropertyListingService.CreateAsync, never from client
+        // input - ignored here so AutoMapper never overwrites them from the request DTO.
+        CreateMap<PropertyListingRequestDto, PropertyListing>()
+            .ForMember(dest => dest.OwnerId, opt => opt.Ignore())
+            .ForMember(dest => dest.Status, opt => opt.Ignore());
 
         // Review mappings
         CreateMap<Review, ReviewResponseDto>()

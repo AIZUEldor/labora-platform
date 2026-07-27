@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<IPhoneNumberNormalizer, UzbekistanPhoneNumberNormalizer>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJobService, JobService>();
+        services.AddScoped<IPropertyListingService, PropertyListingService>();
         services.AddScoped<IJobApplicationService, JobApplicationService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ICategoryService, CategoryService>();
