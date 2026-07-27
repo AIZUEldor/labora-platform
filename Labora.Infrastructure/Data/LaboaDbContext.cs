@@ -28,6 +28,8 @@ public class LaboaDbContext : DbContext
     public DbSet<OtpAbuseEvent> OtpAbuseEvents { get; set; }
     public DbSet<OtpBlock> OtpBlocks { get; set; }
     public DbSet<PaymeTransaction> PaymeTransactions { get; set; }
+    public DbSet<PropertyListing> PropertyListings { get; set; }
+    public DbSet<PropertyImage> PropertyImages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -307,6 +309,37 @@ public class LaboaDbContext : DbContext
             // PostgreSQL system column xmin as the optimistic concurrency token
             // (official Npgsql pattern: a uint property mapped via IsRowVersion()).
             entity.Property(e => e.Version).IsRowVersion();
+        });
+
+        // PropertyListing
+        modelBuilder.Entity<PropertyListing>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(120);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(3000);
+            entity.Property(e => e.AreaSquareMeters).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Price).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Address).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.ContactPhoneNumber).IsRequired().HasMaxLength(20);
+            entity.HasOne(e => e.Owner)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => e.OwnerId);
+            entity.HasIndex(e => e.Status);
+        });
+
+        // PropertyImage
+        modelBuilder.Entity<PropertyImage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ImageUrl).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.StorageKey).IsRequired().HasMaxLength(500);
+            entity.HasOne(e => e.PropertyListing)
+                .WithMany(p => p.Images)
+                .HasForeignKey(e => e.PropertyListingId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.PropertyListingId, e.SortOrder });
         });
     }
 }
