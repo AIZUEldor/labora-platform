@@ -1,5 +1,5 @@
 import api from './api';
-import { CreatePropertyRequest, PropertyListing, PropertyMarker, PropertyType } from '../types';
+import { CreatePropertyRequest, PropertyImage, PropertyListing, PropertyMarker, PropertyType, ReorderPropertyImagesRequest } from '../types';
 
 export const propertyService = {
   getProperties: async (): Promise<PropertyListing[]> => {
@@ -68,6 +68,31 @@ export const propertyService = {
   // CreatePropertyRequest shape can be sent directly, matching jobService.createJob's convention.
   updateProperty: async (id: string, data: CreatePropertyRequest): Promise<PropertyListing> => {
     const response = await api.put<PropertyListing>(`/PropertyListing/${id}`, data);
+    return response.data;
+  },
+
+  // Mirrors jobService.uploadJobImage: single-file multipart POST, field name 'file'.
+  addPropertyImage: async (propertyId: string, imageUri: string): Promise<PropertyImage> => {
+    const formData = new FormData();
+    formData.append('file', {
+      uri: imageUri,
+      name: 'property.jpg',
+      type: 'image/jpeg',
+    } as any);
+    const response = await api.post<PropertyImage>(`/PropertyListing/${propertyId}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  // Mirrors jobService.deleteJobImage.
+  deletePropertyImage: async (propertyId: string, imageId: string): Promise<void> => {
+    await api.delete(`/PropertyListing/${propertyId}/images/${imageId}`);
+  },
+
+  reorderPropertyImages: async (propertyId: string, imageIds: string[]): Promise<PropertyImage[]> => {
+    const body: ReorderPropertyImagesRequest = { imageIds };
+    const response = await api.put<PropertyImage[]>(`/PropertyListing/${propertyId}/images/order`, body);
     return response.data;
   },
 };

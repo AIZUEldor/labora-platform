@@ -10,10 +10,11 @@ import { useThemeStore } from '../../store/themeStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 import { useMapPickerStore } from '../../stores/useMapPickerStore';
 import { propertyService } from '../../services/propertyService';
-import { CreatePropertyRequest, PropertyType, RenovationStatus, RentalPeriod } from '../../types';
+import { CreatePropertyRequest, PropertyImage, PropertyType, RenovationStatus, RentalPeriod } from '../../types';
+import { MEDIA_URL } from '../../services/api';
 import { Spacing, BorderRadius } from '../../constants/spacing';
 import { FontSize, FontWeight } from '../../constants/typography';
-import { PlusIcon, CloseIcon } from '../../components/icons';
+import { PlusIcon, CloseIcon, StarIcon } from '../../components/icons';
 import { sanitizeDigits, formatThousands } from '../../utils/numberFormat';
 import {
   PROPERTY_TYPES,
@@ -89,6 +90,18 @@ export default function CreatePropertyScreen() {
   const [initialLoading, setInitialLoading] = useState(editMode);
   const [initialError, setInitialError] = useState<string | null>(null);
 
+  // Edit mode only: the already-persisted gallery, mutated in place via the dedicated image
+  // endpoints (never through the scalar-field PUT). Kept separate from `images` above, which is
+  // Create mode's local picker-URI state.
+  const [existingImages, setExistingImages] = useState<PropertyImage[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
+  const [reorderingImageId, setReorderingImageId] = useState<string | null>(null);
+  // Single flag guarding every image action at once (add/delete/move/set-cover) - these all
+  // mutate the same server-side ordered list, so overlapping calls could race and desync the
+  // locally-held order from the server's.
+  const imageActionInProgress = uploadingImage || deletingImageId !== null || reorderingImageId !== null;
+
   const label = (uz: string, ru: string, en: string) =>
     language === 'uz' ? uz : language === 'ru' ? ru : en;
 
@@ -131,6 +144,7 @@ export default function CreatePropertyScreen() {
       setLatitude(data.latitude);
       setLongitude(data.longitude);
       setContactPhoneNumber(data.contactPhoneNumber);
+      setExistingImages([...data.images].sort((a, b) => a.sortOrder - b.sortOrder));
     } catch (e: any) {
       setInitialError(e?.message ?? label("Ma'lumotni yuklashda xatolik", 'Ошибка загрузки данных', 'Failed to load data'));
     } finally {
@@ -141,6 +155,115 @@ export default function CreatePropertyScreen() {
   useEffect(() => {
     if (editMode) loadExistingProperty();
   }, [editMode, loadExistingProperty]);
+
+  // Image-mutation-only refetch: unlike loadExistingProperty above, this must never touch the
+  // scalar form fields (title, price, etc.) - the user may have unsaved edits to those in
+  // progress while adding/deleting/reordering images, and a full reload would silently discard
+  // them. Mirrors manage-job.tsx's refreshJob: failure here keeps showing the last known-good
+  // gallery rather than surfacing a stale-refresh error on top of an already-succeeded mutation.
+  const refreshExistingImages = async (): Promise<boolean> => {
+    if (!propertyId) return false;
+    try {
+      const data = await propertyService.getPropertyById(propertyId);
+      setExistingImages([...data.images].sort((a, b) => a.sortOrder - b.sortOrder));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleAddExistingImage = async () => {
+    if (!propertyId || imageActionInProgress) return;
+    if (existingImages.length >= MAX_IMAGES) {
+      Alert.alert('', label(`Maksimal ${MAX_IMAGES} ta rasm yuklash mumkin`, `Максимум ${MAX_IMAGES} фотографий`, `Maximum ${MAX_IMAGES} images allowed`));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    setUploadingImage(true);
+    try {
+      await propertyService.addPropertyImage(propertyId, result.assets[0].uri);
+      const refreshed = await refreshExistingImages();
+      if (!refreshed) {
+        Alert.alert('', label("Ro'yxatni yangilab bo'lmadi, ekranni qayta oching", 'Не удалось обновить список, откройте экран заново', 'Failed to refresh the list, please reopen the screen'));
+      }
+    } catch (e: any) {
+      Alert.alert('Xato', e?.message ?? label('Rasm yuklashda xatolik', 'Ошибка загрузки фото', 'Failed to upload image'));
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleDeleteExistingImage = (imageId: string) => {
+    if (!propertyId || imageActionInProgress) return;
+    if (existingImages.length <= MIN_IMAGES) {
+      Alert.alert('', label(`Kamida ${MIN_IMAGES} ta rasm bo'lishi shart`, `Должно быть минимум ${MIN_IMAGES} фото`, `At least ${MIN_IMAGES} image is required`));
+      return;
+    }
+    Alert.alert(
+      label("Rasmni o'chirish", 'Удалить фото', 'Delete image'),
+      label("Rasmni o'chirishni tasdiqlaysizmi?", 'Удалить это фото?', 'Delete this photo?'),
+      [
+        { text: label('Bekor qilish', 'Отмена', 'Cancel'), style: 'cancel' },
+        {
+          text: label("O'chirish", 'Удалить', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingImageId(imageId);
+            try {
+              await propertyService.deletePropertyImage(propertyId, imageId);
+              const refreshed = await refreshExistingImages();
+              if (!refreshed) {
+                Alert.alert('', label("Ro'yxatni yangilab bo'lmadi, ekranni qayta oching", 'Не удалось обновить список, откройте экран заново', 'Failed to refresh the list, please reopen the screen'));
+              }
+            } catch (e: any) {
+              Alert.alert('Xato', e?.message ?? label("Rasmni o'chirishda xatolik", 'Ошибка удаления фото', 'Failed to delete image'));
+            } finally {
+              setDeletingImageId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Shared by move-left/move-right/set-cover: all three are just "send the full reordered id
+  // list to the server", differing only in how the local array is reshuffled before the call.
+  const applyImageReorder = async (reordered: PropertyImage[], movedImageId: string) => {
+    if (!propertyId) return;
+    setReorderingImageId(movedImageId);
+    try {
+      const updated = await propertyService.reorderPropertyImages(propertyId, reordered.map(img => img.id));
+      setExistingImages([...updated].sort((a, b) => a.sortOrder - b.sortOrder));
+    } catch (e: any) {
+      Alert.alert('Xato', e?.message ?? label("Tartibni o'zgartirishda xatolik", 'Ошибка изменения порядка фото', 'Failed to reorder images'));
+      // Server rejected or a network error occurred - re-sync from the server rather than trust
+      // the optimistic local order, so the UI can't drift from what's actually persisted.
+      await refreshExistingImages();
+    } finally {
+      setReorderingImageId(null);
+    }
+  };
+
+  const handleMoveImage = (index: number, direction: -1 | 1) => {
+    if (imageActionInProgress) return;
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= existingImages.length) return;
+    const reordered = [...existingImages];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+    applyImageReorder(reordered, existingImages[index].id);
+  };
+
+  const handleSetCover = (index: number) => {
+    if (imageActionInProgress || index === 0) return;
+    const target = existingImages[index];
+    const reordered = [target, ...existingImages.filter((_, i) => i !== index)];
+    applyImageReorder(reordered, target.id);
+  };
 
   const handleOpenMapPicker = () => {
     if (latitude !== null && longitude !== null) {
@@ -538,9 +661,10 @@ export default function CreatePropertyScreen() {
           keyboardType="phone-pad"
         />
 
-        {/* Rasmlar - Create mode only; Edit has no image upload/delete endpoints yet, so existing
-            images are never shown, edited, or sent here (Update never references PropertyImage). */}
-        {!editMode && (
+        {/* Rasmlar - Create mode uses the local picker-URI flow below (bundled into the single
+            create POST); Edit mode manages the already-persisted gallery directly via the
+            per-image endpoints, independent of the scalar-field PUT below. */}
+        {!editMode ? (
           <>
             <Text style={[styles.label, { color: colors.textSecondary }]}>
               {label('Rasmlar', 'Фотографии', 'Photos')}
@@ -568,6 +692,94 @@ export default function CreatePropertyScreen() {
                   activeOpacity={0.7}
                 >
                   <PlusIcon size={28} color={colors.primary} />
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </>
+        ) : (
+          <>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              {label('Rasmlar', 'Фотографии', 'Photos')}
+              <Text style={[styles.optional, { color: colors.textTertiary }]}>
+                {label(` (${MIN_IMAGES}-${MAX_IMAGES} ta)`, ` (${MIN_IMAGES}-${MAX_IMAGES})`, ` (${MIN_IMAGES}-${MAX_IMAGES})`)}
+              </Text>
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
+              {existingImages.map((image, index) => (
+                <View key={image.id} style={styles.imageWrapper}>
+                  <Image source={{ uri: `${MEDIA_URL}${image.imageUrl}` }} style={styles.previewImage} />
+
+                  {index === 0 && (
+                    <View style={styles.coverBadge}>
+                      <StarIcon size={11} color="#fff" />
+                      <Text style={styles.coverBadgeText}>{label('Asosiy', 'Обложка', 'Cover')}</Text>
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={() => handleDeleteExistingImage(image.id)}
+                    disabled={imageActionInProgress}
+                    activeOpacity={0.8}
+                  >
+                    {deletingImageId === image.id ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <CloseIcon size={14} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+
+                  <View style={styles.imageActionsRow}>
+                    {reorderingImageId === image.id ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                          style={[styles.imageActionBtn, (index === 0 || imageActionInProgress) && styles.imageActionBtnDisabled]}
+                          onPress={() => handleMoveImage(index, -1)}
+                          disabled={index === 0 || imageActionInProgress}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.imageActionBtnText, { color: colors.textPrimary }]}>‹</Text>
+                        </TouchableOpacity>
+                        {index !== 0 && (
+                          <TouchableOpacity
+                            style={[styles.imageActionBtn, imageActionInProgress && styles.imageActionBtnDisabled]}
+                            onPress={() => handleSetCover(index)}
+                            disabled={imageActionInProgress}
+                            activeOpacity={0.7}
+                          >
+                            <StarIcon size={13} color={colors.primary} />
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                          style={[
+                            styles.imageActionBtn,
+                            (index === existingImages.length - 1 || imageActionInProgress) && styles.imageActionBtnDisabled,
+                          ]}
+                          onPress={() => handleMoveImage(index, 1)}
+                          disabled={index === existingImages.length - 1 || imageActionInProgress}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.imageActionBtnText, { color: colors.textPrimary }]}>›</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                </View>
+              ))}
+              {existingImages.length < MAX_IMAGES && (
+                <TouchableOpacity
+                  style={[styles.addImageBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={handleAddExistingImage}
+                  disabled={imageActionInProgress}
+                  activeOpacity={0.7}
+                >
+                  {uploadingImage ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <PlusIcon size={28} color={colors.primary} />
+                  )}
                 </TouchableOpacity>
               )}
             </ScrollView>
@@ -651,6 +863,12 @@ const styles = StyleSheet.create({
   previewImage:    { width: 90, height: 90, borderRadius: BorderRadius.lg },
   removeImageBtn:  { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: BorderRadius.sm, padding: 3 },
   addImageBtn:     { width: 90, height: 90, borderRadius: BorderRadius.lg, borderWidth: 1.5, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
+  coverBadge:      { position: 'absolute', bottom: 4, left: 4, flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: BorderRadius.sm, paddingHorizontal: 6, paddingVertical: 2 },
+  coverBadgeText:  { color: '#fff', fontSize: 10, fontWeight: FontWeight.medium },
+  imageActionsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 6, height: 26 },
+  imageActionBtn:  { width: 26, height: 26, borderRadius: BorderRadius.sm, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.06)' },
+  imageActionBtnDisabled: { opacity: 0.35 },
+  imageActionBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.bold },
   submitBtn:       { marginTop: Spacing.xl, borderRadius: BorderRadius.xl, overflow: 'hidden' },
   submitGradient:  { paddingVertical: 16, alignItems: 'center' },
   submitText:      { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.bold },

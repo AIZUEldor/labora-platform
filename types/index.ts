@@ -415,3 +415,9 @@ export interface CreatePropertyRequest {
   longitude: number;
   contactPhoneNumber: string;
 }
+
+// Mirrors ReorderPropertyImagesRequestDto - the full ordered list of a property's currently
+// active image ids, sent to PUT /PropertyListing/{id}/images/order.
+export interface ReorderPropertyImagesRequest {
+  imageIds: string[];
+}
