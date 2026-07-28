@@ -12,4 +12,8 @@ public interface IPropertyListingService
     Task<IEnumerable<PropertyListingResponseDto>> GetAllPublishedAsync();
     Task<IEnumerable<PropertyListingResponseDto>> GetByOwnerIdAsync(Guid ownerId);
     Task<IEnumerable<PropertyMarkerDto>> GetPublishedMarkersAsync();
+
+    Task<PropertyImageDto> AddImageAsync(Guid propertyId, Guid ownerId, IFormFile file);
+    Task DeleteImageAsync(Guid propertyId, Guid ownerId, Guid imageId);
+    Task<IEnumerable<PropertyImageDto>> ReorderImagesAsync(Guid propertyId, Guid ownerId, IReadOnlyList<Guid> orderedImageIds);
 }

@@ -93,4 +93,56 @@ public class PropertyListingRepository : GenericRepository<PropertyListing>, IPr
 
         return rows.Select(r => (r.Id, r.Latitude, r.Longitude, r.Price, r.PropertyType));
     }
+
+    // Mirrors JobRepository.AddImageAsync; StorageKey/SortOrder are PropertyImage-specific columns
+    // JobImage doesn't have.
+    public async Task<PropertyImage> AddImageAsync(Guid propertyListingId, string imageUrl, string storageKey, int sortOrder)
+    {
+        PropertyImage image = new()
+        {
+            ImageUrl = imageUrl,
+            StorageKey = storageKey,
+            SortOrder = sortOrder,
+            PropertyListingId = propertyListingId
+        };
+        await _context.PropertyImages.AddAsync(image);
+        await _context.SaveChangesAsync();
+        return image;
+    }
+
+    // Soft delete, unlike JobRepository.DeleteImageAsync's hard delete - PropertyImage rows follow
+    // this codebase's IsDeleted convention, and every existing read query (GetByIdWithImagesAsync,
+    // the cover-image projections above) already filters !IsDeleted, so this alone removes the image
+    // from every future response without any query changes.
+    public async Task DeleteImageAsync(Guid imageId)
+    {
+        PropertyImage? image = await _context.PropertyImages
+            .FirstOrDefaultAsync(i => i.Id == imageId && !i.IsDeleted);
+        if (image != null)
+        {
+            image.IsDeleted = true;
+            image.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task ReorderImagesAsync(IReadOnlyList<(Guid ImageId, int SortOrder)> orderedImages)
+    {
+        List<Guid> imageIds = orderedImages.Select(o => o.ImageId).ToList();
+        List<PropertyImage> images = await _context.PropertyImages
+            .Where(i => imageIds.Contains(i.Id) && !i.IsDeleted)
+            .ToListAsync();
+
+        foreach ((Guid imageId, int sortOrder) in orderedImages)
+        {
+            PropertyImage? image = images.FirstOrDefault(i => i.Id == imageId);
+            if (image is not null)
+            {
+                image.SortOrder = sortOrder;
+                image.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        await _context.SaveChangesAsync();
+    }
 }

@@ -98,4 +98,33 @@ public class PropertyListingController : ControllerBase
         IEnumerable<PropertyMarkerDto> result = await _propertyListingService.GetPublishedMarkersAsync();
         return Ok(result);
     }
+
+    // Ownership, the image-count limit and validation all happen inside PropertyListingService,
+    // matching this controller's own Create/Update/Delete convention above.
+    [HttpPost("{id:guid}/images")]
+    [Authorize]
+    public async Task<IActionResult> UploadImage(Guid id, IFormFile file)
+    {
+        Guid ownerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        PropertyImageDto result = await _propertyListingService.AddImageAsync(id, ownerId, file);
+        return Ok(result);
+    }
+
+    [HttpDelete("{id:guid}/images/{imageId:guid}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteImage(Guid id, Guid imageId)
+    {
+        Guid ownerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        await _propertyListingService.DeleteImageAsync(id, ownerId, imageId);
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/images/order")]
+    [Authorize]
+    public async Task<IActionResult> ReorderImages(Guid id, [FromBody] ReorderPropertyImagesRequestDto request)
+    {
+        Guid ownerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        IEnumerable<PropertyImageDto> result = await _propertyListingService.ReorderImagesAsync(id, ownerId, request.ImageIds);
+        return Ok(result);
+    }
 }

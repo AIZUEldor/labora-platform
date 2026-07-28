@@ -23,4 +23,12 @@ public interface IPropertyListingRepository : IGenericRepository<PropertyListing
     // Lightweight marker projection for the map screen - scalars only, no entity materialized and
     // no Application-layer DTO referenced here (Labora.Domain cannot depend on Labora.Application).
     Task<IEnumerable<(Guid Id, double Latitude, double Longitude, decimal Price, PropertyType PropertyType)>> GetPublishedMarkersAsync();
+
+    // Mirrors IJobRepository.AddImageAsync/DeleteImageAsync, adapted for PropertyImage's extra
+    // StorageKey/SortOrder columns and this entity's soft-delete convention (JobImage is hard-deleted).
+    Task<PropertyImage> AddImageAsync(Guid propertyListingId, string imageUrl, string storageKey, int sortOrder);
+    Task DeleteImageAsync(Guid imageId);
+
+    // Bulk SortOrder rewrite for the reorder endpoint - one round trip for the whole ordered set.
+    Task ReorderImagesAsync(IReadOnlyList<(Guid ImageId, int SortOrder)> orderedImages);
 }

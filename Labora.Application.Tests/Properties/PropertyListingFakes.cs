@@ -12,6 +12,13 @@ internal sealed class FakePropertyListingRepository : IPropertyListingRepository
     public int UpdateAsyncCallCount { get; private set; }
     public int GetByIdWithImagesAsyncCallCount { get; private set; }
     public int DeleteAsyncCallCount { get; private set; }
+    public int AddImageAsyncCallCount { get; private set; }
+    public int DeleteImageAsyncCallCount { get; private set; }
+    public int ReorderImagesAsyncCallCount { get; private set; }
+
+    // Mirrors FakeJobRepository.FaultOnAddImageAsync - lets tests simulate a DB failure after the
+    // file has already been saved, to exercise PropertyListingService.AddImageAsync's cleanup path.
+    public Func<int, Exception?>? FaultOnAddImageAsync { get; set; }
 
     public void SeedListing(PropertyListing listing) => _listings[listing.Id] = listing;
 
@@ -94,6 +101,64 @@ internal sealed class FakePropertyListingRepository : IPropertyListingRepository
             .Where(l => !l.IsDeleted && l.Status == PropertyListingStatus.Published)
             .Select(l => (l.Id, l.Latitude, l.Longitude, l.Price, l.PropertyType));
         return Task.FromResult(result);
+    }
+
+    public Task<PropertyImage> AddImageAsync(Guid propertyListingId, string imageUrl, string storageKey, int sortOrder)
+    {
+        AddImageAsyncCallCount++;
+        Exception? fault = FaultOnAddImageAsync?.Invoke(AddImageAsyncCallCount);
+        if (fault != null)
+            throw fault;
+
+        PropertyImage image = new()
+        {
+            Id = Guid.NewGuid(),
+            ImageUrl = imageUrl,
+            StorageKey = storageKey,
+            SortOrder = sortOrder,
+            PropertyListingId = propertyListingId
+        };
+        if (_listings.TryGetValue(propertyListingId, out PropertyListing? listing))
+        {
+            listing.Images.Add(image);
+        }
+        return Task.FromResult(image);
+    }
+
+    // Mirrors the real repository: soft delete only, scoped to !IsDeleted (a re-delete of an
+    // already-deleted image is a no-op, same as the real FirstOrDefaultAsync filter).
+    public Task DeleteImageAsync(Guid imageId)
+    {
+        DeleteImageAsyncCallCount++;
+        foreach (PropertyListing listing in _listings.Values)
+        {
+            PropertyImage? image = listing.Images.FirstOrDefault(i => i.Id == imageId && !i.IsDeleted);
+            if (image is not null)
+            {
+                image.IsDeleted = true;
+                image.UpdatedAt = DateTime.UtcNow;
+                break;
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task ReorderImagesAsync(IReadOnlyList<(Guid ImageId, int SortOrder)> orderedImages)
+    {
+        ReorderImagesAsyncCallCount++;
+        Dictionary<Guid, int> lookup = orderedImages.ToDictionary(o => o.ImageId, o => o.SortOrder);
+        foreach (PropertyListing listing in _listings.Values)
+        {
+            foreach (PropertyImage image in listing.Images)
+            {
+                if (lookup.TryGetValue(image.Id, out int sortOrder))
+                {
+                    image.SortOrder = sortOrder;
+                    image.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+        }
+        return Task.CompletedTask;
     }
 
     private static string? ComputeCoverImageUrl(PropertyListing listing)
