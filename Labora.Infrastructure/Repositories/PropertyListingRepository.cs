@@ -76,7 +76,7 @@ public class PropertyListingRepository : GenericRepository<PropertyListing>, IPr
         return rows.Select(r => (r.PropertyListing, r.CoverImageUrl));
     }
 
-    public async Task<IEnumerable<(Guid Id, double Latitude, double Longitude, decimal Price, PropertyType PropertyType)>> GetPublishedMarkersAsync()
+    public async Task<IEnumerable<(Guid Id, double Latitude, double Longitude, decimal Price, PropertyType PropertyType, RentalPeriod RentalPeriod)>> GetPublishedMarkersAsync()
     {
         var rows = await _context.PropertyListings
             .AsNoTracking()
@@ -87,11 +87,12 @@ public class PropertyListingRepository : GenericRepository<PropertyListing>, IPr
                 p.Latitude,
                 p.Longitude,
                 p.Price,
-                p.PropertyType
+                p.PropertyType,
+                p.RentalPeriod
             })
             .ToListAsync();
 
-        return rows.Select(r => (r.Id, r.Latitude, r.Longitude, r.Price, r.PropertyType));
+        return rows.Select(r => (r.Id, r.Latitude, r.Longitude, r.Price, r.PropertyType, r.RentalPeriod));
     }
 
     // Mirrors JobRepository.AddImageAsync; StorageKey/SortOrder are PropertyImage-specific columns

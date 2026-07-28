@@ -22,7 +22,7 @@ import { jobService } from '../../services/jobService';
 import { categoryService } from '../../services/categoryService';
 import { workerPostService } from '../../services/workerPostService';
 import { propertyService } from '../../services/propertyService';
-import { Job, Category, WorkerPost, PropertyListing } from '../../types';
+import { Job, Category, WorkerPost, PropertyListing, PropertyType, RentalPeriod } from '../../types';
 import { useAuthStore, AuthState } from '../../store/authStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 import { getCategoryLabel } from '../../utils/categoryLocalization';
@@ -81,6 +81,7 @@ function WorkerHome() {
   const [properties,        setProperties]        = useState<PropertyListing[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [errorProperties,   setErrorProperties]   = useState<string | null>(null);
+  const [propertyFilter, setPropertyFilter] = useState<'all' | 'apartment' | 'house' | 'daily' | 'monthly'>('all');
 
   const PAGE_SIZE = 10;
 
@@ -154,15 +155,32 @@ function WorkerHome() {
     if (mode === 'properties' && !propertiesFetchedRef.current) fetchProperties();
   }, [mode, fetchProperties]);
 
+  const PROPERTY_FILTERS: { label: string; value: 'all' | 'apartment' | 'house' | 'daily' | 'monthly' }[] = [
+    { label: label('Barchasi', 'Все', 'All'),                        value: 'all' },
+    { label: getPropertyTypeLabel(PropertyType.Apartment, language),  value: 'apartment' },
+    { label: getPropertyTypeLabel(PropertyType.House, language),      value: 'house' },
+    { label: getRentalPeriodLabel(RentalPeriod.Daily, language),      value: 'daily' },
+    { label: getRentalPeriodLabel(RentalPeriod.Monthly, language),    value: 'monthly' },
+  ];
+
   const filteredProperties = useMemo(() => {
-    if (!search) return properties;
-    const q = search.toLowerCase();
-    return properties.filter(p =>
-      p.title?.toLowerCase().includes(q) ||
-      p.description?.toLowerCase().includes(q) ||
-      p.address?.toLowerCase().includes(q)
-    );
-  }, [properties, search]);
+    let result = properties;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(p =>
+        p.title?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q) ||
+        p.address?.toLowerCase().includes(q)
+      );
+    }
+    switch (propertyFilter) {
+      case 'apartment': return result.filter(p => p.propertyType === PropertyType.Apartment);
+      case 'house':      return result.filter(p => p.propertyType === PropertyType.House);
+      case 'daily':      return result.filter(p => p.rentalPeriod === RentalPeriod.Daily);
+      case 'monthly':    return result.filter(p => p.rentalPeriod === RentalPeriod.Monthly);
+      default:           return result;
+    }
+  }, [properties, search, propertyFilter]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -418,6 +436,28 @@ function WorkerHome() {
               )}
             </View>
 
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.subCategoriesContainer}>
+              {PROPERTY_FILTERS.map(f => {
+                const isSelected = propertyFilter === f.value;
+                return (
+                  <TouchableOpacity
+                    key={f.value}
+                    onPress={() => setPropertyFilter(f.value)}
+                    style={[styles.subCategoryChip, {
+                      backgroundColor: isSelected ? colors.primary : colors.card,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    }]}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.subCategoryText, { color: isSelected ? '#fff' : colors.textSecondary }]}>
+                      {f.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
             {loadingProperties && (
               <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.md }}>
                 <JobListSkeleton count={4} />
@@ -519,6 +559,7 @@ function EmployerHome() {
   const [properties,        setProperties]        = useState<PropertyListing[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [errorProperties,   setErrorProperties]   = useState<string | null>(null);
+  const [propertyFilter, setPropertyFilter] = useState<'all' | 'apartment' | 'house' | 'daily' | 'monthly'>('all');
 
   const label = (uz: string, ru: string, en: string) =>
     language === 'uz' ? uz : language === 'ru' ? ru : en;
@@ -580,15 +621,32 @@ function EmployerHome() {
     if (mode === 'properties' && !propertiesFetchedRef.current) fetchProperties();
   }, [mode, fetchProperties]);
 
+  const PROPERTY_FILTERS: { label: string; value: 'all' | 'apartment' | 'house' | 'daily' | 'monthly' }[] = [
+    { label: label('Barchasi', 'Все', 'All'),                        value: 'all' },
+    { label: getPropertyTypeLabel(PropertyType.Apartment, language),  value: 'apartment' },
+    { label: getPropertyTypeLabel(PropertyType.House, language),      value: 'house' },
+    { label: getRentalPeriodLabel(RentalPeriod.Daily, language),      value: 'daily' },
+    { label: getRentalPeriodLabel(RentalPeriod.Monthly, language),    value: 'monthly' },
+  ];
+
   const filteredProperties = useMemo(() => {
-    if (!search) return properties;
-    const q = search.toLowerCase();
-    return properties.filter(p =>
-      p.title?.toLowerCase().includes(q) ||
-      p.description?.toLowerCase().includes(q) ||
-      p.address?.toLowerCase().includes(q)
-    );
-  }, [properties, search]);
+    let result = properties;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(p =>
+        p.title?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q) ||
+        p.address?.toLowerCase().includes(q)
+      );
+    }
+    switch (propertyFilter) {
+      case 'apartment': return result.filter(p => p.propertyType === PropertyType.Apartment);
+      case 'house':      return result.filter(p => p.propertyType === PropertyType.House);
+      case 'daily':      return result.filter(p => p.rentalPeriod === RentalPeriod.Daily);
+      case 'monthly':    return result.filter(p => p.rentalPeriod === RentalPeriod.Monthly);
+      default:           return result;
+    }
+  }, [properties, search, propertyFilter]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -799,6 +857,28 @@ function EmployerHome() {
                 <Text style={[styles.seeAll, { color: colors.textTertiary }]}>{filteredProperties.length}</Text>
               )}
             </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.subCategoriesContainer}>
+              {PROPERTY_FILTERS.map(f => {
+                const isSelected = propertyFilter === f.value;
+                return (
+                  <TouchableOpacity
+                    key={f.value}
+                    onPress={() => setPropertyFilter(f.value)}
+                    style={[styles.subCategoryChip, {
+                      backgroundColor: isSelected ? colors.primary : colors.card,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    }]}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.subCategoryText, { color: isSelected ? '#fff' : colors.textSecondary }]}>
+                      {f.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
 
             {loadingProperties && (
               <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.md }}>

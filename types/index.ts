@@ -395,6 +395,7 @@ export interface PropertyMarker {
   longitude: number;
   price: number;
   propertyType: PropertyType;
+  rentalPeriod: RentalPeriod;
 }
 
 // Scalar fields only, mirroring PropertyListingRequestDto - image URIs are passed separately to

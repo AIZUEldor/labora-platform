@@ -1,31 +1,87 @@
 import { Tabs } from 'expo-router';
+import { useState } from 'react';
 import { useAuthStore, AuthState } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 import { UserRole } from '../../types';
 import { router } from 'expo-router';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function PlusButton({ colors }: { colors: any }) {
   const role       = useAuthStore((state: AuthState) => state.role);
   const isEmployer = Number(role) === UserRole.Employer;
+  const [visible, setVisible] = useState(false);
+  const { language } = useLanguageStore();
+  const label = (uz: string, ru: string, en: string) =>
+    language === 'uz' ? uz : language === 'ru' ? ru : en;
 
   return (
-    <TouchableOpacity
-      onPress={() => {
-        if (isEmployer) router.push('/employer/post-job');
-        else router.push('/post-worker');
-      }}
-      activeOpacity={0.85}
-      style={styles.plusWrapper}
-    >
-      <View style={[styles.plusButton, { backgroundColor: colors.primary }]}>
-        <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
-          <Path d="M12 5V19M5 12H19" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" />
-        </Svg>
-      </View>
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity
+        onPress={() => setVisible(true)}
+        activeOpacity={0.85}
+        style={styles.plusWrapper}
+      >
+        <View style={[styles.plusButton, { backgroundColor: colors.primary }]}>
+          <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+            <Path d="M12 5V19M5 12H19" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" />
+          </Svg>
+        </View>
+      </TouchableOpacity>
+
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setVisible(false)}>
+          <TouchableOpacity activeOpacity={1} style={[styles.sheet, { backgroundColor: colors.surface }]}>
+            {isEmployer ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.option, { borderBottomColor: colors.border }]}
+                  onPress={() => { setVisible(false); router.push('/employer/post-job'); }}
+                >
+                  <Text style={[styles.optionText, { color: colors.textPrimary }]}>
+                    {label("Ish e'loni berish", 'Разместить вакансию', 'Create Job Post')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.option, { borderBottomColor: colors.border }]}
+                  onPress={() => { setVisible(false); router.push('/property/create'); }}
+                >
+                  <Text style={[styles.optionText, { color: colors.textPrimary }]}>
+                    {label('Uy e\'loni berish', 'Разместить объявление о недвижимости', 'Create Property Listing')}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[styles.option, { borderBottomColor: colors.border }]}
+                  onPress={() => { setVisible(false); router.push('/post-worker'); }}
+                >
+                  <Text style={[styles.optionText, { color: colors.textPrimary }]}>
+                    {label('Ish qidirish e\'loni berish', 'Разместить объявление о поиске работы', 'Create Worker Post')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.option, { borderBottomColor: colors.border }]}
+                  onPress={() => { setVisible(false); router.push('/property/create'); }}
+                >
+                  <Text style={[styles.optionText, { color: colors.textPrimary }]}>
+                    {label('Uy e\'loni berish', 'Разместить объявление о недвижимости', 'Create Property Listing')}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+            <TouchableOpacity style={styles.cancel} onPress={() => setVisible(false)}>
+              <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
+                {label('Bekor qilish', 'Отмена', 'Cancel')}
+              </Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 }
 
@@ -152,5 +208,35 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 32,
+  },
+  option: {
+    paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  optionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  cancel: {
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  cancelText: {
+    fontSize: 15,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });

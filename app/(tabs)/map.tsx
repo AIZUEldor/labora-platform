@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator,
   TouchableOpacity, ScrollView, TextInput, FlatList, Keyboard,
@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { jobService } from '../../services/jobService';
 import { propertyService } from '../../services/propertyService';
-import { NearbyJob, PropertyMarker } from '../../types';
+import { NearbyJob, PropertyMarker, PropertyType, RentalPeriod } from '../../types';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 import { getPropertyTypeLabel } from '../../utils/propertyLocalization';
 import Svg, { Path } from 'react-native-svg';
@@ -43,6 +43,11 @@ export default function MapScreen() {
   const [jobs, setJobs] = useState<NearbyJob[]>([]);
   const [properties, setProperties] = useState<PropertyMarker[]>([]);
   const [selectedType, setSelectedType] = useState(0);
+  // Default is 'jobs' - the map must show only job markers until the user explicitly switches.
+  const [mapMode, setMapMode] = useState<'jobs' | 'properties'>('jobs');
+  const [selectedPropertyFilter, setSelectedPropertyFilter] = useState<
+    'all' | 'apartment' | 'house' | 'daily' | 'monthly'
+  >('all');
   const [mapReady, setMapReady] = useState(false);
   // mapReady only ever flips false->true once and then stays true, but the WebView actually
   // reloads (a fresh page/Leaflet instance) at least once more after that - whenever `jobs`
@@ -68,22 +73,51 @@ export default function MapScreen() {
     { label: t.map.remote,   value: 6 },
   ];
 
+  // Apartment/House filter by PropertyMarker.propertyType; Daily/Monthly filter by
+  // PropertyMarker.rentalPeriod (added to the marker contract specifically for this). 'all' skips
+  // filtering entirely.
+  const PROPERTY_TYPE_FILTERS: { label: string; value: 'all' | 'apartment' | 'house' | 'daily' | 'monthly' }[] = [
+    { label: t.map.all,                                              value: 'all' },
+    { label: getPropertyTypeLabel(PropertyType.Apartment, language),  value: 'apartment' },
+    { label: getPropertyTypeLabel(PropertyType.House, language),      value: 'house' },
+    { label: t.map.daily,                                            value: 'daily' },
+    { label: t.map.monthly,                                          value: 'monthly' },
+  ];
+
+  const filteredProperties = useMemo(() => {
+    switch (selectedPropertyFilter) {
+      case 'apartment': return properties.filter(p => p.propertyType === PropertyType.Apartment);
+      case 'house':      return properties.filter(p => p.propertyType === PropertyType.House);
+      case 'daily':      return properties.filter(p => p.rentalPeriod === RentalPeriod.Daily);
+      case 'monthly':    return properties.filter(p => p.rentalPeriod === RentalPeriod.Monthly);
+      default:           return properties;
+    }
+  }, [properties, selectedPropertyFilter]);
+
   useEffect(() => { initMap(); }, []);
 
+  // Job markers are only drawn while mapMode === 'jobs'; switching to Properties clears them via
+  // the same injectJavaScript path (buildUpdateMarkersJs([]) removes every jobMarkers layer) rather
+  // than touching the WebView's `source`, so zoom/pan and the Leaflet instance are never reset.
   useEffect(() => {
     if (!mapReady) return;
-    const filtered = selectedType === 0 ? jobs : jobs.filter(j => j.jobType === selectedType);
+    const filtered = mapMode === 'jobs'
+      ? (selectedType === 0 ? jobs : jobs.filter(j => j.jobType === selectedType))
+      : [];
     webViewRef.current?.injectJavaScript(buildUpdateMarkersJs(filtered));
-  }, [selectedType, mapReady]);
+  }, [selectedType, mapReady, mapMode]);
 
   // Property markers are never baked into the WebView's initial HTML with live data - they're
   // always added via injectJavaScript once MAP_READY fires, whether the fetch resolved before or
   // after the map is ready. This means Property data updating never changes the WebView's `source`
   // prop, so it can never force a full reload (which would reset zoom/pan and re-init Leaflet).
+  // Same mode gating as the job effect above: only drawn while mapMode === 'properties', otherwise
+  // cleared via the identical injectJavaScript path.
   useEffect(() => {
     if (!mapReady) return;
-    webViewRef.current?.injectJavaScript(buildUpdatePropertyMarkersJs(properties, language));
-  }, [properties, mapReady, mapReadyGen, language]);
+    const toRender = mapMode === 'properties' ? filteredProperties : [];
+    webViewRef.current?.injectJavaScript(buildUpdatePropertyMarkersJs(toRender, language));
+  }, [filteredProperties, mapReady, mapReadyGen, language, mapMode]);
 
   const initMap = async () => {
     setLoading(true);
@@ -119,8 +153,13 @@ export default function MapScreen() {
       setJobs(nearbyJobs);
       // Markerlarni yangilash
       console.log('JOBS COUNT:', jobs.length);
-      const filtered = selectedType === 0 ? nearbyJobs : nearbyJobs.filter(j => j.jobType === selectedType);
-      webViewRef.current?.injectJavaScript(buildUpdateMarkersJs(filtered));
+      // Only paint job markers while Jobs mode is active - a location search performed while in
+      // Properties mode still refreshes `jobs` in state (so switching back to Jobs shows fresh
+      // results) but must not draw over the Property markers currently on screen.
+      if (mapMode === 'jobs') {
+        const filtered = selectedType === 0 ? nearbyJobs : nearbyJobs.filter(j => j.jobType === selectedType);
+        webViewRef.current?.injectJavaScript(buildUpdateMarkersJs(filtered));
+      }
     } catch {}
   };
 
@@ -428,6 +467,30 @@ export default function MapScreen() {
         <Text style={styles.headerSub}>{filteredJobs.length} {t.map.found}</Text>
       </LinearGradient>
 
+      {/* Jobs / Properties toggle */}
+      <View style={[styles.modeToggleWrapper, { backgroundColor: colors.background }]}>
+        <View style={[styles.modeToggleContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.modeToggleBtn, mapMode === 'jobs' && { backgroundColor: '#16A34A' }]}
+            onPress={() => setMapMode('jobs')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.modeToggleText, { color: mapMode === 'jobs' ? '#fff' : colors.textSecondary }]}>
+              {language === 'uz' ? 'Ishlar' : language === 'ru' ? 'Работы' : 'Jobs'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeToggleBtn, mapMode === 'properties' && { backgroundColor: '#16A34A' }]}
+            onPress={() => setMapMode('properties')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.modeToggleText, { color: mapMode === 'properties' ? '#fff' : colors.textSecondary }]}>
+              {language === 'uz' ? "Ko'chmas mulk" : language === 'ru' ? 'Недвижимость' : 'Properties'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Qidiruv */}
       <View style={[styles.searchWrapper, { backgroundColor: colors.background }]}>
         <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -465,28 +528,48 @@ export default function MapScreen() {
         )}
       </View>
 
-      {/* Filter chips */}
+      {/* Filter chips - Job filters while mapMode === 'jobs', Property filters while 'properties' */}
       <View style={[styles.filterWrapper, { backgroundColor: colors.background }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-          {JOB_TYPE_FILTERS.map(f => {
-            const active = selectedType === f.value;
-            return (
-              <TouchableOpacity
-                key={f.value}
-                onPress={() => setSelectedType(f.value)}
-                style={[
-                  styles.chip,
-                  active
-                    ? { backgroundColor: '#16A34A', borderColor: '#16A34A' }
-                    : { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
-              >
-                <Text style={[styles.chipText, { color: active ? '#fff' : colors.textPrimary }]}>
-                  {f.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+          {mapMode === 'jobs'
+            ? JOB_TYPE_FILTERS.map(f => {
+                const active = selectedType === f.value;
+                return (
+                  <TouchableOpacity
+                    key={f.value}
+                    onPress={() => setSelectedType(f.value)}
+                    style={[
+                      styles.chip,
+                      active
+                        ? { backgroundColor: '#16A34A', borderColor: '#16A34A' }
+                        : { backgroundColor: colors.card, borderColor: colors.border },
+                    ]}
+                  >
+                    <Text style={[styles.chipText, { color: active ? '#fff' : colors.textPrimary }]}>
+                      {f.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })
+            : PROPERTY_TYPE_FILTERS.map(f => {
+                const active = selectedPropertyFilter === f.value;
+                return (
+                  <TouchableOpacity
+                    key={f.value}
+                    onPress={() => setSelectedPropertyFilter(f.value)}
+                    style={[
+                      styles.chip,
+                      active
+                        ? { backgroundColor: '#2563EB', borderColor: '#2563EB' }
+                        : { backgroundColor: colors.card, borderColor: colors.border },
+                    ]}
+                  >
+                    <Text style={[styles.chipText, { color: active ? '#fff' : colors.textPrimary }]}>
+                      {f.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
         </ScrollView>
       </View>
 
@@ -514,6 +597,10 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingBottom: 16, alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
   headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  modeToggleWrapper: { paddingHorizontal: 12, paddingTop: 10 },
+  modeToggleContainer: { flexDirection: 'row', borderRadius: 12, borderWidth: 1.5, padding: 4, gap: 4 },
+  modeToggleBtn: { flex: 1, borderRadius: 9, paddingVertical: 9, alignItems: 'center' },
+  modeToggleText: { fontSize: 13, fontWeight: '600' },
   searchWrapper: { paddingHorizontal: 12, paddingVertical: 8, zIndex: 100 },
   searchBox: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1.5, paddingHorizontal: 12, paddingVertical: 9, gap: 8 },
   searchInput: { flex: 1, fontSize: 14 },

@@ -94,12 +94,12 @@ internal sealed class FakePropertyListingRepository : IPropertyListingRepository
         return Task.FromResult(result);
     }
 
-    public Task<IEnumerable<(Guid Id, double Latitude, double Longitude, decimal Price, PropertyType PropertyType)>> GetPublishedMarkersAsync()
+    public Task<IEnumerable<(Guid Id, double Latitude, double Longitude, decimal Price, PropertyType PropertyType, RentalPeriod RentalPeriod)>> GetPublishedMarkersAsync()
     {
         // Mirrors the real query's filter: !IsDeleted && Status == Published.
-        IEnumerable<(Guid, double, double, decimal, PropertyType)> result = _listings.Values
+        IEnumerable<(Guid, double, double, decimal, PropertyType, RentalPeriod)> result = _listings.Values
             .Where(l => !l.IsDeleted && l.Status == PropertyListingStatus.Published)
-            .Select(l => (l.Id, l.Latitude, l.Longitude, l.Price, l.PropertyType));
+            .Select(l => (l.Id, l.Latitude, l.Longitude, l.Price, l.PropertyType, l.RentalPeriod));
         return Task.FromResult(result);
     }
 

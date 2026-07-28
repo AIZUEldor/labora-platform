@@ -488,6 +488,131 @@ export default function CreatePropertyScreen() {
           textAlignVertical="top"
         />
 
+        {/* Rasmlar - Create mode uses the local picker-URI flow below (bundled into the single
+            create POST); Edit mode manages the already-persisted gallery directly via the
+            per-image endpoints, independent of the scalar-field PUT below. */}
+        {!editMode ? (
+          <>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              {label('Rasmlar', 'Фотографии', 'Photos')}
+              <Text style={[styles.optional, { color: colors.textTertiary }]}>
+                {label(` (${MIN_IMAGES}-${MAX_IMAGES} ta)`, ` (${MIN_IMAGES}-${MAX_IMAGES})`, ` (${MIN_IMAGES}-${MAX_IMAGES})`)}
+              </Text>
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
+              {images.map((uri, index) => (
+                <View key={index} style={styles.imageWrapper}>
+                  <Image source={{ uri }} style={styles.previewImage} />
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={() => removeImage(index)}
+                    activeOpacity={0.8}
+                  >
+                    <CloseIcon size={14} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {images.length < MAX_IMAGES && (
+                <TouchableOpacity
+                  style={[styles.addImageBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={pickImage}
+                  activeOpacity={0.7}
+                >
+                  <PlusIcon size={28} color={colors.primary} />
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </>
+        ) : (
+          <>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              {label('Rasmlar', 'Фотографии', 'Photos')}
+              <Text style={[styles.optional, { color: colors.textTertiary }]}>
+                {label(` (${MIN_IMAGES}-${MAX_IMAGES} ta)`, ` (${MIN_IMAGES}-${MAX_IMAGES})`, ` (${MIN_IMAGES}-${MAX_IMAGES})`)}
+              </Text>
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
+              {existingImages.map((image, index) => (
+                <View key={image.id} style={styles.imageWrapper}>
+                  <Image source={{ uri: `${MEDIA_URL}${image.imageUrl}` }} style={styles.previewImage} />
+
+                  {index === 0 && (
+                    <View style={styles.coverBadge}>
+                      <StarIcon size={11} color="#fff" />
+                      <Text style={styles.coverBadgeText}>{label('Asosiy', 'Обложка', 'Cover')}</Text>
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={() => handleDeleteExistingImage(image.id)}
+                    disabled={imageActionInProgress}
+                    activeOpacity={0.8}
+                  >
+                    {deletingImageId === image.id ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <CloseIcon size={14} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+
+                  <View style={styles.imageActionsRow}>
+                    {reorderingImageId === image.id ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                          style={[styles.imageActionBtn, (index === 0 || imageActionInProgress) && styles.imageActionBtnDisabled]}
+                          onPress={() => handleMoveImage(index, -1)}
+                          disabled={index === 0 || imageActionInProgress}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.imageActionBtnText, { color: colors.textPrimary }]}>‹</Text>
+                        </TouchableOpacity>
+                        {index !== 0 && (
+                          <TouchableOpacity
+                            style={[styles.imageActionBtn, imageActionInProgress && styles.imageActionBtnDisabled]}
+                            onPress={() => handleSetCover(index)}
+                            disabled={imageActionInProgress}
+                            activeOpacity={0.7}
+                          >
+                            <StarIcon size={13} color={colors.primary} />
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                          style={[
+                            styles.imageActionBtn,
+                            (index === existingImages.length - 1 || imageActionInProgress) && styles.imageActionBtnDisabled,
+                          ]}
+                          onPress={() => handleMoveImage(index, 1)}
+                          disabled={index === existingImages.length - 1 || imageActionInProgress}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.imageActionBtnText, { color: colors.textPrimary }]}>›</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                </View>
+              ))}
+              {existingImages.length < MAX_IMAGES && (
+                <TouchableOpacity
+                  style={[styles.addImageBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={handleAddExistingImage}
+                  disabled={imageActionInProgress}
+                  activeOpacity={0.7}
+                >
+                  {uploadingImage ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <PlusIcon size={28} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </>
+        )}
+
         {/* Mulk turi */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label('Mulk turi', 'Тип недвижимости', 'Property Type')}
@@ -660,131 +785,6 @@ export default function CreatePropertyScreen() {
           onChangeText={setContactPhoneNumber}
           keyboardType="phone-pad"
         />
-
-        {/* Rasmlar - Create mode uses the local picker-URI flow below (bundled into the single
-            create POST); Edit mode manages the already-persisted gallery directly via the
-            per-image endpoints, independent of the scalar-field PUT below. */}
-        {!editMode ? (
-          <>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              {label('Rasmlar', 'Фотографии', 'Photos')}
-              <Text style={[styles.optional, { color: colors.textTertiary }]}>
-                {label(` (${MIN_IMAGES}-${MAX_IMAGES} ta)`, ` (${MIN_IMAGES}-${MAX_IMAGES})`, ` (${MIN_IMAGES}-${MAX_IMAGES})`)}
-              </Text>
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
-              {images.map((uri, index) => (
-                <View key={index} style={styles.imageWrapper}>
-                  <Image source={{ uri }} style={styles.previewImage} />
-                  <TouchableOpacity
-                    style={styles.removeImageBtn}
-                    onPress={() => removeImage(index)}
-                    activeOpacity={0.8}
-                  >
-                    <CloseIcon size={14} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              ))}
-              {images.length < MAX_IMAGES && (
-                <TouchableOpacity
-                  style={[styles.addImageBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={pickImage}
-                  activeOpacity={0.7}
-                >
-                  <PlusIcon size={28} color={colors.primary} />
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-          </>
-        ) : (
-          <>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              {label('Rasmlar', 'Фотографии', 'Photos')}
-              <Text style={[styles.optional, { color: colors.textTertiary }]}>
-                {label(` (${MIN_IMAGES}-${MAX_IMAGES} ta)`, ` (${MIN_IMAGES}-${MAX_IMAGES})`, ` (${MIN_IMAGES}-${MAX_IMAGES})`)}
-              </Text>
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
-              {existingImages.map((image, index) => (
-                <View key={image.id} style={styles.imageWrapper}>
-                  <Image source={{ uri: `${MEDIA_URL}${image.imageUrl}` }} style={styles.previewImage} />
-
-                  {index === 0 && (
-                    <View style={styles.coverBadge}>
-                      <StarIcon size={11} color="#fff" />
-                      <Text style={styles.coverBadgeText}>{label('Asosiy', 'Обложка', 'Cover')}</Text>
-                    </View>
-                  )}
-
-                  <TouchableOpacity
-                    style={styles.removeImageBtn}
-                    onPress={() => handleDeleteExistingImage(image.id)}
-                    disabled={imageActionInProgress}
-                    activeOpacity={0.8}
-                  >
-                    {deletingImageId === image.id ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <CloseIcon size={14} color="#fff" />
-                    )}
-                  </TouchableOpacity>
-
-                  <View style={styles.imageActionsRow}>
-                    {reorderingImageId === image.id ? (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <>
-                        <TouchableOpacity
-                          style={[styles.imageActionBtn, (index === 0 || imageActionInProgress) && styles.imageActionBtnDisabled]}
-                          onPress={() => handleMoveImage(index, -1)}
-                          disabled={index === 0 || imageActionInProgress}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[styles.imageActionBtnText, { color: colors.textPrimary }]}>‹</Text>
-                        </TouchableOpacity>
-                        {index !== 0 && (
-                          <TouchableOpacity
-                            style={[styles.imageActionBtn, imageActionInProgress && styles.imageActionBtnDisabled]}
-                            onPress={() => handleSetCover(index)}
-                            disabled={imageActionInProgress}
-                            activeOpacity={0.7}
-                          >
-                            <StarIcon size={13} color={colors.primary} />
-                          </TouchableOpacity>
-                        )}
-                        <TouchableOpacity
-                          style={[
-                            styles.imageActionBtn,
-                            (index === existingImages.length - 1 || imageActionInProgress) && styles.imageActionBtnDisabled,
-                          ]}
-                          onPress={() => handleMoveImage(index, 1)}
-                          disabled={index === existingImages.length - 1 || imageActionInProgress}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[styles.imageActionBtnText, { color: colors.textPrimary }]}>›</Text>
-                        </TouchableOpacity>
-                      </>
-                    )}
-                  </View>
-                </View>
-              ))}
-              {existingImages.length < MAX_IMAGES && (
-                <TouchableOpacity
-                  style={[styles.addImageBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={handleAddExistingImage}
-                  disabled={imageActionInProgress}
-                  activeOpacity={0.7}
-                >
-                  {uploadingImage ? (
-                    <ActivityIndicator color={colors.primary} />
-                  ) : (
-                    <PlusIcon size={28} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-          </>
-        )}
 
         {/* Submit */}
         <TouchableOpacity

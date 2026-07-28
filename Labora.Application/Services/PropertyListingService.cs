@@ -275,7 +275,7 @@ public class PropertyListingService : IPropertyListingService
 
     public async Task<IEnumerable<PropertyMarkerDto>> GetPublishedMarkersAsync()
     {
-        IEnumerable<(Guid Id, double Latitude, double Longitude, decimal Price, PropertyType PropertyType)> markers =
+        IEnumerable<(Guid Id, double Latitude, double Longitude, decimal Price, PropertyType PropertyType, RentalPeriod RentalPeriod)> markers =
             await _propertyListingRepository.GetPublishedMarkersAsync();
 
         return markers.Select(m => new PropertyMarkerDto
@@ -284,7 +284,8 @@ public class PropertyListingService : IPropertyListingService
             Latitude = m.Latitude,
             Longitude = m.Longitude,
             Price = m.Price,
-            PropertyType = m.PropertyType
+            PropertyType = m.PropertyType,
+            RentalPeriod = m.RentalPeriod
         });
     }
 }
